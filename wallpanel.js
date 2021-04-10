@@ -134,7 +134,6 @@ let bodyOverflowOrig;
 let screenWakeLock = new ScreenWakeLock();
 
 const elHass = document.querySelector("body > home-assistant");
-const hass = elHass.__hass;
 const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 
 const messageBox = document.createElement('div');
@@ -376,7 +375,7 @@ function updateInfo() {
 	if (config.debug) console.debug("Updating info");
 	lastInfoUpdate = Date.now();
 
-	let weather = hass.states["weather.home"];
+	let weather = elHass.__hass.states["weather.home"];
 	if (weather) {
 		weatherStateInfo.innerHTML = weather.state;
 		weatherTemperatureInfo.innerHTML = `${weather.attributes.temperature}° C`;
