@@ -3,7 +3,8 @@
  * Released under the GNU General Public License v3.0
  */
 
-class ScreenWakeLock {
+ 
+ class ScreenWakeLock {
 	constructor() {
 		this.enabled = false;
 		this.error = null;
@@ -104,7 +105,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "0.9";
+const version = "1.0";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
@@ -117,11 +118,19 @@ const defaultConfig = {
 	display_time: 15.0,
 	keep_screen_on_time: 0,
 	black_screen_after_time: 0,
-	image_url: "http://unsplash.it/${width}/${height}?random=${timestamp}",
+	//image_url: "http://unsplash.it/${width}/${height}?random=${timestamp}",
+	image_url: "media-source://media_source",
 	image_fit: 'cover', // cover / contain / fill
 	info_update_interval: 30,
-	style: {}
+	style: {},
+	info_template: `
+	<div style="font-size: 1.0em">{{ states["weather.home"].state }}</div>
+	<div style="font-size: 1.2em">{{ states["weather.home"].attributes.temperature }}° C</div>
+	<div style="font-size: 1.2em; margin-top: 0.5em">{{ (new Date()).toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'}) }}</div>
+	<div style="font-size: 1.2em">{{ (new Date()).toLocaleDateString(undefined, {weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric'}) }}</div>
+	`
 };
+
 let config = {};
 let activePanel = null;
 let messageBoxTimeout = null;
@@ -132,6 +141,8 @@ let lastImageUpdate;
 let lastInfoUpdate;
 let bodyOverflowOrig;
 let screenWakeLock = new ScreenWakeLock();
+let imageList = [];
+let imageIndex = -1;
 
 const elHass = document.querySelector("body > home-assistant");
 const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
@@ -144,7 +155,7 @@ messageBox.style.top = 0;
 messageBox.style.left = 0;
 messageBox.style.width = '100%';
 messageBox.style.height = '10%';
-messageBox.style.zIndex = 1000;
+messageBox.style.zIndex = 1001;
 messageBox.style.visibility = 'hidden';
 //messageBox.style.margin = '5vh auto auto auto';
 messageBox.style.padding = '5vh 0 0 0';
@@ -164,7 +175,7 @@ debugBox.style.left = 0;
 debugBox.style.width = '100%';
 debugBox.style.height = '40%';
 debugBox.style.background = '#00000099';
-debugBox.style.zIndex = 1000;
+debugBox.style.zIndex = 1001;
 debugBox.style.visibility = 'hidden';
 debugBox.style.fontFamily = 'monospace';
 debugBox.style.fontSize = '12px';
@@ -218,25 +229,6 @@ infoBox.style.fontSize = '4vh';
 infoBox.style.color = '#eeeeee';
 infoBox.style.textShadow = '-1px -1px 0 #111111, 1px -1px 0 #111111, -1px 1px 0 #111111, 1px 1px 0 #111111';
 infoContainer.appendChild(infoBox);
-
-const weatherStateInfo = document.createElement('div');
-weatherStateInfo.id = 'wallpanel-screensaver-info-state';
-infoBox.appendChild(weatherStateInfo);
-
-const weatherTemperatureInfo = document.createElement('div');
-weatherTemperatureInfo.id = 'wallpanel-screensaver-info-temperature';
-weatherTemperatureInfo.style.fontSize = '1.2em';
-infoBox.appendChild(weatherTemperatureInfo);
-
-const timeInfo = document.createElement('div');
-timeInfo.id = 'wallpanel-screensaver-info-time';
-timeInfo.style.marginTop = '0.5em';
-timeInfo.style.fontSize = '1.2em';
-infoBox.appendChild(timeInfo);
-
-const dateInfo = document.createElement('div');
-timeInfo.id = 'wallpanel-screensaver-info-date';
-infoBox.appendChild(dateInfo);
 
 
 function setSidebarHidden(hidden) {
@@ -308,6 +300,12 @@ function updateConfig() {
 			}
 		}
 	}
+	if (config.image_url.startsWith("/")) {
+		config.image_url = `media-source://media_source${config.image_url}`;
+	}
+	if (config.image_url.startsWith("media-source://media_source")) {
+		config.image_url = config.image_url.replace(/\/+$/, '');
+	}
 	if (!config.enabled) {
 		config.debug = false;
 		config.hide_toolbar = false;
@@ -336,7 +334,65 @@ function hideMessage() {
 	messageBox.innerHTML = '';
 }
 
-function updateImage(img) {
+function findImages(mediaContentId) {
+	console.debug(`findImages: ${mediaContentId}`);
+	return new Promise(
+		function(resolve, reject) {
+			elHass.__hass.callWS({
+				type: "media_source/browse_media",
+				media_content_id: mediaContentId
+			}).then(
+				mediaEntry => {
+					//console.debug(mediaEntry);
+					var promises = mediaEntry.children.map(child => {
+						if (child.media_class == "image") {
+							//console.debug(child);
+							return child.media_content_id;
+						}
+						if (child.media_class == "directory") {
+							return findImages(child.media_content_id);
+						}
+					});
+					Promise.all(promises).then(results => {
+						let result = [];
+						for (let res of results) {
+							result = result.concat(res);
+						}
+						resolve(result);
+					})
+				},
+				error => {
+					//console.warn(error);
+					reject(error);
+				}
+			);
+		}
+	);
+}
+
+function updateImageList(callback) {
+	if (!config.image_url.startsWith("media-source://media_source")) return;
+	let mediaContentId = config.image_url;
+	findImages(mediaContentId).then(
+		result => {
+			imageList = result.sort();
+			if (config.debug) {
+				console.debug("Image list is now:");
+				console.debug(imageList);
+			}
+			if (callback) {
+				callback();
+			}
+		},
+		error => {
+			error = `Failed to update image list from ${config.image_url}: ${JSON.stringify(error)}`;
+			console.error(error);
+			displayMessage(error, 10000)
+		}
+	)
+}
+
+function updateImageFromUrl(img) {
 	let width = screensaverContainer.clientWidth;
 	let height = screensaverContainer.clientHeight;
 	let timestamp = Math.floor(Date.now() / 1000);
@@ -346,6 +402,47 @@ function updateImage(img) {
 	imageUrl = imageUrl.replace(/\${timestamp}/g, timestamp);
 	if (config.debug) console.debug(`Updating image '${img.id}' from '${imageUrl}'`);
 	img.src = imageUrl;
+}
+
+function updateImageFromMediaSource(img) {
+	if (imageList.length == 0) {
+		return;
+	}
+	imageIndex++;
+	if (imageIndex >= imageList.length) {
+		imageIndex = 0;
+	}
+	let imagePath = imageList[imageIndex];
+	if (!imagePath) {
+		return;
+	}
+	imagePath = imagePath.replace(/^media-source:\/\/media_source/, '/media');
+	elHass.__hass.callWS({
+		type: "auth/sign_path",
+		path: imagePath,
+		expires: 5
+	}).then(
+		result => {
+			img.src = `${document.location.origin}${result.path}`;
+		}
+	);
+}
+
+function updateImage(img) {
+	if (config.image_url.startsWith("media-source://media_source")) {
+		return updateImageFromMediaSource(img);
+	}
+	else {
+		return updateImageFromUrl(img);
+	}
+}
+
+function preloadImages() {
+	if (config.debug) console.debug("Preloading images");
+	updateImage(imageOne);
+	setTimeout(function() {
+		updateImage(imageTwo);
+	}, 3000);
 }
 
 function switchActiveImage() {
@@ -376,17 +473,18 @@ function updateInfo() {
 	if (config.debug) console.debug("Updating info");
 	lastInfoUpdate = Date.now();
 
-	let weather = elHass.__hass.states["weather.home"];
-	if (weather) {
-		weatherStateInfo.innerHTML = weather.state;
-		weatherTemperatureInfo.innerHTML = `${weather.attributes.temperature}° C`;
-		
-	}
-	let now = new Date();
-	let timeOptions = {hour: '2-digit', minute:'2-digit'}
-	timeInfo.innerHTML = now.toLocaleTimeString(undefined, timeOptions);
-	let dateOptions = {weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric'};		
-	dateInfo.innerHTML = now.toLocaleDateString(undefined, dateOptions);
+	let html = config.info_template;
+	let states = elHass.__hass.states;
+	html = html.replace(/{{s*(.+?)\s*}}/g, function (match, expression, offset, string) {
+		try {
+			return eval(expression);
+		}
+		catch (err) {
+			console.warn(err);
+			return err;
+		}
+	});
+	infoBox.innerHTML = html;
 }
 
 function startScreensaver() {
@@ -489,17 +587,22 @@ function handleInteractionEvent(e, isClick) {
 		setupScreensaver();
 	}
 	if (screensaverRunningSince) {
-		let x = e.clientX;
-		let right = 0.0
-		if (!x && e.touches && e.touches[0]) {
-			x = e.touches[0].clientX;
-		}
-		if (x) {
-			right = (screensaverContainer.clientWidth - x) / screensaverContainer.clientWidth;
-		}
-		if (right <= 0.05) {
-			if (isClick && new Date() - lastImageUpdate > config.crossfade_time*1000 + 1000) {
-				switchActiveImage();
+		if (isClick) {
+			let x = e.clientX;
+			let right = 0.0
+			if (!x && e.touches && e.touches[0]) {
+				x = e.touches[0].clientX;
+			}
+			if (x) {
+				right = (screensaverContainer.clientWidth - x) / screensaverContainer.clientWidth;
+			}
+			if (right <= 0.05) {
+				if (new Date() - lastImageUpdate > config.crossfade_time*1000 + 1000) {
+					switchActiveImage();
+				}
+			}
+			else {
+				stopScreensaver();
 			}
 		}
 		else {
@@ -573,11 +676,12 @@ window.setInterval(() => {
 				applyStyleConfig();
 				console.info(`Wallpanel config: ${JSON.stringify(config)}`);
 				if (config.idle_time > 0) {
-					if (config.debug) console.debug("Preloading images");
-					updateImage(imageOne);
-					setTimeout(function() {
-						updateImage(imageTwo);
-					}, 3000);
+					if (config.image_url.startsWith("media-source://media_source")) {
+						updateImageList(preloadImages);
+					}	 
+					else {
+						preloadImages();
+					}
 				}
 			}
 			if (config.idle_time > 0 && Date.now() - idleSince >= config.idle_time*1000) {
@@ -605,6 +709,7 @@ window.setInterval(() => {
 		debugBox.scrollTop = debugBox.scrollHeight;
 	}
 }, 1000);
+
 
 window.addEventListener('click', e => {
 	handleInteractionEvent(e, true);
