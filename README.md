@@ -1,6 +1,6 @@
-# Lovelace WallPanel
-Wall panel mode for your Home Assistant Lovelace dashboards.
-Configurable extension which features a fullscreen mode, image screensaver, screen wake lock and the ability to hide side and top bar.
+# WallPanel
+🖼️ Wall panel mode for your Home Assistant Dashboards.
+Configurable extension which features a fullscreen mode, photo slideshow screensaver, screen wake lock and the ability to hide side and top bar.
 
 ![Screenshot of screensaver](./doc/screenshot-screensaver.png)
 
