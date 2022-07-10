@@ -885,7 +885,7 @@ class WallpanelView extends HuiView {
 				this.switchActiveImage();
 			}
 			if (now - this.lastImageListUpdate >= config.image_list_update_interval*1000) {
-				updateImageList();
+				this.updateImageList();
 			}
 		}
 
