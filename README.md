@@ -31,8 +31,8 @@ The recommended way is to install this plugin using HACS.
 
 
 ## Manual installation
-1. Download [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
-2. Open Configuration => Lovelace Dashboards => Resources and add **/local/wallpanel.js** (Resource type: **JavaScript module**).
+* Download [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
+* Open Configuration => Lovelace Dashboards => [Resources](https://my.home-assistant.io/redirect/lovelace_resources/) and add **/local/wallpanel.js** (Resource type: **JavaScript module**).
 
 
 # Upgrading
@@ -47,8 +47,8 @@ The recommended way is to upgrade this plugin using HACS.
 * Click on `Download`
 
 ## Manual upgrade
-1. Download current [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
-2. Open Configuration => Lovelace Dashboards => Resources and modify the resource URL to force browsers to reload the resource.
+* Download current [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
+* Open Configuration => Lovelace Dashboards => [Resources](https://my.home-assistant.io/redirect/lovelace_resources/) and modify the resource URL to force browsers to reload the resource.
 For example you could add or change the query string: **/local/wallpanel.js?v2**
 
 # Configuration
