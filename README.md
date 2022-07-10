@@ -13,6 +13,22 @@ Show dashboard cards and badges of your choice on top of the images.
 # Installation
 
 The recommended way is to install this plugin using HACS.
+## HACS Installation
+### Add to custom repositories
+* Go to HACS => Frontend
+* Click on the three dots in the top right corner
+* Select "Custom repositories"
+* Insert `https://github.com/j-a-n/lovelace-wallpanel` into repository.
+* Select the `Lovelace` as category.
+* Click the `ADD` button.
+
+### Install plugin 
+* Search for `WallPanel` in the Frontend repository list
+* Click on the repository card
+* Click on `Install this repository in HACS`
+* Select the latest version 
+* Click on `Download`
+
 
 ## Manual installation
 1. Download [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
@@ -22,6 +38,13 @@ The recommended way is to install this plugin using HACS.
 # Upgrading
 
 The recommended way is to upgrade this plugin using HACS.
+
+## HACS upgrade
+* Search for `WallPanel` in the Frontend repository list
+* Click on the repository card
+* Click on `Install this repository in HACS`
+* Select the latest version 
+* Click on `Download`
 
 ## Manual upgrade
 1. Download current [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
