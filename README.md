@@ -107,10 +107,10 @@ wallpanel:
   black_screen_after_time: 7200
   control_reactivation_time: 1.0
   screensaver_entity: input_boolean.wallpanel_screensaver
-  info_animation_duration_x: 30,
-  info_animation_duration_y: 11,
-  info_animation_timing_function_x: 'ease-in-out',
-  info_animation_timing_function_y: 'ease-in-out',
+  info_animation_duration_x: 30
+  info_animation_duration_y: 11
+  info_animation_timing_function_x: 'ease-in-out'
+  info_animation_timing_function_y: 'ease-in-out'
   style:
     wallpanel-screensaver-info-box:
       font-size: 8vh
