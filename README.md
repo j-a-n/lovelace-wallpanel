@@ -162,6 +162,7 @@ Instead of using `media-source://media_source/` as `image_url` you can just use 
 - `/media_source/media1` = Images in the Local Media directory named `media1`
 - `/media1/folder1` = Images in `folder1` of the Local Media directory named `media1`
 
+Tip: If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
 
 ## Badges and cards
 A so-called info box can be displayed above the images.
@@ -340,6 +341,7 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
         grid-column: 2
 ```
 ![Grid layout](./doc/grid-layout.png | width=400)
+
 
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
