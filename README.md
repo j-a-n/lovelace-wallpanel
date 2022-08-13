@@ -274,7 +274,7 @@ style:
     '--primary-text-color': '#e1e1e1'
     '--secondary-text-color': '#9b9b9b'
 ```
-![Dark style](./doc/dark-style.png | width=400)
+![Dark style](./doc/dark-style.png)
 
 ### Light style
 ```yaml
@@ -293,7 +293,7 @@ style:
     '--primary-text-color': '#212121'
     '--secondary-text-color': '#727272'
 ```
-![Light style](./doc/light-style.png | width=400)
+![Light style](./doc/light-style.png)
 
 ### Transparent style
 ```yaml
@@ -307,7 +307,7 @@ style:
     '--primary-text-color': '#ffffff'
     '--secondary-text-color': '#dddddd'
 ```
-![Transparent style](./doc/transparent-style.png | width=400)
+![Transparent style](./doc/transparent-style.png)
 
 ### Positioning
 The cards and badges are positionend by a [Grid_Layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout).
@@ -341,7 +341,7 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
         grid-row: 3
         grid-column: 2
 ```
-![Grid layout](./doc/grid-layout.png | width=400)
+![Grid layout](./doc/grid-layout.png)
 
 
 # Credits
