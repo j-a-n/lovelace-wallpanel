@@ -158,7 +158,7 @@ See [Home Assistant Media Source integration documentation](https://www.home-ass
 
 Instead of using `media-source://media_source/` as `image_url` you can just use `/` as a shortcut.
 
-- `/` or  = Images in all Local Media sources
+- `/` = Images in all Local Media sources
 - `/media_source/media1` = Images in the Local Media directory named `media1`
 - `/media1/folder1` = Images in `folder1` of the Local Media directory named `media1`
 
