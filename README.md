@@ -8,7 +8,6 @@
 Configurable extension which features a fullscreen mode, photo slideshow screensaver, screen wake lock and the ability to hide side and top bar.
 Show dashboard cards and badges of your choice on top of the images.
 
-![Wallpanel example](./doc/wallpanel.png)
 ![Screenshot of screensaver](./doc/screensaver-screenshot.png)
 
 # Installation
