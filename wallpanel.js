@@ -518,6 +518,7 @@ class WallpanelView extends HuiView {
 		this.style.zIndex = 1000;
 		this.style.visibility = 'hidden';
 		this.style.opacity = 0;
+		this.style.position = 'fixed';
 
 		this.messageBox = document.createElement('div');
 		this.messageBox.id = 'wallpanel-message-box';
