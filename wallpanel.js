@@ -122,6 +122,7 @@ const defaultConfig = {
 	keep_screen_on_time: 0,
 	black_screen_after_time: 0,
 	control_reactivation_time: 1.0,
+	screensaver_stop_navigation_path: '',
 	screensaver_entity: '',
 	image_url: "http://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_fit: 'cover', // cover / contain / fill
@@ -251,6 +252,24 @@ function setToolbarHidden(hidden) {
 		console.error(e);
 	}
 }
+
+
+function navigate(path, keepSearch=true) {
+	if (keepSearch && (!path.includes('?'))) {
+		path += window.location.search;
+	}
+	history.pushState(null, "", path);
+	elHass.dispatchEvent(
+		new Event(
+			"location-changed", {
+				bubbles: true,
+				cancelable: false,
+				composed: true,
+			}
+		)
+	);
+}
+
 
 function findImages(hass, mediaContentId) {
 	if (config.debug) console.debug(`findImages: ${mediaContentId}`);
@@ -862,6 +881,9 @@ class WallpanelView extends HuiView {
 		this.screensaverStoppedAt = Date.now();
 		document.body.style.overflow = this.bodyOverflowOrig;
 		
+		if (config.screensaver_stop_navigation_path) {
+			navigate(config.screensaver_stop_navigation_path);
+		}
 		this.hideMessage();
 
 		this.style.transition = '';
