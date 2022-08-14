@@ -72,6 +72,7 @@ You can set the following configuration parameters for every individual Home Ass
 | image_url                        | Fetch screensaver images from this URL. See below for details.                            | See below |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.              | 3600       |
+| image_order                      | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).            | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation).            | 0          |
 | info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movemrnt in x-direction. | ease     |

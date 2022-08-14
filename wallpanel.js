@@ -126,6 +126,7 @@ const defaultConfig = {
 	image_url: "http://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
+	image_order: 'sorted', // sorted / random
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
@@ -694,7 +695,18 @@ class WallpanelView extends HuiView {
 		if (this.imageList.length == 0) {
 			return;
 		}
-		this.imageIndex++;
+		if (config.image_order == "random") {
+			if (this.imageList.length > 1) {
+				let imageIndex = this.imageIndex;
+				while (imageIndex == this.imageIndex) {
+					imageIndex = Math.floor(Math.random() * this.imageList.length);
+				}
+				this.imageIndex = imageIndex;
+			}
+		}
+		else {
+			this.imageIndex++;
+		}
 		if (this.imageIndex >= this.imageList.length) {
 			this.imageIndex = 0;
 		}
