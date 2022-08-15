@@ -198,15 +198,6 @@ badges:
   - entity: sun.sun
 ```
 
-Example and default for cards:
-```yaml
-cards:
-  - type: weather-forecast
-    entity: weather.home
-    show_forecast: true
-```
-
-
 ## Info box animation
 The info box, which contains the cards and badges, can be animated and moved around the screen using CSS animations.
 The following settings can be used to configure the animation:
