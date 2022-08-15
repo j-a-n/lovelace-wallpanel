@@ -258,7 +258,17 @@ It is also possible to start and stop the screensaver by changing this input_boo
 You can customize the style of every wallpanel component.
 Use the `style` configuration attribute and the `wp_style` atttribute for individual cards to set CSS styles as needed. 
 
-Here are some examples:
+The following CSS custom properties (variables) can be used to set styles for all added cards, the defaults are:
+```yaml
+style:
+  wallpanel-screensaver-info-box:
+    '--wp-card-width': 500px
+    '--wp-card-margin': 5px
+	'--wp-card-padding': 0px
+    '--wp-card-backdrop-filter': none
+```
+
+Here are some style examples:
 
 ### Dark style
 ```yaml

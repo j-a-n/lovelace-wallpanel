@@ -497,6 +497,7 @@ class WallpanelView extends HuiView {
 		if (config.badges) {
 			const div = document.createElement('div');
 			div.style.padding = 'var(--wp-card-padding)';
+			div.style.margin = 'var(--wp-card-margin)';
 			div.style.textAlign = 'center';
 			config.badges.forEach(badgeConfig => {
 				if (config.debug) console.debug("Creating badge:", badgeConfig);
@@ -523,6 +524,8 @@ class WallpanelView extends HuiView {
 				const div = document.createElement('div');
 				div.style.width = 'var(--wp-card-width)';
 				div.style.padding = 'var(--wp-card-padding)';
+				div.style.margin = 'var(--wp-card-margin)';
+				div.style.backdropFilter = 'var(--wp-card-backdrop-filter)';
 				for (const attr in style) {
 					div.style.setProperty(attr, style[attr]);
 				}
@@ -624,7 +627,9 @@ class WallpanelView extends HuiView {
 		this.infoBox.style.height = 'fit-content';
 		this.infoBox.style.borderRadius = '10px';
 		this.infoBox.style.setProperty('--wp-card-width', '500px');
-		this.infoBox.style.setProperty('--wp-card-padding', '5px');
+		this.infoBox.style.setProperty('--wp-card-padding', '0px');
+		this.infoBox.style.setProperty('--wp-card-margin', '5px');
+		this.infoBox.style.setProperty('--wp-card-backdrop-filter', 'none');
 		
 		this.infoBoxContent = document.createElement('div');
 		this.infoBoxContent.id = 'wallpanel-screensaver-info-box-content';
