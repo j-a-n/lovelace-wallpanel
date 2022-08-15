@@ -635,6 +635,18 @@ class WallpanelView extends HuiView {
 		this.infoBoxPosY.appendChild(this.infoBoxPosX);
 		this.infoContainer.appendChild(this.infoBoxPosY);
 
+		this.screensaverOverlay = document.createElement('div');
+		this.screensaverOverlay.id = 'wallpanel-screensaver-overlay';
+		this.screensaverOverlay.style.position = 'absolute';
+		this.screensaverOverlay.style.top = 0;
+		this.screensaverOverlay.style.left = 0;
+		this.screensaverOverlay.style.width = '100%';
+		this.screensaverOverlay.style.height = '100%';
+		this.screensaverOverlay.style.opacity = 0;
+		this.screensaverOverlay.style.background = '#000000';
+		
+		this.screensaverContainer.appendChild(this.screensaverOverlay);
+
 		this.shadowStyle = document.createElement('style');
 		let shadow = this.attachShadow({mode: 'open'});
 		shadow.appendChild(this.shadowStyle);
