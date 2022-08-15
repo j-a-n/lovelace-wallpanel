@@ -187,17 +187,12 @@ badges:
   - entity: sun.sun
 ```
 
-### CSS styles for cards
-You can use the special config key `wp_style` to set CSS styles for individual cards.
-
 Example and default for cards:
 ```yaml
 cards:
   - type: weather-forecast
     entity: weather.home
-    wp_style:
-      padding-top: 10px
-      '--ha-card-background': '#990000'
+    show_forecast: true
 ```
 
 
