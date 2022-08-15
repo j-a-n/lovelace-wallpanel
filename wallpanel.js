@@ -647,8 +647,7 @@ class WallpanelView extends HuiView {
 		this.screensaverOverlay.style.left = 0;
 		this.screensaverOverlay.style.width = '100%';
 		this.screensaverOverlay.style.height = '100%';
-		this.screensaverOverlay.style.opacity = 0;
-		this.screensaverOverlay.style.background = '#000000';
+		this.screensaverOverlay.style.background = '#00000000';
 		
 		this.screensaverContainer.appendChild(this.screensaverOverlay);
 
