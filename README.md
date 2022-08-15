@@ -281,6 +281,16 @@ style:
 ```
 You can add the `wp_style` attribute for individual cards to set CSS styles as needed.
 
+**Example**
+
+```yaml
+cards:
+  - type: weather-forecast
+    entity: weather.home
+    wp_style:
+      margin-top: 10px
+      '--ha-card-background': '#990000'
+```
 
 Here are some style examples:
 
