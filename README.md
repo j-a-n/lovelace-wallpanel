@@ -71,13 +71,14 @@ You can set the following configuration parameters for every individual Home Ass
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver ist stopped.          |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). |        |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                            | See below |
+| image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.              | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
-| info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).            | 0          |
-| info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation).            | 0          |
-| info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movemrnt in x-direction. | ease     |
-| info_animation_timing_function_y | The CSS timing-function to use for the animation of the info box movemrnt in y-direction. | ease     |
+| info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation). | 0          |
+| info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation). | 0          |
+| info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movemrnt in x-direction. | ease       |
+| info_animation_timing_function_y | The CSS timing-function to use for the animation of the info box movemrnt in y-direction. | ease       |
 | style                            | Additional CSS styles for wallpanel elements.                                             | {}         |
 | badges                           | Badges to display in info box. See below for details.                                     | []         |
 | cards                            | Cards to display in info box. See below for details.                                      | See below  |
@@ -165,6 +166,16 @@ Instead of using `media-source://media_source/` as `image_url` you can just use 
 - `/media1/folder1` = Images in `folder1` of the Local Media directory named `media1`
 
 Tip: If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
+
+## image_excludes
+A list of regular expressions which can be used to exclude files and directories from local media sources.
+
+**Example**
+```yaml
+image_excludes:
+  - '\.tif$'
+  - '/@eaDir'
+```
 
 ## Badges and cards
 A so-called info box can be displayed above the images.
