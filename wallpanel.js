@@ -690,6 +690,7 @@ class WallpanelView extends HuiView {
 		if (this.updatingImageList) return;
 		this.updatingImageList = true;
 		let mediaContentId = config.image_url;
+		let wp = this;
 		findImages(this.hass, mediaContentId).then(
 			result => {
 				this.imageList = result.sort();
@@ -706,7 +707,7 @@ class WallpanelView extends HuiView {
 				this.updatingImageList = false;
 				error = `Failed to update image list from ${config.image_url}: ${JSON.stringify(error)}`;
 				console.error(error);
-				displayMessage(error, 10000)
+				wp.displayMessage(error, 10000)
 			}
 		)
 	}
