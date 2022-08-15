@@ -276,7 +276,7 @@ style:
   wallpanel-screensaver-info-box:
     '--wp-card-width': 500px
     '--wp-card-margin': 5px
-	'--wp-card-padding': 0px
+    '--wp-card-padding': 0px
     '--wp-card-backdrop-filter': none
 ```
 You can add the `wp_style` attribute for individual cards to set CSS styles as needed.
