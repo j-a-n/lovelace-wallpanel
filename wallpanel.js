@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "2.2";
+const version = "2.3";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
@@ -128,6 +128,7 @@ const defaultConfig = {
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
+	image_excludes: [],
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
@@ -273,6 +274,13 @@ function navigate(path, keepSearch=true) {
 
 function findImages(hass, mediaContentId) {
 	if (config.debug) console.debug(`findImages: ${mediaContentId}`);
+	let excludeRegExp = [];
+	if (config.image_excludes) {
+		for (let imageExclude of config.image_excludes) {
+			excludeRegExp.push(new RegExp(imageExclude));
+		}
+	}
+	
 	return new Promise(
 		function(resolve, reject) {
 			hass.callWS({
@@ -282,6 +290,12 @@ function findImages(hass, mediaContentId) {
 				mediaEntry => {
 					//console.debug(mediaEntry);
 					var promises = mediaEntry.children.map(child => {
+						let filename = child.media_content_id.replace(/^media-source:\/\/media_source/, '');
+						for (let exclude of excludeRegExp) {
+							if (exclude.test(filename)) {
+								return;
+							}
+						}
 						if (child.media_class == "image") {
 							//console.debug(child);
 							return child.media_content_id;
@@ -293,7 +307,9 @@ function findImages(hass, mediaContentId) {
 					Promise.all(promises).then(results => {
 						let result = [];
 						for (let res of results) {
-							result = result.concat(res);
+							if (res) {
+								result = result.concat(res);
+							}
 						}
 						resolve(result);
 					})
