@@ -255,8 +255,25 @@ When the screensaver starts this input_boolean will be set to `on` and to `off` 
 It is also possible to start and stop the screensaver by changing this input_boolean.
 
 ## Styles
-You can customize the style of every wallpanel component.
-Use the `style` configuration attribute and the `wp_style` atttribute for individual cards to set CSS styles as needed. 
+You can customize the style of every wallpanel element.
+
+The most important element IDs are:
+- `wallpanel-screensaver-container`
+- `wallpanel-screensaver-info-box`
+- `wallpanel-screensaver-info-box-content`
+- `wallpanel-screensaver-overlay`
+
+Use the `style` configuration attribute and add a key for the element ID for which you want to set style attributes.
+
+**Example**
+
+```yaml
+style:
+  wallpanel-screensaver-overlay:
+    background: '#00000055'
+  wallpanel-screensaver-info-box-content:
+    background: '#ffffff'
+```
 
 The following CSS custom properties (variables) can be used to set styles for all added cards, the defaults are:
 ```yaml
@@ -267,10 +284,12 @@ style:
 	'--wp-card-padding': 0px
     '--wp-card-backdrop-filter': none
 ```
+You can add the `wp_style` attribute for individual cards to set CSS styles as needed.
+
 
 Here are some style examples:
 
-### Dark style
+## Dark style
 ```yaml
 style:
   wallpanel-screensaver-info-box:
@@ -287,7 +306,7 @@ style:
 ```
 ![Dark style](./doc/dark-style.png)
 
-### Light style
+## Light style
 ```yaml
 style:
   wallpanel-screensaver-container:
@@ -306,7 +325,7 @@ style:
 ```
 ![Light style](./doc/light-style.png)
 
-### Transparent style
+## Transparent style
 ```yaml
 style:
   wallpanel-screensaver-info-box:
@@ -320,7 +339,7 @@ style:
 ```
 ![Transparent style](./doc/transparent-style.png)
 
-### Positioning
+## Positioning
 The cards and badges are positionend by a [Grid_Layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout).
 
 **Example**
@@ -353,7 +372,6 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
         grid-column: 2
 ```
 ![Grid layout](./doc/grid-layout.png)
-
 
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
