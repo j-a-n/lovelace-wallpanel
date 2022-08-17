@@ -406,13 +406,13 @@ wallpanel:
       style:
         wallpanel-screensaver-overlay:
           background: '#000000bb'
-    off:
-      enabled: false
+    black:
+      black_screen_after_time: 1
   profile: night
   profile_entity: input_text.wallpanel_profile
 ```
 
-The example contains the two profiles `night` and `off`.
+The example contains the two profiles `night` and `black`.
 Setting the `profile` configuration to `night` will overwrite the
 main configuration with the settings defined in the referenced profile.
 
