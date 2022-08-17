@@ -1036,6 +1036,6 @@ window.setInterval(() => {
 		updateConfig();
 		setToolbarHidden(config.hide_toolbar);
 		setSidebarHidden(config.hide_sidebar);
-		console.info(`Wallpanel config: ${JSON.stringify(config)}`);
+		if (config.debug) console.debug(`Wallpanel config: ${JSON.stringify(config)}`);
 	}
 }, 1000);
