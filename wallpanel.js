@@ -155,10 +155,32 @@ const LitElement = Object.getPrototypeOf(customElements.get("hui-masonry-view"))
 const HuiView = customElements.get("hui-view");
 
 
+function isObject(item) {
+	return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
+function mergeConfig(target, ...sources) {
+	// https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
+	if (!sources.length) return target;
+	const source = sources.shift();
+
+	if (isObject(target) && isObject(source)) {
+		for (const key in source) {
+			if (isObject(source[key])) {
+				if (!target[key]) Object.assign(target, { [key]: {} });
+				mergeConfig(target[key], source[key]);
+			} else {
+				Object.assign(target, { [key]: source[key] });
+			}
+		}
+	}
+	return mergeConfig(target, ...sources);
+}
+
 function updateConfig() {
 	config = {};
-	Object.assign(config, defaultConfig);
-	Object.assign(config, getHaPanelLovelaceConfig());
+	mergeConfig(config, defaultConfig);
+	mergeConfig(config, getHaPanelLovelaceConfig());
 	
 	const params = new URLSearchParams(window.location.search);
 	for (let [key, value] of params) {
@@ -176,7 +198,7 @@ function updateConfig() {
 	}
 	if (config.profile && config.profiles[config.profile]) {
 		if (config.debug) console.debug(`Switching to profile ${config.profile}`);
-		Object.assign(config, config.profiles[config.profile]);
+		config = mergeConfig(config, config.profiles[config.profile]);
 	}
 	
 	if (config.image_url) {
