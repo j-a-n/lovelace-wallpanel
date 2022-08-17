@@ -799,7 +799,7 @@ class WallpanelView extends HuiView {
 	}
 
 	updateImageList(callback) {
-		if (!config.image_url.startsWith("media-source://media_source")) return;
+		if (!config.image_url || !config.image_url.startsWith("media-source://media_source")) return;
 		if (this.updatingImageList) return;
 		this.lastImageListUpdate = Date.now();
 		this.updatingImageList = true;
@@ -876,6 +876,9 @@ class WallpanelView extends HuiView {
 	}
 	
 	updateImage(img) {
+		if (!config.image_url) {
+			return;
+		}
 		img.setAttribute('data-loading', true);
 		img.addEventListener('load', function() {
 			img.setAttribute('data-loading', false);
@@ -887,6 +890,7 @@ class WallpanelView extends HuiView {
 				this.updateImageList(this.switchActiveImage.bind(this));
 			}
 		})
+		
 		if (config.image_url.startsWith("media-source://media_source")) {
 			return this.updateImageFromMediaSource(img);
 		}
@@ -1045,6 +1049,14 @@ class WallpanelView extends HuiView {
 			}
 			if (now - this.lastImageListUpdate >= config.image_list_update_interval*1000) {
 				this.updateImageList();
+			}
+		}
+		else {
+			if (this.imageOne.style.visibility != 'hidden') {
+				this.imageOne.style.visibility = 'hidden';
+			}
+			if (this.imageTwo.style.visibility != 'hidden') {
+				this.imageTwo.style.visibility = 'hidden';
 			}
 		}
 
