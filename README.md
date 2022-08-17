@@ -82,6 +82,9 @@ You can set the following configuration parameters for every individual Home Ass
 | style                            | Additional CSS styles for wallpanel elements.                                             | {}         |
 | badges                           | Badges to display in info box. See below for details.                                     | []         |
 | cards                            | Cards to display in info box. See below for details.                                      | See below  |
+| profiles                         | Configuration profiles. See below for details.                                            | {}         |
+| profile                          | Configuration profile to activate.                                                        |            |
+| profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles.                   |            |
 
 ## Home Assistant Dashboard configuration
 You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).
@@ -104,11 +107,15 @@ wallpanel:
   hide_sidebar: true
   fullscreen: true
   idle_time: 10
-  image_url: 'http://picsum.photos/${width}/${height}?random=${timestamp}'
-  image_fit: cover
   keep_screen_on_time: 86400
   black_screen_after_time: 7200
   control_reactivation_time: 1.0
+  screensaver_stop_navigation_path: /lovelace/default_view 
+  image_url: 'http://picsum.photos/${width}/${height}?random=${timestamp}'
+  image_fit: cover
+  image_list_update_interval: 3600
+  image_order: 'sorted'
+  image_excludes: []
   screensaver_entity: input_boolean.wallpanel_screensaver
   info_animation_duration_x: 30
   info_animation_duration_y: 11
@@ -120,8 +127,6 @@ wallpanel:
       font-weight: 600
       color: '#eeeeee'
       text-shadow: '-2px -2px 0 #03a9f4, 2px -2px 0 #03a9f4, -2px 2px 0 #03a9f4, 2px 2px 0 #03a9f4'
-  badges:
-  cards:
 ```
 
 ## URL query parameters
@@ -379,6 +384,45 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
         grid-column: 2
 ```
 ![Grid layout](./doc/grid-layout.png)
+
+
+## Profiles
+With profiles you can easily switch between different configurations.
+
+**Example**
+
+```yaml
+wallpanel:
+  enabled: true
+  info_animation_duration_x: 30
+  info_animation_duration_y: 20
+  style:
+    wallpanel-screensaver-overlay:
+      background: '#00000000'
+  profiles:
+    night:
+      info_animation_duration_x: 0
+      info_animation_duration_y: 0
+      style:
+        wallpanel-screensaver-overlay:
+          background: '#000000bb'
+    off:
+      enabled: false
+  profile: night
+  profile_entity: input_text.wallpanel_profile
+```
+
+The example contains the two profiles `night` and `off`.
+Setting the `profile` configuration to `night` will overwrite the
+main configuration with the settings defined in the referenced profile.
+
+A profile can be activated by a query string parameter: 
+`http://hass:8123/lovelace/default_view?wp_profile="night"`
+
+In addition, a profile can be changed dynamically using an input_text helper.
+For the example, an input_text helper named `wallpanel_profile` must be created in HA.
+The profile can then be changed by setting the status of `input_text.wallpanel_profile`.
+
 
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
