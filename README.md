@@ -387,7 +387,7 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
 
 
 ## Profiles
-With profiles you can easily switch between different configurations.
+With profiles you can easily switch between different configurations. The profiles definition is added at the end of the wallpanel definition. evrything before this section represents the 'standard' or default profile.
 
 **Example**
 
@@ -412,16 +412,24 @@ wallpanel:
   profile_entity: input_text.wallpanel_profile
 ```
 
-The example contains the two profiles `night` and `black`.
+The example contains the two (additional) profiles `night` and `black`.
 Setting the `profile` configuration to `night` will overwrite the
-main configuration with the settings defined in the referenced profile.
+main (default) configuration with the settings defined in the referenced profile.
 
-A profile can be activated by a query string parameter: 
+There are three different options to activate a profile:
+
+A) Activation by a query string parameter: 
 `http://hass:8123/lovelace/default_view?wp_profile="night"`
 
-In addition, a profile can be changed dynamically using an input_text helper.
+B) Dynamically activation by using an input_text or input_select helper.
 For the example, an input_text helper named `wallpanel_profile` must be created in HA.
-The profile can then be changed by setting the status of `input_text.wallpanel_profile`.
+The profile can then be changed by setting the status of `input_text.wallpanel_profile` either 
+manually or by an (e.g. time based) automation. Changing the value of the helper to the
+(exact) name of the profile will change the display immediately. Any value different to
+the defined additional profiles will switch back to the default/standard definitions
+
+C) Adding the line profile: (name) to the profile section (second last line in example) however
+this may be useful in rare situations only
 
 
 # Credits
