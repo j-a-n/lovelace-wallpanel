@@ -98,7 +98,7 @@ wallpanel:
   fullscreen: true
 ```
 
-**Extendend example**:
+**Extended example**:
 ```yaml
 wallpanel:
   enabled: true
