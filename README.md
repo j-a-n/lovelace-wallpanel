@@ -77,8 +77,10 @@ You can set the following configuration parameters for every individual Home Ass
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation). | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation). | 0          |
-| info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movemrnt in x-direction. | ease       |
-| info_animation_timing_function_y | The CSS timing-function to use for the animation of the info box movemrnt in y-direction. | ease       |
+| info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movement in x-direction. | ease       |
+| info_animation_timing_function_y | The CSS timing-function to use for the animation of the info box movement in y-direction. | ease       |
+| info_random_move_interval        | Interval of random movement of the info box in seconds (0 = no random movement).          | 0          |
+| info_random_move_fade_duration   | Duration of the fade-in and fade-out animation of the info box in case of random movement. (0 = no animation). | 2.0        |
 | style                            | Additional CSS styles for wallpanel elements.                                             | {}         |
 | badges                           | Badges to display in info box. See below for details.                                     | []         |
 | cards                            | Cards to display in info box. See below for details.                                      | See below  |
@@ -121,6 +123,8 @@ wallpanel:
   info_animation_duration_y: 11
   info_animation_timing_function_x: 'ease-in-out'
   info_animation_timing_function_y: 'ease-in-out'
+  info_random_move_interval: 0
+  info_random_move_fade_duration: 2.0
   style:
     wallpanel-screensaver-info-box:
       font-size: 8vh

@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "2.4";
+const version = "2.5";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
@@ -133,6 +133,8 @@ const defaultConfig = {
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
 	info_animation_timing_function_y: 'ease',
+	info_random_move_interval: 0,
+	info_random_move_fade_duration: 2.0,
 	style: {},
 	badges: [],
 	cards: [
@@ -419,6 +421,8 @@ class WallpanelView extends HuiView {
 		this.idleSince = Date.now();
 		this.bodyOverflowOrig = null;
 		this.lastProfileSet = config.profile;
+		this.lastRandomMove = null;
+		this.translateInterval = null;
 
 		this.__hass = elHass.__hass;
 		this.__cards = [];
@@ -653,6 +657,42 @@ class WallpanelView extends HuiView {
 		`
 	}
 	
+	randomMove() {
+		this.lastRandomMove = Date.now();
+		let computed = getComputedStyle(this.infoContainer);
+		let maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) * 2 - parseInt(computed.paddingRight) * 2 - this.infoBox.offsetWidth;
+		let maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) * 2 - parseInt(computed.paddingBottom) * 2 - this.infoBox.offsetHeight;
+		let x = Math.floor(Math.random() * maxX);
+		let y = Math.floor(Math.random() * maxY);
+		
+		if (config.info_random_move_fade_duration > 0) {
+			let keyframes = [
+				{ opacity: 1 },
+				{ opacity: 0, offset: 0.5 },
+				{ opacity: 1 }
+			];
+			this.infoBox.animate(
+				keyframes, { 
+					duration: Math.round(config.info_random_move_fade_duration * 1000),
+					iterations: 1 
+				}
+			);
+		}
+		let wp = this;
+		let ms = Math.round(config.info_random_move_fade_duration * 500);
+		if (ms < 0) {
+			ms = 0;
+		}
+		if (wp.translateInterval) {
+			clearInterval(wp.translateInterval);
+		}
+		wp.translateInterval = setInterval(function() {
+			wp.infoBoxPosX.style.transform = `translate3d(${x}px, 0px, 0px)`;
+			wp.infoBoxPosY.style.transform = `translate3d(0px, ${y}px, 0px)`;	
+		}, ms);
+		
+	}
+
 	createInfoBoxContent() {
 		if (config.debug) console.debug("Creating info box content");
 		this.infoBoxContent.innerHTML = '';
@@ -741,7 +781,6 @@ class WallpanelView extends HuiView {
 
 		this.infoBox = document.createElement('div');
 		this.infoBox.id = 'wallpanel-screensaver-info-box';
-		
 		
 		this.infoBoxContent = document.createElement('div');
 		this.infoBoxContent.id = 'wallpanel-screensaver-info-box-content';
@@ -887,7 +926,8 @@ class WallpanelView extends HuiView {
 			img.setAttribute('data-loading', false);
 			console.error(`Failed to load image: ${img.src}`);
 			if (config.image_url.startsWith("media-source://media_source") && (!this.updatingImageList)) {
-				this.updateImageList(this.switchActiveImage.bind(this));
+				let wp = this;
+				wp.updateImageList(wp.switchActiveImage.bind(wp));
 			}
 		})
 		
@@ -986,6 +1026,7 @@ class WallpanelView extends HuiView {
 			}, 2000);
 		}
 		
+		this.lastRandomMove = Date.now();
 		this.lastImageUpdate = Date.now();
 		this.screensaverStartedAt = Date.now();
 		this.screensaverStoppedAt = null;
@@ -1030,7 +1071,11 @@ class WallpanelView extends HuiView {
 
 	updateScreensaver() {
 		let now = Date.now();
-
+		
+		if (config.info_random_move_interval > 0 && now - this.lastRandomMove >= config.info_random_move_interval*1000) {
+			this.randomMove();
+		}
+		
 		if (config.black_screen_after_time > 0 && now - this.screensaverStartedAt >= config.black_screen_after_time*1000) {
 			if (config.debug) console.debug("Setting screen to black");
 			if (this.imageOne.style.visibility != 'hidden') {
