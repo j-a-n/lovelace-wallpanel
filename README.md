@@ -246,6 +246,15 @@ info_animation_timing_function_y: steps(3, end)
 Fewer steps and higher duration will result in fewer movements and lower resource consumption.
 
 
+In addition, it is possible to move the info box to a random position on the screen at a fixed time interval.
+
+**Example**
+
+```yaml
+info_random_move_interval: 10
+info_random_move_fade_duration: 2.0
+```
+
 ## keep_screen_on_time
 If you set this attribute to a value greater than zero, the screen is prevented from dimming or locking for the specified time in seconds.
 
