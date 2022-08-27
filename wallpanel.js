@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "2.5";
+const version = "2.6";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
@@ -434,7 +434,7 @@ class WallpanelView extends HuiView {
 
 	// Whenever the state changes, a new `hass` object is set.
 	set hass(hass) {
-		if (!config.enabled) {
+		if (!config.enabled || !activePanelUrl) {
 			return;
 		}
 		if (config.debug) console.debug("Update hass");
@@ -497,6 +497,9 @@ class WallpanelView extends HuiView {
 	}
 
 	timer() {
+		if (!config.enabled || !activePanelUrl) {
+			return;
+		}
 		if (this.screensaverStartedAt) {
 			this.updateScreensaver();
 		}
@@ -1183,7 +1186,14 @@ document.body.appendChild(wallpanel);
 
 window.setInterval(() => {
 	let pl = getHaPanelLovelace();
-	if (pl && pl.panel && pl.panel.url_path && activePanelUrl != pl.panel.url_path) {
+	if (!pl && activePanelUrl) {
+		if (config.debug) console.debug("No dashboard active");
+		activePanelUrl = null;
+		if (wallpanel.screensaverStartedAt > 0) {
+			wallpanel.stopScreensaver();
+		}
+	}
+	else if (pl && pl.panel && pl.panel.url_path && activePanelUrl != pl.panel.url_path) {
 		if (config.debug) console.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
 		activePanelUrl = pl.panel.url_path;
 		updateConfig();
