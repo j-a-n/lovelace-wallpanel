@@ -434,6 +434,9 @@ class WallpanelView extends HuiView {
 
 	// Whenever the state changes, a new `hass` object is set.
 	set hass(hass) {
+		if (!config.enabled) {
+			return;
+		}
 		if (config.debug) console.debug("Update hass");
 		this.__hass = hass;
 
