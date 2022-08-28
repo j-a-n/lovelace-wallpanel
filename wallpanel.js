@@ -129,14 +129,14 @@ const defaultConfig = {
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
 	image_excludes: [],
+	show_exif_info: false,
+	exif_info_template: '${DateTimeOriginal}',
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
 	info_animation_timing_function_y: 'ease',
 	info_random_move_interval: 0,
 	info_random_move_fade_duration: 2.0,
-	show_exif_info: false,
-	exif_info_template: '${DateTimeOriginal}',
 	style: {},
 	badges: [],
 	cards: [
@@ -922,7 +922,7 @@ class WallpanelView extends HuiView {
 		[this.imageOne, this.imageTwo].forEach(function(img) {
 			img.addEventListener('load', function() {
 				img.setAttribute('data-loading', false);
-				if (config.image_url.startsWith("media-source://media_source") && img.imagePath && /\.jpe?g$/.test(img.imagePath)) {
+				if (config.show_exif_info && config.image_url.startsWith("media-source://media_source") && img.imagePath && /\.jpe?g$/.test(img.imagePath)) {
 					EXIF.getData(img, function() {
 						if (config.debug) {
 							console.debug("EXIF data:");
