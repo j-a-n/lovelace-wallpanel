@@ -75,6 +75,8 @@ You can set the following configuration parameters for every individual Home Ass
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.              | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
+| show_exif_info                   | Show exif info on top of image? Only available for local jpeg images.                     | false      |
+| exif_info_template               | Format of EXIF image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. | ${DateTimeOriginal} |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation). | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation). | 0          |
 | info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movement in x-direction. | ease       |
@@ -185,6 +187,37 @@ image_excludes:
   - '\.tif$'
   - '/@eaDir'
 ```
+
+## EXIF info
+Set `show_exif_info` to `true` to show info on top of images if available.
+This will only work for local jpeg images.
+
+The EXIF info can be formatted by specifying HTML code in `exif_info_template`.
+Placeholders like `${EXIF-tag-name}` will be replaced with the corresponding EXIF tag value.
+See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for available EXIF tag names.
+
+**Example**
+```yaml
+show_exif_info: true
+exif_info_template: '<b>Date:</b> ${DateTimeOriginal}<br /><b>Comment:</b> ${UserComment}'
+```
+
+The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
+
+**Example an default:**
+```yaml
+style:
+  wallpanel-screensaver-image-info-exif:
+    position: 'absolute'
+    bottom: '0.5em'
+    right: '0.5em'
+    padding: '0.1em 0.5em 0.1em 0.5em'
+    font-size: '2em'
+    background: '#00000055'
+    backdrop-filter: 'blur(2px)'
+    border-radius: '0.1em'
+```
+
 
 ## Badges and cards
 A so-called info box can be displayed above the images.
