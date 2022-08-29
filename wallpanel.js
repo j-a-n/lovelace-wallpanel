@@ -1130,7 +1130,12 @@ class WallpanelView extends HuiView {
 
 	startScreensaver() {
 		if (config.debug) console.debug("Start screensaver");
-		
+		const params = new URLSearchParams(window.location.search);
+		if (params.get("edit") == "1") {
+			if (config.debug) console.debug("Dashboard in edit mode, not starting screensaver");
+			return;
+		}
+
 		this.updateStyle();
 		this.setupScreensaver();
 		
