@@ -498,6 +498,8 @@ this may be useful in rare situations only
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
 
+Thanks to Jacob Seidelin for exif-js
+
 This project is inspired by:
 - https://github.com/tcarlsen/lovelace-screensaver
 - https://gist.github.com/ciotlosm/1f09b330aa5bd5ea87b59f33609cc931
