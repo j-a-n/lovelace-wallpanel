@@ -203,21 +203,7 @@ exif_info_template: '<b>Date:</b> ${DateTimeOriginal}<br /><b>Comment:</b> ${Use
 ```
 
 The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
-
-**Example an default:**
-```yaml
-style:
-  wallpanel-screensaver-image-info-exif:
-    position: 'absolute'
-    bottom: '0.5em'
-    right: '0.5em'
-    padding: '0.1em 0.5em 0.1em 0.5em'
-    font-size: '2em'
-    background: '#00000055'
-    backdrop-filter: 'blur(2px)'
-    border-radius: '0.1em'
-```
-
+See section "Styles".
 
 ## Badges and cards
 A so-called info box can be displayed above the images.
@@ -309,6 +295,7 @@ The most important element IDs are:
 - `wallpanel-screensaver-container`
 - `wallpanel-screensaver-info-box`
 - `wallpanel-screensaver-info-box-content`
+- `wallpanel-screensaver-image-info-exif`
 - `wallpanel-screensaver-overlay`
 
 Use the `style` configuration attribute and add a key for the element ID for which you want to set style attributes.
@@ -343,6 +330,36 @@ cards:
     wp_style:
       margin-top: 10px
       '--ha-card-background': '#990000'
+```
+
+The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
+
+**Example and default:**
+```yaml
+style:
+  wallpanel-screensaver-image-info-exif:
+    position: 'absolute'
+    bottom: '0.5em'
+    right: '0.5em'
+    padding: '0.1em 0.5em 0.1em 0.5em'
+    font-size: '2em'
+    background: '#00000055'
+    backdrop-filter: 'blur(2px)'
+    border-radius: '0.1em'
+```
+
+**Another example:**
+```yaml
+style:
+  wallpanel-screensaver-image-info-exif:
+    position: 'absolute'
+    bottom: '0.5em'
+    right: '1.0em'
+    font-size: '2.5em'
+    -webkit-text-stroke: '0.02em #000'
+    color: '#ff9a00'
+    font-weight: '900'
+    font-family: 'monospace'
 ```
 
 Here are some style examples:
