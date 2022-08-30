@@ -165,6 +165,14 @@ The following variables can be used in HTTP URLs:
 - `${width}` = viewport width
 - `${height}` = viewport height
 
+Example of using images from unsplash.com:
+
+`https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}`
+
+You can narrow down the images from unsplash.com using certain search terms, for example "fruit" and "beer".
+
+`https://source.unsplash.com/random/${width}x${height}?fruit,beer&sig=${timestamp}`
+
 
 It is also possible to use images from the Home Assistant Local Media source.
 Just set the `image_url` to a media-source URL as displayed in the URL of the Home Assistant Media Browser.
