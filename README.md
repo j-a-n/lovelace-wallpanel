@@ -239,7 +239,7 @@ If set to 0, animation in x-direction will be disabled.
 The style of the animation can be configured with **info_animation_timing_function_x** for x-direction and **info_animation_timing_function_y** for the y-direction using a CSS animation-timing-function.
 
 Possible values are, for example, **ease** and **linear**.
-For details, please have a look at [MDN - CSS animation-timing-function](https://developer.mozilla.org/de/docs/Web/CSS/animation-timing-function).
+For details, please have a look at [MDN - CSS animation-timing-function](https://developer.mozilla.org/docs/Web/CSS/animation-timing-function).
 
 An example of a nice animated movement using the Easing function:
 
