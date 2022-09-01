@@ -130,6 +130,7 @@ const defaultConfig = {
 	image_order: 'sorted', // sorted / random
 	image_excludes: [],
 	show_exif_info: false,
+	fetch_address_data: true,
 	exif_info_template: '${DateTimeOriginal}',
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
@@ -924,24 +925,31 @@ class WallpanelView extends HuiView {
 				img.setAttribute('data-loading', false);
 				if (config.show_exif_info && config.image_url.startsWith("media-source://media_source") && img.imagePath && /\.jpe?g$/.test(img.imagePath)) {
 					EXIF.getData(img, function() {
-						if (config.debug) {
-							console.debug("EXIF data:");
-							console.debug(img.exifdata);
+						if (config.debug) console.debug("EXIF data:", img.exifdata);
+						let exifLong = img.exifdata["GPSLongitude"];
+						let exifLat = img.exifdata["GPSLatitude"];
+						if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
+							let m = (img.exifdata["GPSLatitudeRef"] == "S") ? -1 : 1;
+							let latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
+							m = (img.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
+							let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
+							
+							let xhr = new XMLHttpRequest();
+							xhr.onload = function(event) {
+								let info = JSON.parse(xhr.responseText); 
+								if (config.debug) console.debug("nominatim data:", info);
+								img.exifdata.address = info.address;
+								wp.setEXIFImageInfo(img);
+							}
+							xhr.onerror = function(event) { 
+								console.error("nominatim error:", event);
+							}
+							xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+							//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
+							xhr.timeout = 5000;
+							xhr.send();
 						}
-						let exifElement = img.parentElement.querySelector('.wallpanel-screensaver-image-info-exif');
-						let html = config.exif_info_template;
-						html = html.replace(/\${([^}]+)}/g, function (match, tag, offset, string) {
-							let val = img.exifdata[tag];
-							if (!val) {
-								return "";
-							}
-							if (/DateTime/.test(tag)) {
-								val = val.replace(/(\d\d\d\d):(\d\d):(\d\d)/, '$1-$2-$3');
-							}
-							return val;
-						});
-						img.exifdata = null;
-						exifElement.innerHTML = html;
+						wp.setEXIFImageInfo(img);
 					});
 				}
 			});
@@ -953,6 +961,48 @@ class WallpanelView extends HuiView {
 				}
 			})
 		});
+	}
+
+	setEXIFImageInfo(img) {
+		let exifElement = img.parentElement.querySelector('.wallpanel-screensaver-image-info-exif');
+			let html = config.exif_info_template;
+			html = html.replace(/\${([^}]+)}/g, function (match, tag, offset, string) {
+				if (!img.exifdata) {
+					return "";
+				}
+				
+				let prefix = "";
+				let suffix = "";
+				if (tag.includes("!")) {
+					let tmp = tag.split("!");
+					tag = tmp[0];
+					for (let i=1; i<tmp.length; i++) {
+						let tmp2 = tmp[i].split("=", 2);
+						if (tmp2[0] == "prefix") {
+							prefix = tmp2[1];
+						}
+						else if (tmp2[0] == "suffix") {
+							suffix = tmp2[1];
+						}
+					}
+				}
+				
+				let keys = tag.split(".");
+				let val = img.exifdata;
+				keys.forEach(key => {
+					if (val) {
+						val = val[key];
+					}
+				});
+				if (!val) {
+					return "";
+				}
+				if (/DateTime/.test(tag)) {
+					val = val.replace(/(\d\d\d\d):(\d\d):(\d\d)/, '$1-$2-$3');
+				}
+				return prefix + val + suffix;
+			});
+			exifElement.innerHTML = html;
 	}
 
 	reconfigure() {
@@ -1044,6 +1094,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		img.setAttribute('data-loading', true);
+		img.exifdata = null;
 		img.imagePath = null;
 		
 		if (config.image_url.startsWith("media-source://media_source")) {
