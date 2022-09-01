@@ -131,7 +131,7 @@ const defaultConfig = {
 	image_excludes: [],
 	show_exif_info: false,
 	fetch_address_data: false,
-	exif_info_template: '${address.town!prefix=!suffix= // }${DateTimeOriginal}',
+	exif_info_template: '${DateTimeOriginal}',
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
@@ -495,7 +495,7 @@ class WallpanelView extends HuiView {
 				if (config.debug) console.debug(result);
 			},
 			error => {
-				console.error(error);
+				console.error("Failed to set screensaver entity state:", error);
 			}
 		);
 	}
