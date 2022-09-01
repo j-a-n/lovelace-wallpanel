@@ -124,7 +124,7 @@ const defaultConfig = {
 	control_reactivation_time: 1.0,
 	screensaver_stop_navigation_path: '',
 	screensaver_entity: '',
-	image_url: "http://picsum.photos/${width}/${height}?random=${timestamp}",
+	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
