@@ -76,6 +76,7 @@ You can set the following configuration parameters for every individual Home Ass
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.              | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
 | show_exif_info                   | Show exif info on top of image? Only available for local jpeg images.                     | false      |
+| fetch_address_data               | Fetcg address data for EXIF GPS coordinates from nominatim.openstreetmap.org?             | false      |
 | exif_info_template               | Format of EXIF image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. | ${DateTimeOriginal} |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation). | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation). | 0          |
@@ -120,6 +121,9 @@ wallpanel:
   image_list_update_interval: 3600
   image_order: 'sorted'
   image_excludes: []
+  show_exif_info: false,
+  fetch_address_data: true,
+  exif_info_template: '${address.town!prefix=!suffix= // }${DateTimeOriginal}',
   screensaver_entity: input_boolean.wallpanel_screensaver
   info_animation_duration_x: 30
   info_animation_duration_y: 11
@@ -204,10 +208,19 @@ The EXIF info can be formatted by specifying HTML code in `exif_info_template`.
 Placeholders like `${EXIF-tag-name}` will be replaced with the corresponding EXIF tag value.
 See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for available EXIF tag names.
 
+If the EXIF data contains GPS location information and the `fetch_address_data` configuration is set to `true`,
+address data for the GPS coordinates will be fetched from `nominatim.openstreetmap.org`.
+The received address data can be used via placeholders in the form `address.<attribute>`.
+Available attributes are: `country`, `country_code`, `county`, `municipality`, `postcode`, `region`, `road`, `state`, `town` and `village`.
+See [Nominatim Reverse Geocoding](https://nominatim.org/release-docs/latest/api/Reverse/) for details.
+
+A prefix and suffix string can be added for each placeholder.
+Prefix and suffix are not displayed if the placeholder value is empty.
+
 **Example**
 ```yaml
 show_exif_info: true
-exif_info_template: '<b>Date:</b> ${DateTimeOriginal}<br /><b>Comment:</b> ${UserComment}'
+exif_info_template: '<span style="color:#990000">//</span> ${address.town!prefix=!suffix= // }${DateTimeOriginal}'
 ```
 
 The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
@@ -505,8 +518,8 @@ this may be useful in rare situations only
 
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
-
-Thanks to Jacob Seidelin for exif-js
+Many thanks to Openstreetmap for providing the excellent Nominatim search engine!
+Thanks to Jacob Seidelin for exif-js!
 
 This project is inspired by:
 - https://github.com/tcarlsen/lovelace-screensaver
