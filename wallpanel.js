@@ -948,8 +948,7 @@ class WallpanelView extends HuiView {
 			img.addEventListener('error', function() {
 				img.setAttribute('data-loading', false);
 				console.error(`Failed to load image: ${img.src}`);
-				if (config.image_url.startsWith("media-source://media_source") && (!this.updatingImageList)) {
-					let wp = this;
+				if (config.image_url.startsWith("media-source://media_source") && (!wp.updatingImageList)) {
 					wp.updateImageList(wp.switchActiveImage.bind(wp));
 				}
 			})
@@ -974,8 +973,7 @@ class WallpanelView extends HuiView {
 			result => {
 				this.imageList = result.sort();
 				if (config.debug) {
-					console.debug("Image list is now:");
-					console.debug(this.imageList);
+					console.debug("Image list is now:", this.imageList);
 				}
 				this.updatingImageList = false;
 				if (callback) {
