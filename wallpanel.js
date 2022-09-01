@@ -131,7 +131,7 @@ const defaultConfig = {
 	image_excludes: [],
 	show_exif_info: false,
 	fetch_address_data: true,
-	exif_info_template: '${DateTimeOriginal}',
+	exif_info_template: '${address.town!prefix=!suffix= // }${DateTimeOriginal}',
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
