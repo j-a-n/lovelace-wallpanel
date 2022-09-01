@@ -130,7 +130,7 @@ const defaultConfig = {
 	image_order: 'sorted', // sorted / random
 	image_excludes: [],
 	show_exif_info: false,
-	fetch_address_data: true,
+	fetch_address_data: false,
 	exif_info_template: '${address.town!prefix=!suffix= // }${DateTimeOriginal}',
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
