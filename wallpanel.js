@@ -1031,7 +1031,7 @@ class WallpanelView extends HuiView {
 		this.hass.callWS({
 			type: "auth/sign_path",
 			path: imagePath,
-			expires: 5
+			expires: 10
 		}).then(
 			result => {
 				img.src = `${document.location.origin}${result.path}`;
