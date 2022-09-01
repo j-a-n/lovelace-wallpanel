@@ -76,7 +76,7 @@ You can set the following configuration parameters for every individual Home Ass
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.              | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
 | show_exif_info                   | Show exif info on top of image? Only available for local jpeg images.                     | false      |
-| fetch_address_data               | Fetcg address data for EXIF GPS coordinates from nominatim.openstreetmap.org?             | false      |
+| fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?             | false      |
 | exif_info_template               | Format of EXIF image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. | ${DateTimeOriginal} |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation). | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation). | 0          |
