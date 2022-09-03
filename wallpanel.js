@@ -449,11 +449,14 @@ class WallpanelView extends HuiView {
 
 	// Whenever the state changes, a new `hass` object is set.
 	set hass(hass) {
+		if (config.debug) console.debug("Update hass");
+		this.__hass = hass;
+
+		this.updateProfile();
+
 		if (!config.enabled || !activePanelUrl) {
 			return;
 		}
-		if (config.debug) console.debug("Update hass");
-		this.__hass = hass;
 
 		if (config.screensaver_entity && this.__hass.states[config.screensaver_entity]) {
 			let lastChanged = new Date(this.__hass.states[config.screensaver_entity].last_changed);
@@ -466,8 +469,6 @@ class WallpanelView extends HuiView {
 				this.startScreensaver();
 			}
 		}
-
-		this.updateProfile();
 
 		if (this.screensaverStartedAt) {
 			this.__cards.forEach(card => {
