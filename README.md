@@ -471,7 +471,7 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
 
 
 ## Profiles
-With profiles you can easily switch between different configurations. The profiles definition is added at the end of the wallpanel definition. evrything before this section represents the 'standard' or default profile.
+With profiles you can easily switch between different configurations. The profiles definition is added at the end of the wallpanel definition. everything before this section represents the 'standard' or default profile.
 
 **Example**
 
@@ -492,12 +492,14 @@ wallpanel:
           background: '#000000bb'
     black:
       black_screen_after_time: 1
+    user.jane:
+      enabled: false
   profile: night
   profile_entity: input_text.wallpanel_profile
 ```
 
-The example contains the two (additional) profiles `night` and `black`.
-Setting the `profile` configuration to `night` will overwrite the
+The example contains three (additional) profiles `night`, `black` and `user.jane`.
+Setting the `profile` configuration to a profile name will overwrite the
 main (default) configuration with the settings defined in the referenced profile.
 
 There are three different options to activate a profile:
@@ -514,6 +516,11 @@ the defined additional profiles will switch back to the default/standard definit
 
 C) Adding the line profile: (name) to the profile section (second last line in example) however
 this may be useful in rare situations only
+
+D) An existing user profile is automatically activated if it matches the logged-in user.
+The name of a user profile must start with the string `user.` followed by a user name.
+The username of the logged in user is converted to lowercase and spaces are replaced with `_`.
+Therefore, the username `Jane Doe` will activate the user profile `user.jane_doe`.
 
 
 # Credits
