@@ -195,29 +195,41 @@ function mergeConfig(target, ...sources) {
 }
 
 function updateConfig() {
+	const params = new URLSearchParams(window.location.search);
+	const user = elHass.__hass.user.name ? elHass.__hass.user.name.toLowerCase() : null;
+
 	config = {};
 	mergeConfig(config, defaultConfig);
 	mergeConfig(config, getHaPanelLovelaceConfig());
 	
-	const params = new URLSearchParams(window.location.search);
+	let paramConfig = {}
 	for (let [key, value] of params) {
 		if (key.startsWith("wp_")) {
 			key = key.substring(3);
 			if (key in defaultConfig && value) {
 				// Convert to the right type
-				config[key] = defaultConfig[key].constructor(JSON.parse(value));
+				paramConfig[key] = defaultConfig[key].constructor(JSON.parse(value));
 			}
 		}
 	}
-	
-	if (config.profile_entity && elHass.__hass.states[config.profile_entity]) {
-		config.profile = elHass.__hass.states[config.profile_entity].state;
+	config = mergeConfig(config, paramConfig);
+	if (config.profiles && config.profile && config.profiles[config.profile]) {
+		let profile = config.profile;
+		config = mergeConfig(config, config.profiles[profile]);
+		if (config.debug) console.debug(`Profile set from config: ${profile}`);
 	}
-	if (config.profile && config.profiles[config.profile]) {
-		if (config.debug) console.debug(`Switching to profile ${config.profile}`);
-		config = mergeConfig(config, config.profiles[config.profile]);
+	if (config.profiles && user && config.profiles[`user.${user}`]) {
+		let profile = `user.${user}`;
+		config = mergeConfig(config, config.profiles[profile]);
+		if (config.debug) console.debug(`Profile set from user: ${profile}`);
 	}
-	
+	config = mergeConfig(config, paramConfig);
+	if (config.profiles && config.profile_entity && elHass.__hass.states[config.profile_entity] && config.profiles[elHass.__hass.states[config.profile_entity].state]) {
+		let profile = elHass.__hass.states[config.profile_entity].state;
+		config = mergeConfig(config, config.profiles[profile]);
+		if (config.debug) console.debug(`Profile set from entity state: ${profile}`);
+	}
+
 	if (config.image_url) {
 		if (config.image_url.startsWith("/")) {
 			config.image_url = `media-source://media_source${config.image_url}`;
@@ -922,6 +934,7 @@ class WallpanelView extends HuiView {
 		});
 		
 		[this.imageOne, this.imageTwo].forEach(function(img) {
+			if (!img) return;
 			img.addEventListener('load', function() {
 				img.setAttribute('data-loading', false);
 				if (config.show_exif_info && config.image_url.startsWith("media-source://media_source") && img.imagePath && /\.jpe?g$/.test(img.imagePath)) {
