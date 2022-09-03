@@ -196,8 +196,8 @@ function mergeConfig(target, ...sources) {
 
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
-	const user = elHass.__hass.user.name ? elHass.__hass.user.name.toLowerCase() : null;
-
+	const user = elHass.__hass.user.name ? elHass.__hass.user.name.toLowerCase().replace(/\s/g, '_') : null;
+	
 	config = {};
 	mergeConfig(config, defaultConfig);
 	mergeConfig(config, getHaPanelLovelaceConfig());
