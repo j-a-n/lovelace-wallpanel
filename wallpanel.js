@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "3.2";
+const version = "3.3";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
@@ -1095,10 +1095,13 @@ class WallpanelView extends HuiView {
 		this.hass.callWS({
 			type: "auth/sign_path",
 			path: imagePath,
-			expires: 10
+			expires: 30
 		}).then(
 			result => {
 				img.src = `${document.location.origin}${result.path}`;
+			},
+			error => {
+				console.error("auth/sign_path error:", error);
 			}
 		);
 	}
