@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "3.3";
+const version = "3.4";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
@@ -302,7 +302,7 @@ function setSidebarHidden(hidden) {
 		window.dispatchEvent(new Event('resize'));
 	}
 	catch (e) {
-		console.error(e);
+		if (config.debug) console.debug(e);
 	}
 }
 
@@ -322,7 +322,7 @@ function setToolbarHidden(hidden) {
 		window.dispatchEvent(new Event('resize'));
 	}
 	catch (e) {
-		console.error(e);
+		if (config.debug) console.debug(e);
 	}
 }
 
@@ -1380,8 +1380,11 @@ window.setInterval(() => {
 		if (config.debug) console.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
 		activePanelUrl = pl.panel.url_path;
 		updateConfig();
-		setToolbarHidden(config.hide_toolbar);
-		setSidebarHidden(config.hide_sidebar);
+		const params = new URLSearchParams(window.location.search);
+		if (params.get("edit") != "1") {
+			setToolbarHidden(config.hide_toolbar);
+			setSidebarHidden(config.hide_sidebar);
+		}
 	}
 }, 1000);
 
