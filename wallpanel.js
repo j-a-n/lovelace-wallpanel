@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "3.4";
+const version = "3.5";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
@@ -938,33 +938,7 @@ class WallpanelView extends HuiView {
 			img.addEventListener('load', function() {
 				img.setAttribute('data-loading', false);
 				if (config.show_exif_info && config.image_url.startsWith("media-source://media_source") && img.imagePath && /\.jpe?g$/.test(img.imagePath)) {
-					EXIF.getData(img, function() {
-						if (config.debug) console.debug("EXIF data:", img.exifdata);
-						let exifLong = img.exifdata["GPSLongitude"];
-						let exifLat = img.exifdata["GPSLatitude"];
-						if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
-							let m = (img.exifdata["GPSLatitudeRef"] == "S") ? -1 : 1;
-							let latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
-							m = (img.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
-							let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
-							
-							let xhr = new XMLHttpRequest();
-							xhr.onload = function(event) {
-								let info = JSON.parse(xhr.responseText); 
-								if (config.debug) console.debug("nominatim data:", info);
-								img.exifdata.address = info.address;
-								wp.setEXIFImageInfo(img);
-							}
-							xhr.onerror = function(event) { 
-								console.error("nominatim error:", event);
-							}
-							xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-							//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
-							xhr.timeout = 5000;
-							xhr.send();
-						}
-						wp.setEXIFImageInfo(img);
-					});
+					wp.fetchEXIFInfo(img);
 				}
 			});
 			img.addEventListener('error', function() {
@@ -977,6 +951,45 @@ class WallpanelView extends HuiView {
 		});
 	}
 
+	fetchEXIFInfo(img) {
+		let wp = this;
+		EXIF.getData(img, function() {
+			if (config.debug) console.debug("EXIF data:", img.exifdata);
+			let exifLong = img.exifdata["GPSLongitude"];
+			let exifLat = img.exifdata["GPSLatitude"];
+			if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
+				let m = (img.exifdata["GPSLatitudeRef"] == "S") ? -1 : 1;
+				let latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
+				m = (img.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
+				let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
+				
+				const xhr = new XMLHttpRequest();
+				xhr.onload = function(event) {
+					if (this.status == 200 || this.status === 0) {	
+						let info = JSON.parse(xhr.responseText); 
+						if (config.debug) console.debug("nominatim data:", info);
+						img.exifdata.address = info.address;
+						wp.setEXIFImageInfo(img);
+					}
+					else {
+						console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
+					}
+				}
+				xhr.onerror = function(event) { 
+					console.error("nominatim error:", event);
+				}
+				xhr.ontimeout = function(event) { 
+					console.error("nominatim timeout:", event);
+				}
+				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+				//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
+				xhr.timeout = 10000;
+				xhr.send();
+			}
+			wp.setEXIFImageInfo(img);
+		});
+	}
+	
 	setEXIFImageInfo(img) {
 		let exifElement = img.parentElement.querySelector('.wallpanel-screensaver-image-info-exif');
 			let html = config.exif_info_template;
