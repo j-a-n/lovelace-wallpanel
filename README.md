@@ -123,7 +123,7 @@ wallpanel:
   image_excludes: []
   show_exif_info: false,
   fetch_address_data: true,
-  exif_info_template: '${address.town!prefix=!suffix= // }${DateTimeOriginal}',
+  exif_info_template: '${address.town||address.city||address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}',
   screensaver_entity: input_boolean.wallpanel_screensaver
   info_animation_duration_x: 30
   info_animation_duration_y: 11
@@ -211,16 +211,25 @@ See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for availa
 If the EXIF data contains GPS location information and the `fetch_address_data` configuration is set to `true`,
 address data for the GPS coordinates will be fetched from `nominatim.openstreetmap.org`.
 The received address data can be used via placeholders in the form `address.<attribute>`.
-Available attributes are: `country`, `country_code`, `county`, `municipality`, `postcode`, `region`, `road`, `state`, `town` and `village`.
+Available attributes are: `country`, `country_code`, `county`, `municipality`, `postcode`, `region`, `road`, `state`, `city`, `town` and `village`.
 See [Nominatim Reverse Geocoding](https://nominatim.org/release-docs/latest/api/Reverse/) for details.
+
+If you specify multiple alternative values separated by two pipe symbols (`||`), the first available attribute is used.
 
 A prefix and suffix string can be added for each placeholder.
 Prefix and suffix are not displayed if the placeholder value is empty.
 
+For date values you can specify date format options.
+Each option must consist of an `<option name>:<option value>` pair.
+Multiple options must be separated by commas.
+Available option names are: `year`, `month`, `day`, `weekday`, `hour`, `minute` and `second`.
+Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
+See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
+
 **Example**
 ```yaml
 show_exif_info: true
-exif_info_template: '<span style="color:#990000">//</span> ${address.town!prefix=!suffix= // }${DateTimeOriginal}'
+exif_info_template: '<span style="color:#990000">//</span> ${address.town||address.city||address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
 ```
 
 The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
