@@ -999,6 +999,7 @@ class WallpanelView extends HuiView {
 				}
 				let prefix = "";
 				let suffix = "";
+				let options = null;
 				if (tags.includes("!")) {
 					let tmp = tags.split("!");
 					tags = tmp[0];
@@ -1009,6 +1010,15 @@ class WallpanelView extends HuiView {
 						}
 						else if (tmp2[0] == "suffix") {
 							suffix = tmp2[1];
+						}
+						else if (tmp2[0] == "options") {
+							options = {};
+							tmp2[1].split(",").forEach(optVal => {
+								let tmp3 = optVal.split(":", 2);
+								if (tmp3[0] && tmp3[1]) {
+									options[tmp3[0].replace(/\s/g, '')] = tmp3[1].replace(/\s/g, '');
+								}
+							});
 						}
 					}
 				}
@@ -1033,7 +1043,11 @@ class WallpanelView extends HuiView {
 					return "";
 				}
 				if (/DateTime/.test(tag)) {
-					val = val.replace(/(\d\d\d\d):(\d\d):(\d\d)/, '$1-$2-$3');
+					let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
+					if (!options) {
+						options = {year: "numeric", month: "2-digit", day: "2-digit"};
+					}
+					val = date.toLocaleDateString(undefined, options);
 				}
 				return prefix + val + suffix;
 			});
