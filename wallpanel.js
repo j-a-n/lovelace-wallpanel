@@ -980,16 +980,15 @@ class WallpanelView extends HuiView {
 	setEXIFImageInfo(img) {
 		let exifElement = img.parentElement.querySelector('.wallpanel-screensaver-image-info-exif');
 			let html = config.exif_info_template;
-			html = html.replace(/\${([^}]+)}/g, function (match, tag, offset, string) {
+			html = html.replace(/\${([^}]+)}/g, function (match, tags, offset, string) {
 				if (!img.exifdata) {
 					return "";
 				}
-				
 				let prefix = "";
 				let suffix = "";
-				if (tag.includes("!")) {
-					let tmp = tag.split("!");
-					tag = tmp[0];
+				if (tags.includes("!")) {
+					let tmp = tags.split("!");
+					tags = tmp[0];
 					for (let i=1; i<tmp.length; i++) {
 						let tmp2 = tmp[i].split("=", 2);
 						if (tmp2[0] == "prefix") {
@@ -1001,13 +1000,22 @@ class WallpanelView extends HuiView {
 					}
 				}
 				
-				let keys = tag.split(".");
-				let val = img.exifdata;
-				keys.forEach(key => {
+				let val = "";
+				let tagList = tags.split("||");
+				let tag = "";
+				for (let i=0; i<tagList.length; i++) {
+					tag = tagList[i];
+					let keys = tag.replace(/\s/g, '').split(".");
+					val = img.exifdata;
+					keys.forEach(key => {
+						if (val) {
+							val = val[key];
+						}
+					});
 					if (val) {
-						val = val[key];
+						break
 					}
-				});
+				};
 				if (!val) {
 					return "";
 				}
