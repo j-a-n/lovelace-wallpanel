@@ -165,6 +165,7 @@ let classStyles = {
 		"border-radius": "0.1em"
 	}
 }
+let nominatimCache = {};
 
 const elHass = document.querySelector("body > home-assistant");
 const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
@@ -450,7 +451,7 @@ class WallpanelView extends HuiView {
 		this.lastProfileSet = config.profile;
 		this.lastRandomMove = null;
 		this.translateInterval = null;
-
+		
 		this.__hass = elHass.__hass;
 		this.__cards = [];
 		this.__badges = [];
@@ -963,28 +964,36 @@ class WallpanelView extends HuiView {
 				m = (img.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
 				let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
 				
-				const xhr = new XMLHttpRequest();
-				xhr.onload = function(event) {
-					if (this.status == 200 || this.status === 0) {	
-						let info = JSON.parse(xhr.responseText); 
-						if (config.debug) console.debug("nominatim data:", info);
-						img.exifdata.address = info.address;
-						wp.setEXIFImageInfo(img);
+				const cacheKey = `${latitude},${longitude}`;
+				if (nominatimCache[cacheKey]) {
+					if (config.debug) console.debug(`Use nominatim cache: ${cacheKey}`);
+					img.exifdata.address = nominatimCache[cacheKey];
+					wp.setEXIFImageInfo(img);
+				}
+				else {
+					const xhr = new XMLHttpRequest();
+					xhr.onload = function(event) {
+						if (this.status == 200 || this.status === 0) {	
+							let info = JSON.parse(xhr.responseText); 
+							if (config.debug) console.debug("nominatim data:", info);
+							nominatimCache[cacheKey] = img.exifdata.address = info.address;
+							wp.setEXIFImageInfo(img);
+						}
+						else {
+							console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
+						}
 					}
-					else {
-						console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
+					xhr.onerror = function(event) { 
+						console.error("nominatim error:", event);
 					}
+					xhr.ontimeout = function(event) { 
+						console.error("nominatim timeout:", event);
+					}
+					xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+					//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
+					xhr.timeout = 15000;
+					xhr.send();
 				}
-				xhr.onerror = function(event) { 
-					console.error("nominatim error:", event);
-				}
-				xhr.ontimeout = function(event) { 
-					console.error("nominatim timeout:", event);
-				}
-				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-				//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
-				xhr.timeout = 10000;
-				xhr.send();
 			}
 			wp.setEXIFImageInfo(img);
 		});
