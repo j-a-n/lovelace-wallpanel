@@ -54,42 +54,44 @@ For example you could add or change the query string: **/local/wallpanel.js?v2**
 # Configuration
 You can set the following configuration parameters for every individual Home Assistant Dashboard:
 
-| Config                           | Description                                                                               | Default   |
-| -------------------------------- | ----------------------------------------------------------------------------------------- | --------- |
-| enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
-| debug                            | Show debug output?                                                                        | false     |
-| hide_toolbar                     | Hide the upper panel toolbar?                                                             | false     |
-| hide_sidebar                     | Hide the navigation sidebar?                                                              | false     |
-| fullscreen                       | Set browser window to fullscreen? <br>*Due to browser restrictions you will need to interact with the screen once to activate fullscreen mode after loading the dashboard page.* | false   |
-| idle_time                        | Time in seconds after which the screensaver will start (0 = screensaver disabled).        | 15        |
-| fade_in_time                     | Screensaver fade-in time in seconds.                                                      | 3.0       |
-| crossfade_time                   | Crossfade duration in seconds for screensaver images.                                     | 3.0       |
-| display_time                     | Duration in seconds after which the next screensaver image will be shown.                 | 15.0      |
-| keep_screen_on_time              | Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).            | 0         |
-| black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled). | 0         |
-| control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
-| screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver ist stopped.          |           |
-| screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). |        |
-| image_url                        | Fetch screensaver images from this URL. See below for details.                            | See below |
-| image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
-| image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
-| image_list_update_interval       | When using a local media source, the image list is updated at this interval.              | 3600       |
-| image_order                      | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
-| show_exif_info                   | Show exif info on top of image? Only available for local jpeg images.                     | false      |
-| fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?             | false      |
-| exif_info_template               | Format of EXIF image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. | ${DateTimeOriginal} |
-| info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation). | 0          |
-| info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation). | 0          |
-| info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movement in x-direction. | ease       |
-| info_animation_timing_function_y | The CSS timing-function to use for the animation of the info box movement in y-direction. | ease       |
-| info_random_move_interval        | Interval of random movement of the info box in seconds (0 = no random movement).          | 0          |
-| info_random_move_fade_duration   | Duration of the fade-in and fade-out animation of the info box in case of random movement. (0 = no animation). | 2.0        |
-| style                            | Additional CSS styles for wallpanel elements.                                             | {}         |
-| badges                           | Badges to display in info box. See below for details.                                     | []         |
-| cards                            | Cards to display in info box. See below for details.                                      | See below  |
-| profiles                         | Configuration profiles. See below for details.                                            | {}         |
-| profile                          | Configuration profile to activate.                                                        |            |
-| profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles.                   |            |
+| Config                                 | Description                                                                               | Default   |
+| -------------------------------------- | ----------------------------------------------------------------------------------------- | --------- |
+| enabled                                | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
+| debug                                  | Show debug output?                                                                        | false     |
+| hide_toolbar                           | Hide the upper panel toolbar?                                                             | false     |
+| hide_sidebar                           | Hide the navigation sidebar?                                                              | false     |
+| fullscreen                             | Set browser window to fullscreen? <br>*Due to browser restrictions you will need to interact with the screen once to activate fullscreen mode after loading the dashboard page.* | false   |
+| idle_time                              | Time in seconds after which the screensaver will start (0 = screensaver disabled).        | 15        |
+| fade_in_time                           | Screensaver fade-in time in seconds.                                                      | 3.0       |
+| crossfade_time                         | Crossfade duration in seconds for screensaver images.                                     | 3.0       |
+| display_time                           | Duration in seconds after which the next screensaver image will be shown.                 | 15.0      |
+| keep_screen_on_time                    | Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).            | 0         |
+| black_screen_after_time                | Time in seconds after which the screensaver will show just a black screen (0 = disabled). | 0         |
+| control_reactivation_time              | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
+| screensaver_stop_navigation_path       | Path to navigate to (e.g., /lovelace/default_view) when screensaver ist stopped.          |           |
+| screensaver_entity                     | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). |        |
+| image_url                              | Fetch screensaver images from this URL. See below for details.                            | See below |
+| image_excludes                         | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
+| image_fit                              | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
+| image_list_update_interval             | When using a local media source, the image list is updated at this interval.              | 3600       |
+| image_order                            | The order in which the images are displayed (possible values are: sorted / random).       | sorted     |
+| show_exif_info                         | Show exif info on top of image? Only available for local jpeg images.                     | false      |
+| fetch_address_data                     | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?             | false      |
+| exif_info_template                     | Format of EXIF image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. | ${DateTimeOriginal} |
+| info_animation_duration_x              | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation). | 0          |
+| info_animation_duration_y              | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation). | 0          |
+| info_animation_timing_function_x       | The CSS timing-function to use for the animation of the info box movement in x-direction. | ease       |
+| info_animation_timing_function_y       | The CSS timing-function to use for the animation of the info box movement in y-direction. | ease       |
+| info_random_move_interval              | Interval of random movement of the info box in seconds (0 = no random movement). Shouldn't be used together with `info_move_around_corners_*` options.         | 0          |
+| info_random_move_fade_duration         | Duration of the fade-in and fade-out animation of the info box in case of random movement. (0 = no animation). Shouldn't be used together with `info_move_around_corners_*` options. | 2.0     |
+| info_move_around_corners_interval      | Interval of around-corners movement of the info box in seconds (0 = no random movement). Shouldn't be used together with `info_random_move_*` options.         | 0          |
+| info_move_around_corners_fade_duration | Duration of the fade-in and fade-out animation of the info box in case of around-corners movement. (0 = no animation). Shouldn't be used together with `info_random_move_*` options. | 2.0     |
+| style                                  | Additional CSS styles for wallpanel elements.                                             | {}         |
+| badges                                 | Badges to display in info box. See below for details.                                     | []         |
+| cards                                  | Cards to display in info box. See below for details.                                      | See below  |
+| profiles                               | Configuration profiles. See below for details.                                            | {}         |
+| profile                                | Configuration profile to activate.                                                        |            |
+| profile_entity                         | An entity of type 'input_text' used for dynamic activation of profiles.                   |            |
 
 ## Home Assistant Dashboard configuration
 You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).
@@ -286,7 +288,7 @@ info_animation_timing_function_y: steps(3, end)
 Fewer steps and higher duration will result in fewer movements and lower resource consumption.
 
 
-In addition, it is possible to move the info box to a random position on the screen at a fixed time interval.
+In addition, it is possible to move the info box to a random position on the screen or around corners of the screen (top left, bottom left, bottom right, top right, and so forth), at a fixed time interval.
 
 **Example**
 
