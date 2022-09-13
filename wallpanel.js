@@ -124,7 +124,6 @@ const defaultConfig = {
 	control_reactivation_time: 1.0,
 	screensaver_stop_navigation_path: '',
 	screensaver_entity: '',
-	screensaver_entity_browser_mod: false,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
@@ -501,19 +500,20 @@ class WallpanelView extends HuiView {
 
         getScreensaverEntity() {
 		if (!config.screensaver_entity) return;
-		if (config.screensaver_entity_browser_mod === true) {
-			if (window.browser_mod) {
-				if (window.browser_mod.entity_id) {
-					// V1
-					return config.screensaver_entity + '_' + window.browser_mod.entity_id;
-				}
-				else if (window.browser_mod.browserID) {
-					// V2
-					return config.screensaver_entity + '_' + window.browser_mod.browserID.replace('-', '_');
-				}
+		if (window.browser_mod) {
+			if (window.browser_mod.entity_id) {
+				// V1
+				var browserId = window.browser_mod.entity_id;
 			}
-			else return;
-                }
+			else if (window.browser_mod.browserID) {
+				// V2
+				var browserId = window.browser_mod.browserID.replace('-', '_');
+			}
+			else {
+				return config.screensaver_entity;
+			}
+			return config.screensaver_entity.replace("${browser_id}", browserId);
+		}
 		else {
 			return config.screensaver_entity;
 		}
