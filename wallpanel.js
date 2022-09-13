@@ -1024,7 +1024,7 @@ class WallpanelView extends HuiView {
 				}
 				
 				let val = "";
-				let tagList = tags.split("||");
+				let tagList = tags.split("|");
 				let tag = "";
 				for (let i=0; i<tagList.length; i++) {
 					tag = tagList[i];

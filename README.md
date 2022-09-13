@@ -123,7 +123,7 @@ wallpanel:
   image_excludes: []
   show_exif_info: false,
   fetch_address_data: true,
-  exif_info_template: '${address.town||address.city||address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}',
+  exif_info_template: '${address.town|address.city!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long}',
   screensaver_entity: input_boolean.wallpanel_screensaver
   info_animation_duration_x: 30
   info_animation_duration_y: 11
@@ -214,7 +214,7 @@ The received address data can be used via placeholders in the form `address.<att
 Available attributes are: `country`, `country_code`, `county`, `municipality`, `postcode`, `region`, `road`, `state`, `city`, `town` and `village`.
 See [Nominatim Reverse Geocoding](https://nominatim.org/release-docs/latest/api/Reverse/) for details.
 
-If you specify multiple alternative values separated by two pipe symbols (`||`), the first available attribute is used.
+If you specify multiple alternative values separated by a pipe symbol (`|`), the first available attribute is used.
 
 A prefix and suffix string can be added for each placeholder.
 Prefix and suffix are not displayed if the placeholder value is empty.
@@ -229,7 +229,7 @@ See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/Ja
 **Example**
 ```yaml
 show_exif_info: true
-exif_info_template: '<span style="color:#990000">//</span> ${address.town||address.city||address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
+exif_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
 ```
 
 The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
