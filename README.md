@@ -70,6 +70,7 @@ You can set the following configuration parameters for every individual Home Ass
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver ist stopped.          |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). |        |
+| screensaver_entity_browser_mod   | If browser_mod is installed and this is set to true, BrowserID will be appended to screensaver_entity (`screensaver_entity` + `_` + `BrowserID`, ie. `input_boolean.screensaver_b388c16f_5539d2ae`). This allows to control multiple screensavers separately. | false |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                            | See below |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |

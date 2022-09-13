@@ -124,6 +124,7 @@ const defaultConfig = {
 	control_reactivation_time: 1.0,
 	screensaver_stop_navigation_path: '',
 	screensaver_entity: '',
+	screensaver_entity_browser_mod: false,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
@@ -470,9 +471,11 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		if (config.screensaver_entity && this.__hass.states[config.screensaver_entity]) {
-			let lastChanged = new Date(this.__hass.states[config.screensaver_entity].last_changed);
-			let state = this.__hass.states[config.screensaver_entity].state;
+		const screensaver_entity = this.getScreensaverEntity();
+
+		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
+			let lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
+			let state = this.__hass.states[screensaver_entity].state;
 			
 			if (state == "off" && this.screensaverStartedAt && lastChanged.getTime() - this.screensaverStartedAt > 0) {
 				this.stopScreensaver();
@@ -496,13 +499,34 @@ class WallpanelView extends HuiView {
 		return this.__hass;
 	}
 
+        getScreensaverEntity() {
+		if (!config.screensaver_entity) return;
+		if (config.screensaver_entity_browser_mod === true) {
+			if (window.browser_mod) {
+				if (window.browser_mod.entity_id) {
+					// V1
+					return config.screensaver_entity + '_' + window.browser_mod.entity_id;
+				}
+				else if (window.browser_mod.browserID) {
+					// V2
+					return config.screensaver_entity + '_' + window.browser_mod.browserID.replace('-', '_');
+				}
+			}
+			else return;
+                }
+		else {
+			return config.screensaver_entity;
+		}
+        }
+
 	setScreensaverEntityState() {
-		if (!config.screensaver_entity || !this.__hass.states[config.screensaver_entity]) return;
-		if (this.screensaverStartedAt && this.__hass.states[config.screensaver_entity].state == 'on') return;
-		if (!this.screensaverStartedAt && this.__hass.states[config.screensaver_entity].state == 'off') return;
+		const screensaver_entity = this.getScreensaverEntity();
+		if (!screensaver_entity || !this.__hass.states[screensaver_entity]) return;
+		if (this.screensaverStartedAt && this.__hass.states[screensaver_entity].state == 'on') return;
+		if (!this.screensaverStartedAt && this.__hass.states[screensaver_entity].state == 'off') return;
 
 		this.__hass.callService('input_boolean', this.screensaverStartedAt ? "turn_on" : "turn_off", {
-			entity_id: config.screensaver_entity
+			entity_id: screensaver_entity
 		}).then(
 			result => {
 				if (config.debug) console.debug(result);
