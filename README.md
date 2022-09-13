@@ -213,6 +213,7 @@ address data for the GPS coordinates will be fetched from `nominatim.openstreetm
 The received address data can be used via placeholders in the form `address.<attribute>`.
 Available attributes are: `country`, `country_code`, `county`, `municipality`, `postcode`, `region`, `road`, `state`, `city`, `town` and `village`.
 See [Nominatim Reverse Geocoding](https://nominatim.org/release-docs/latest/api/Reverse/) for details.
+Please respect the [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/).
 
 If you specify multiple alternative values separated by a pipe symbol (`|`), the first available attribute is used.
 
