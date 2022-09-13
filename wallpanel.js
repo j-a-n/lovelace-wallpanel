@@ -1231,11 +1231,11 @@ class WallpanelView extends HuiView {
 
 		this.setScreensaverEntityState();
 
-		setTimeout(() => {
-			if (config.screensaver_stop_navigation_path) {
+		if (config.screensaver_stop_navigation_path) {
+			setTimeout(() => {
 				navigate(config.screensaver_stop_navigation_path);
-			}
-		}, (config.fade_in_time+1)*1000);
+			}, (config.fade_in_time+1)*1000);
+		}
 	}
 	
 	stopScreensaver() {
