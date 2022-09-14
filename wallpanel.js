@@ -1274,6 +1274,12 @@ class WallpanelView extends HuiView {
 		this.style.opacity = 1;
 
 		this.setScreensaverEntityState();
+
+		if (config.screensaver_stop_navigation_path) {
+			setTimeout(() => {
+				navigate(config.screensaver_stop_navigation_path);
+			}, (config.fade_in_time+1)*1000);
+		}
 	}
 	
 	stopScreensaver() {
@@ -1283,9 +1289,6 @@ class WallpanelView extends HuiView {
 		this.screensaverStoppedAt = Date.now();
 		document.body.style.overflow = this.bodyOverflowOrig;
 		
-		if (config.screensaver_stop_navigation_path) {
-			navigate(config.screensaver_stop_navigation_path);
-		}
 		this.hideMessage();
 
 		this.style.transition = '';
