@@ -136,8 +136,9 @@ const defaultConfig = {
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
 	info_animation_timing_function_y: 'ease',
-	info_random_move_interval: 0,
-	info_random_move_fade_duration: 2.0,
+	info_move_pattern: 'random',
+	info_move_interval: 0,
+	info_move_fade_duration: 2.0,
 	style: {},
 	badges: [],
 	cards: [
@@ -475,7 +476,8 @@ class WallpanelView extends HuiView {
 		this.idleSince = Date.now();
 		this.bodyOverflowOrig = null;
 		this.lastProfileSet = insertBrowserID(config.profile);
-		this.lastRandomMove = null;
+		this.lastMove = null;
+		this.lastCorner = 0; // 0 - top left, 1 - bottom left, 2 - bottom right, 3 - top right
 		this.translateInterval = null;
 		
 		this.__hass = elHass.__hass;
@@ -764,16 +766,27 @@ class WallpanelView extends HuiView {
 			${classCss}
 		`
 	}
-	
+
 	randomMove() {
-		this.lastRandomMove = Date.now();
 		let computed = getComputedStyle(this.infoContainer);
 		let maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) * 2 - parseInt(computed.paddingRight) * 2 - this.infoBox.offsetWidth;
 		let maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) * 2 - parseInt(computed.paddingBottom) * 2 - this.infoBox.offsetHeight;
 		let x = Math.floor(Math.random() * maxX);
 		let y = Math.floor(Math.random() * maxY);
-		
-		if (config.info_random_move_fade_duration > 0) {
+		this.moveInfoBox(x, y);
+	}
+
+	moveAroundCorners() {
+		this.lastCorner = (this.lastCorner + 1) % 4;
+		let computed = getComputedStyle(this.infoContainer);
+		let x = [2, 3].includes(this.lastCorner) ? this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) * 2 - parseInt(computed.paddingRight) * 2 - this.infoBox.offsetWidth : 0;
+		let y = [1, 2].includes(this.lastCorner) ? this.infoContainer.offsetHeight - parseInt(computed.paddingTop) * 2 - parseInt(computed.paddingBottom) * 2 - this.infoBox.offsetHeight : 0;
+		this.moveInfoBox(x, y);
+	}
+
+	moveInfoBox(x, y) {
+		this.lastMove = Date.now();
+		if (config.info_move_fade_duration > 0) {
 			let keyframes = [
 				{ opacity: 1 },
 				{ opacity: 0, offset: 0.5 },
@@ -781,13 +794,13 @@ class WallpanelView extends HuiView {
 			];
 			this.infoBox.animate(
 				keyframes, { 
-					duration: Math.round(config.info_random_move_fade_duration * 1000),
+					duration: Math.round(config.info_move_fade_duration * 1000),
 					iterations: 1 
 				}
 			);
 		}
 		let wp = this;
-		let ms = Math.round(config.info_random_move_fade_duration * 500);
+		let ms = Math.round(config.info_move_fade_duration * 500);
 		if (ms < 0) {
 			ms = 0;
 		}
@@ -798,7 +811,6 @@ class WallpanelView extends HuiView {
 			wp.infoBoxPosX.style.transform = `translate3d(${x}px, 0px, 0px)`;
 			wp.infoBoxPosY.style.transform = `translate3d(0px, ${y}px, 0px)`;	
 		}, ms);
-		
 	}
 
 	createInfoBoxContent() {
@@ -1289,7 +1301,7 @@ class WallpanelView extends HuiView {
 			}, 2000);
 		}
 		
-		this.lastRandomMove = Date.now();
+		this.lastMove = Date.now();
 		this.lastImageUpdate = Date.now();
 		this.screensaverStartedAt = Date.now();
 		this.screensaverStoppedAt = null;
@@ -1338,10 +1350,18 @@ class WallpanelView extends HuiView {
 	updateScreensaver() {
 		let now = Date.now();
 		
-		if (config.info_random_move_interval > 0 && now - this.lastRandomMove >= config.info_random_move_interval*1000) {
-			this.randomMove();
+		if (config.info_move_interval > 0 && now - this.lastMove >= config.info_move_interval*1000) {
+			if (config.info_move_pattern === 'random') {
+				this.randomMove();
+			}
+			else if (config.info_move_pattern === 'corners') {
+				this.moveAroundCorners();
+			}
+			else {
+				console.error(`Unknown info move type ${config.info_move_pattern}`);
+			}
 		}
-		
+
 		if (config.black_screen_after_time > 0 && now - this.screensaverStartedAt >= config.black_screen_after_time*1000) {
 			if (config.debug) console.debug("Setting screen to black");
 			if (this.imageOneContainer.style.visibility != 'hidden') {
