@@ -213,7 +213,7 @@ function updateConfig() {
 		}
 	}
 	config = mergeConfig(config, paramConfig);
-	const profile = this.insertBrowserID(config.profile);
+	const profile = insertBrowserID(config.profile);
 	if (config.profiles && profile && config.profiles[profile]) {
 		config = mergeConfig(config, config.profiles[profile]);
 		if (config.debug) console.debug(`Profile set from config: ${profile}`);
@@ -224,7 +224,7 @@ function updateConfig() {
 		if (config.debug) console.debug(`Profile set from user: ${profile}`);
 	}
 	config = mergeConfig(config, paramConfig);
-	const profile_entity = this.insertBrowserID(config.profile_entity);
+	const profile_entity = insertBrowserID(config.profile_entity);
 	if (config.profiles && profile_entity && elHass.__hass.states[profile_entity] && config.profiles[elHass.__hass.states[profile_entity].state]) {
 		let profile = elHass.__hass.states[profile_entity].state;
 		config = mergeConfig(config, config.profiles[profile]);
@@ -397,6 +397,31 @@ function findImages(hass, mediaContentId) {
 }
 
 
+function insertBrowserID(s) {
+	if (s && window.browser_mod) {
+		if (window.browser_mod.entity_id) {
+			// V1
+			var browserId = window.browser_mod.entity_id;
+		}
+		else if (window.browser_mod.browserID) {
+			// V2
+			var browserId = window.browser_mod.browserID.replace('-', '_');
+		}
+		else {
+			if (config.debug) console.debug(`insertBrowserID(${s}): no BrowserID`);
+			return s;
+		}
+		var res = s.replace("${browser_id}", browserId);
+		if (config.debug) console.debug(`insertBrowserID(${s}): return ${res}`);
+		return res;
+	}
+	else {
+		if (config.debug) console.debug(`insertBrowserID(${s}): no browser_mod or no string`);
+		return s;
+	}
+}
+
+
 document.addEventListener('fullscreenerror', (event) => {
 	console.error('Failed to enter fullscreen');
 });
@@ -448,7 +473,7 @@ class WallpanelView extends HuiView {
 		this.screensaverStoppedAt = new Date();
 		this.idleSince = Date.now();
 		this.bodyOverflowOrig = null;
-		this.lastProfileSet = this.insertBrowserID(config.profile);
+		this.lastProfileSet = insertBrowserID(config.profile);
 		this.lastRandomMove = null;
 		this.translateInterval = null;
 
@@ -471,7 +496,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		const screensaver_entity = this.insertBrowserID(config.screensaver_entity);
+		const screensaver_entity = insertBrowserID(config.screensaver_entity);
 
 		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
 			let lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
@@ -499,32 +524,8 @@ class WallpanelView extends HuiView {
 		return this.__hass;
 	}
 
-	insertBrowserID(s) {
-		if (s && window.browser_mod) {
-			if (window.browser_mod.entity_id) {
-				// V1
-				var browserId = window.browser_mod.entity_id;
-			}
-			else if (window.browser_mod.browserID) {
-				// V2
-				var browserId = window.browser_mod.browserID.replace('-', '_');
-			}
-			else {
-				if (config.debug) console.debug(`insertBrowserID(${s}): no BrowserID`);
-				return s;
-			}
-			var res = s.replace("${browser_id}", browserId);
-			if (config.debug) console.debug(`insertBrowserID(${s}): return ${res}`);
-			retur res;
-		}
-		else {
-			if (config.debug) console.debug(`insertBrowserID(${s}): no browser_mod or no string`);
-			return s;
-		}
-	}
-
 	setScreensaverEntityState() {
-		const screensaver_entity = this.insertBrowserID(config.screensaver_entity);
+		const screensaver_entity = insertBrowserID(config.screensaver_entity);
 		if (!screensaver_entity || !this.__hass.states[screensaver_entity]) return;
 		if (this.screensaverStartedAt && this.__hass.states[screensaver_entity].state == 'on') return;
 		if (!this.screensaverStartedAt && this.__hass.states[screensaver_entity].state == 'off') return;
@@ -542,7 +543,7 @@ class WallpanelView extends HuiView {
 	}
 
 	updateProfile() {
-		const profile_entity = this.insertBrowserID(config.profile_entity);
+		const profile_entity = insertBrowserID(config.profile_entity);
 		if (profile_entity && this.__hass.states[profile_entity]) {
 			const profile = this.__hass.states[profile_entity].state;
 			if ((profile && profile != this.lastProfileSet) || (!profile && this.lastProfileSet)) {
