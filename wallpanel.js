@@ -768,7 +768,6 @@ class WallpanelView extends HuiView {
 	}
 
 	randomMove() {
-		this.lastMove = Date.now();
 		let computed = getComputedStyle(this.infoContainer);
 		let maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) * 2 - parseInt(computed.paddingRight) * 2 - this.infoBox.offsetWidth;
 		let maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) * 2 - parseInt(computed.paddingBottom) * 2 - this.infoBox.offsetHeight;
@@ -778,7 +777,6 @@ class WallpanelView extends HuiView {
 	}
 
 	moveAroundCorners() {
-		this.lastMove = Date.now();
 		this.lastCorner = (this.lastCorner + 1) % 4;
 		let computed = getComputedStyle(this.infoContainer);
 		let x = [2, 3].includes(this.lastCorner) ? this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) * 2 - parseInt(computed.paddingRight) * 2 - this.infoBox.offsetWidth : 0;
@@ -787,6 +785,7 @@ class WallpanelView extends HuiView {
 	}
 
 	moveInfoBox(x, y) {
+		this.lastMove = Date.now();
 		if (config.info_move_fade_duration > 0) {
 			let keyframes = [
 				{ opacity: 1 },
