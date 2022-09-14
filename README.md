@@ -69,7 +69,7 @@ You can set the following configuration parameters for every individual Home Ass
 | black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled).              | 0         |
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver ist stopped.                       |           |
-| screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). |        |
+| screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
@@ -89,8 +89,8 @@ You can set the following configuration parameters for every individual Home Ass
 | badges                           | Badges to display in info box. See below for details.                                                  | []         |
 | cards                            | Cards to display in info box. See below for details.                                                   | See below  |
 | profiles                         | Configuration profiles. See below for details.                                                         | {}         |
-| profile                          | Configuration profile to activate.                                                                     |            |
-| profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles.                                |            |
+| profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
+| profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
 
 ## Home Assistant Dashboard configuration
 You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).
@@ -124,7 +124,7 @@ wallpanel:
   image_excludes: []
   show_exif_info: false,
   fetch_address_data: true,
-  exif_info_template: '${address.town!prefix=!suffix= // }${DateTimeOriginal}',
+  exif_info_template: '${address.town|address.city!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long}',
   screensaver_entity: input_boolean.wallpanel_screensaver
   info_animation_duration_x: 30
   info_animation_duration_y: 11
@@ -213,16 +213,26 @@ See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for availa
 If the EXIF data contains GPS location information and the `fetch_address_data` configuration is set to `true`,
 address data for the GPS coordinates will be fetched from `nominatim.openstreetmap.org`.
 The received address data can be used via placeholders in the form `address.<attribute>`.
-Available attributes are: `country`, `country_code`, `county`, `municipality`, `postcode`, `region`, `road`, `state`, `town` and `village`.
+Available attributes are: `country`, `country_code`, `county`, `municipality`, `postcode`, `region`, `road`, `state`, `city`, `town` and `village`.
 See [Nominatim Reverse Geocoding](https://nominatim.org/release-docs/latest/api/Reverse/) for details.
+Please respect the [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/).
+
+If you specify multiple alternative values separated by a pipe symbol (`|`), the first available attribute is used.
 
 A prefix and suffix string can be added for each placeholder.
 Prefix and suffix are not displayed if the placeholder value is empty.
 
+For date values you can specify date format options.
+Each option must consist of an `<option name>:<option value>` pair.
+Multiple options must be separated by commas.
+Available option names are: `year`, `month`, `day`, `weekday`, `hour`, `minute` and `second`.
+Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
+See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
+
 **Example**
 ```yaml
 show_exif_info: true
-exif_info_template: '<span style="color:#990000">//</span> ${address.town!prefix=!suffix= // }${DateTimeOriginal}'
+exif_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
 ```
 
 The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
@@ -524,6 +534,53 @@ D) An existing user profile is automatically activated if it matches the logged-
 The name of a user profile must start with the string `user.` followed by a user name.
 The username of the logged in user is converted to lowercase and spaces are replaced with `_`.
 Therefore, the username `Jane Doe` will activate the user profile `user.jane_doe`.
+
+
+## Integration with browser_mod
+Normally, it is not possible to set different configuration for different devices. That gap can be closed by integrating WallPanel with [Browser Mod](https://github.com/thomasloven/hass-browser_mod).
+
+Once Browser Mod is correctly installed and configured, Browser ID can be used to define per-device settings.
+
+A separate screensaver entity can exist for each device:
+
+```yaml
+wallpanel:
+  enabled: true
+  screensaver_entity: input_boolean.screensaver_${browser_id}
+```
+
+`${browser_id}` will be replaced with the value of Browser ID (eg. `input_boolean.screensaver_e9a2c86e_5526f1ee`).
+
+A separate profile can be defined for each device:
+
+```yaml
+wallpanel:
+  enabled: true
+  image_order: random
+  profiles:
+    device_e9a2c86e_5526f1ee:
+      image_url: media-source://media_source/local/kitchen
+      screensaver_entity: input_boolean.screensaver_kitchen
+    device_89ae788b_cd883eb1:
+      image_url: media-source://media_source/local/livingroom
+      screensaver_entity: input_boolean.screensaver_livingroom
+  profile: device_${browser_id}
+```
+
+Note: It is not required to define profiles for all devices.
+
+Finally, a separate profile entity can be used for each device:
+
+```yaml
+wallpanel:
+  enabled: true
+  profiles:
+    dogs:
+      image_url: https://source.unsplash.com/random/${width}x${height}?dogs&sig=${timestamp}
+    cats:
+      image_url: https://source.unsplash.com/random/${width}x${height}?cats&sig=${timestamp}
+  profile_entity: input_text.screensaver_profile_${browser_id}
+```
 
 
 # Credits
