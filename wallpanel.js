@@ -213,8 +213,8 @@ function updateConfig() {
 		}
 	}
 	config = mergeConfig(config, paramConfig);
-	if (config.profiles && config.profile && config.profiles[config.profile]) {
-		let profile = config.profile;
+	const profile = this.insertBrowserID(config.profile);
+	if (config.profiles && profile && config.profiles[profile]) {
 		config = mergeConfig(config, config.profiles[profile]);
 		if (config.debug) console.debug(`Profile set from config: ${profile}`);
 	}
@@ -224,8 +224,9 @@ function updateConfig() {
 		if (config.debug) console.debug(`Profile set from user: ${profile}`);
 	}
 	config = mergeConfig(config, paramConfig);
-	if (config.profiles && config.profile_entity && elHass.__hass.states[config.profile_entity] && config.profiles[elHass.__hass.states[config.profile_entity].state]) {
-		let profile = elHass.__hass.states[config.profile_entity].state;
+	const profile_entity = this.insertBrowserID(config.profile_entity);
+	if (config.profiles && profile_entity && elHass.__hass.states[profile_entity] && config.profiles[elHass.__hass.states[profile_entity].state]) {
+		let profile = elHass.__hass.states[profile_entity].state;
 		config = mergeConfig(config, config.profiles[profile]);
 		if (config.debug) console.debug(`Profile set from entity state: ${profile}`);
 	}
@@ -447,7 +448,7 @@ class WallpanelView extends HuiView {
 		this.screensaverStoppedAt = new Date();
 		this.idleSince = Date.now();
 		this.bodyOverflowOrig = null;
-		this.lastProfileSet = config.profile;
+		this.lastProfileSet = this.insertBrowserID(config.profile);
 		this.lastRandomMove = null;
 		this.translateInterval = null;
 
@@ -470,7 +471,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		const screensaver_entity = this.getScreensaverEntity();
+		const screensaver_entity = this.insertBrowserID(config.screensaver_entity);
 
 		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
 			let lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
@@ -498,9 +499,8 @@ class WallpanelView extends HuiView {
 		return this.__hass;
 	}
 
-        getScreensaverEntity() {
-		if (!config.screensaver_entity) return;
-		if (window.browser_mod) {
+	insertBrowserID(s) {
+		if (s && window.browser_mod) {
 			if (window.browser_mod.entity_id) {
 				// V1
 				var browserId = window.browser_mod.entity_id;
@@ -510,17 +510,21 @@ class WallpanelView extends HuiView {
 				var browserId = window.browser_mod.browserID.replace('-', '_');
 			}
 			else {
-				return config.screensaver_entity;
+				if (config.debug) console.debug(`insertBrowserID(${s}): no BrowserID`);
+				return s;
 			}
-			return config.screensaver_entity.replace("${browser_id}", browserId);
+			var res = s.replace("${browser_id}", browserId);
+			if (config.debug) console.debug(`insertBrowserID(${s}): return ${res}`);
+			retur res;
 		}
 		else {
-			return config.screensaver_entity;
+			if (config.debug) console.debug(`insertBrowserID(${s}): no browser_mod or no string`);
+			return s;
 		}
-        }
+	}
 
 	setScreensaverEntityState() {
-		const screensaver_entity = this.getScreensaverEntity();
+		const screensaver_entity = this.insertBrowserID(config.screensaver_entity);
 		if (!screensaver_entity || !this.__hass.states[screensaver_entity]) return;
 		if (this.screensaverStartedAt && this.__hass.states[screensaver_entity].state == 'on') return;
 		if (!this.screensaverStartedAt && this.__hass.states[screensaver_entity].state == 'off') return;
@@ -538,8 +542,9 @@ class WallpanelView extends HuiView {
 	}
 
 	updateProfile() {
-		if (config.profile_entity && this.__hass.states[config.profile_entity]) {
-			const profile = this.__hass.states[config.profile_entity].state;
+		const profile_entity = this.insertBrowserID(config.profile_entity);
+		if (profile_entity && this.__hass.states[profile_entity]) {
+			const profile = this.__hass.states[profile_entity].state;
 			if ((profile && profile != this.lastProfileSet) || (!profile && this.lastProfileSet)) {
 				if (config.debug) console.debug(`Set profile to ${profile}`);
 				this.lastProfileSet = profile;
