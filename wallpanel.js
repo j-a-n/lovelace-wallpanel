@@ -173,6 +173,17 @@ const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 const LitElement = Object.getPrototypeOf(customElements.get("hui-masonry-view"));
 const HuiView = customElements.get("hui-view");
 
+let browserId = null;
+if (window.browser_mod) {
+	if (window.browser_mod.entity_id) {
+		// V1
+		browserId = window.browser_mod.entity_id;
+	}
+	else if (window.browser_mod.browserID) {
+		// V2
+		browserId = window.browser_mod.browserID.replace('-', '_');
+	}
+}
 
 function isObject(item) {
 	return (item && typeof item === 'object' && !Array.isArray(item));
@@ -399,28 +410,18 @@ function findImages(hass, mediaContentId) {
 }
 
 
-function insertBrowserID(s) {
-	if (s && window.browser_mod) {
-		if (window.browser_mod.entity_id) {
-			// V1
-			var browserId = window.browser_mod.entity_id;
-		}
-		else if (window.browser_mod.browserID) {
-			// V2
-			var browserId = window.browser_mod.browserID.replace('-', '_');
-		}
-		else {
-			if (config.debug) console.debug(`insertBrowserID(${s}): no BrowserID`);
-			return s;
-		}
-		var res = s.replace("${browser_id}", browserId);
-		if (config.debug) console.debug(`insertBrowserID(${s}): return ${res}`);
-		return res;
+function insertBrowserID(string) {
+	if (!string) {
+		if (config.debug) console.debug(`insertBrowserID(${string}): no string`);
+		return string
 	}
-	else {
-		if (config.debug) console.debug(`insertBrowserID(${s}): no browser_mod or no string`);
-		return s;
+	if (!browserId) {
+		if (config.debug) console.debug(`insertBrowserID(${string}): no browser_mod`);
+		return string
 	}
+	let res = string.replace("${browser_id}", browserId);
+	if (config.debug) console.debug(`insertBrowserID(${string}): return ${res}`);
+	return res;
 }
 
 
