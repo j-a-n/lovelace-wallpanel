@@ -69,7 +69,7 @@ You can set the following configuration parameters for every individual Home Ass
 | black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled). | 0         |
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver ist stopped.          |           |
-| screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (allows to control multiple screensavers separately). |        |
+| screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                            | See below |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
@@ -88,8 +88,8 @@ You can set the following configuration parameters for every individual Home Ass
 | badges                           | Badges to display in info box. See below for details.                                     | []         |
 | cards                            | Cards to display in info box. See below for details.                                      | See below  |
 | profiles                         | Configuration profiles. See below for details.                                            | {}         |
-| profile                          | Configuration profile to activate.                                                        |            |
-| profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles.                   |            |
+| profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
+| profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
 
 ## Home Assistant Dashboard configuration
 You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).
@@ -521,6 +521,53 @@ D) An existing user profile is automatically activated if it matches the logged-
 The name of a user profile must start with the string `user.` followed by a user name.
 The username of the logged in user is converted to lowercase and spaces are replaced with `_`.
 Therefore, the username `Jane Doe` will activate the user profile `user.jane_doe`.
+
+
+## Integration with browser_mod
+Normally, it is not possible to set different configuration for different devices. That gap can be closed by integrating WallPanel with [Browser Mod](https://github.com/thomasloven/hass-browser_mod).
+
+Once Browser Mod is correctly installed and configured, Browser ID can be used to define per-device settings.
+
+A separate screensaver entity can exist for each device:
+
+```yaml
+wallpanel:
+  enabled: true
+  screensaver_entity: input_boolean.screensaver_${browser_id}
+```
+
+`${browser_id}` will be replaced with the value of Browser ID (eg. `input_boolean.screensaver_e9a2c86e_5526f1ee`).
+
+A separate profile can be defined for each device:
+
+```yaml
+wallpanel:
+  enabled: true
+  image_order: random
+  profiles:
+    device_e9a2c86e_5526f1ee:
+      image_url: media-source://media_source/local/kitchen
+      screensaver_entity: input_boolean.screensaver_kitchen
+    device_89ae788b_cd883eb1:
+      image_url: media-source://media_source/local/livingroom
+      screensaver_entity: input_boolean.screensaver_livingroom
+  profile: device_${browser_id}
+```
+
+Note: It is not required to define profiles for all devices.
+
+Finally, a separate profile entity can be used for each device:
+
+```yaml
+wallpanel:
+  enabled: true
+  profiles:
+    dogs:
+      image_url: https://source.unsplash.com/random/${width}x${height}?dogs&sig=${timestamp}
+    cats:
+      image_url: https://source.unsplash.com/random/${width}x${height}?cats&sig=${timestamp}
+  profile_entity: input_text.screensaver_profile_${browser_id}
+```
 
 
 # Credits
