@@ -1019,8 +1019,13 @@ class WallpanelView extends HuiView {
 						if (this.status == 200 || this.status === 0) {	
 							let info = JSON.parse(xhr.responseText); 
 							if (config.debug) console.debug("nominatim data:", info);
-							nominatimCache[cacheKey] = img.exifdata.address = info.address;
-							wp.setEXIFImageInfo(img);
+							if (info && info.address) {
+								nominatimCache[cacheKey] = info.address;
+								if (img && img.exifdata) {
+									img.exifdata.address = nominatimCache[cacheKey];
+									wp.setEXIFImageInfo(img);
+								}
+							}
 						}
 						else {
 							console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
