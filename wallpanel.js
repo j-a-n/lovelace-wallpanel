@@ -981,16 +981,21 @@ class WallpanelView extends HuiView {
 			if (!img) return;
 			img.addEventListener('load', function() {
 				img.setAttribute('data-loading', false);
-				if (config.show_exif_info && config.image_url.startsWith("media-source://media_source") && img.imagePath && /\.jpe?g$/.test(img.imagePath)) {
+				if (config.show_exif_info && img.imagePath && /.*\.jpe?g$/.test(img.imagePath)) {
 					wp.fetchEXIFInfo(img);
 				}
 			});
 			img.addEventListener('error', function() {
 				img.setAttribute('data-loading', false);
 				console.error(`Failed to load image: ${img.src}`);
-				if (config.image_url.startsWith("media-source://media_source") && (!wp.updatingImageList)) {
-					wp.updateImageList(wp.switchActiveImage.bind(wp));
+				if (img.imagePath) {
+					const idx = wp.imageList.indexOf(img.imagePath);
+					if (idx > -1) {
+						if (config.debug) console.debug(`Removing image from list: ${img.imagePath}`);
+						wp.imageList.splice(idx, 1);
+					}
 				}
+				wp.updateImage(img);
 			})
 		});
 	}
@@ -1182,8 +1187,8 @@ class WallpanelView extends HuiView {
 		if (!imagePath) {
 			return;
 		}
-		imagePath = imagePath.replace(/^media-source:\/\/media_source/, '/media');
 		img.imagePath = imagePath;
+		imagePath = imagePath.replace(/^media-source:\/\/media_source/, '/media');
 		this.hass.callWS({
 			type: "auth/sign_path",
 			path: imagePath,
