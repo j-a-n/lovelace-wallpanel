@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "3.5";
+const version = "4.0";
 const defaultConfig = {
 	enabled: false,
 	debug: false,
