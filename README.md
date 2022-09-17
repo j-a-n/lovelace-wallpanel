@@ -68,7 +68,7 @@ You can set the following configuration parameters for every individual Home Ass
 | keep_screen_on_time              | Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).                         | 0         |
 | black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled).              | 0         |
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
-| screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                       |           |
+| screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
