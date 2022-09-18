@@ -166,7 +166,9 @@ let classStyles = {
 		"border-radius": "0.1em"
 	}
 }
-let nominatimCache = {};
+let exifDataCache = {};
+let exifDataCacheKeys = [];
+const exifDataCacheMaxSize = 1000;
 
 const elHass = document.querySelector("body > home-assistant");
 const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
@@ -1002,118 +1004,138 @@ class WallpanelView extends HuiView {
 
 	fetchEXIFInfo(img) {
 		let wp = this;
-		EXIF.getData(img, function() {
-			if (config.debug) console.debug("EXIF data:", img.exifdata);
-			let exifLong = img.exifdata["GPSLongitude"];
-			let exifLat = img.exifdata["GPSLatitude"];
-			if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
-				let m = (img.exifdata["GPSLatitudeRef"] == "S") ? -1 : 1;
-				let latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
-				m = (img.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
-				let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
-				
-				const cacheKey = `${latitude},${longitude}`;
-				if (nominatimCache[cacheKey]) {
-					if (config.debug) console.debug(`Use nominatim cache: ${cacheKey}`);
-					img.exifdata.address = nominatimCache[cacheKey];
-					wp.setEXIFImageInfo(img);
-				}
-				else {
-					const xhr = new XMLHttpRequest();
-					xhr.onload = function(event) {
-						if (this.status == 200 || this.status === 0) {	
-							let info = JSON.parse(xhr.responseText); 
-							if (config.debug) console.debug("nominatim data:", info);
-							if (info && info.address) {
-								nominatimCache[cacheKey] = info.address;
-								if (img && img.exifdata) {
-									img.exifdata.address = nominatimCache[cacheKey];
-									wp.setEXIFImageInfo(img);
-								}
-							}
-						}
-						else {
-							console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
-						}
-					}
-					xhr.onerror = function(event) { 
-						console.error("nominatim error:", event);
-					}
-					xhr.ontimeout = function(event) { 
-						console.error("nominatim timeout:", event);
-					}
-					xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-					//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
-					xhr.timeout = 15000;
-					xhr.send();
-				}
+		if (exifDataCache[img.imagePath]) {
+			wp.setEXIFImageInfo(img.imagePath);
+			return;
+		}
+		if (exifDataCacheKeys.length >= exifDataCacheMaxSize) {
+			let oldest = exifDataCacheKeys.shift();
+			if (exifDataCache[oldest]) {
+				delete exifDataCache[oldest];
 			}
-			wp.setEXIFImageInfo(img);
+		}
+
+		const tmpImg = document.createElement("img");
+		tmpImg.imagePath = img.imagePath;
+		tmpImg.src = img.src;
+		getImageData(tmpImg, function() {
+			if (config.debug) console.debug("EXIF data:", tmpImg.exifdata);
+			exifDataCacheKeys.push(tmpImg.imagePath);
+			exifDataCache[tmpImg.imagePath] = tmpImg.exifdata;
+			wp.setEXIFImageInfo(tmpImg.imagePath);
+
+			let exifLong = tmpImg.exifdata["GPSLongitude"];
+			let exifLat = tmpImg.exifdata["GPSLatitude"];
+			if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
+				let m = (tmpImg.exifdata["GPSLatitudeRef"] == "S") ? -1 : 1;
+				let latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
+				m = (tmpImg.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
+				let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
+			
+				const xhr = new XMLHttpRequest();
+				xhr.onload = function(event) {
+					if (this.status == 200 || this.status === 0) {	
+						let info = JSON.parse(xhr.responseText); 
+						if (config.debug) console.debug("nominatim data:", info);
+						if (info && info.address) {
+							exifDataCache[tmpImg.imagePath].address = info.address;
+							wp.setEXIFImageInfo(tmpImg.imagePath);
+						}
+					}
+					else {
+						console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
+						delete exifDataCache[tmpImg.imagePath];
+					}
+				}
+				xhr.onerror = function(event) { 
+					console.error("nominatim error:", event);
+					delete exifDataCache[tmpImg.imagePath];
+				}
+				xhr.ontimeout = function(event) { 
+					console.error("nominatim timeout:", event);
+					delete exifDataCache[tmpImg.imagePath];
+				}
+				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+				//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
+				xhr.timeout = 15000;
+				xhr.send();
+			}
 		});
 	}
 	
-	setEXIFImageInfo(img) {
-		let exifElement = img.parentElement.querySelector('.wallpanel-screensaver-image-info-exif');
-			let html = config.exif_info_template;
-			html = html.replace(/\${([^}]+)}/g, function (match, tags, offset, string) {
-				if (!img.exifdata) {
-					return "";
-				}
-				let prefix = "";
-				let suffix = "";
-				let options = null;
-				if (tags.includes("!")) {
-					let tmp = tags.split("!");
-					tags = tmp[0];
-					for (let i=1; i<tmp.length; i++) {
-						let tmp2 = tmp[i].split("=", 2);
-						if (tmp2[0] == "prefix") {
-							prefix = tmp2[1];
-						}
-						else if (tmp2[0] == "suffix") {
-							suffix = tmp2[1];
-						}
-						else if (tmp2[0] == "options") {
-							options = {};
-							tmp2[1].split(",").forEach(optVal => {
-								let tmp3 = optVal.split(":", 2);
-								if (tmp3[0] && tmp3[1]) {
-									options[tmp3[0].replace(/\s/g, '')] = tmp3[1].replace(/\s/g, '');
-								}
-							});
-						}
+	setEXIFImageInfo(imagePath) {
+		let imgExifData = exifDataCache[imagePath];
+		let exifElement = null;
+		if (this.imageOne.imagePath == imagePath) {
+			exifElement = this.imageOneInfoExif;
+		}
+		else if (this.imageTwo.imagePath == imagePath) {
+			exifElement = this.imageTwoInfoExif;
+		}
+		if (!exifElement) {
+			return;
+		}
+		
+		let html = config.exif_info_template;
+		html = html.replace(/\${([^}]+)}/g, function (match, tags, offset, string) {
+			if (!imgExifData) {
+				return "";
+			}
+			let prefix = "";
+			let suffix = "";
+			let options = null;
+			if (tags.includes("!")) {
+				let tmp = tags.split("!");
+				tags = tmp[0];
+				for (let i=1; i<tmp.length; i++) {
+					let tmp2 = tmp[i].split("=", 2);
+					if (tmp2[0] == "prefix") {
+						prefix = tmp2[1];
+					}
+					else if (tmp2[0] == "suffix") {
+						suffix = tmp2[1];
+					}
+					else if (tmp2[0] == "options") {
+						options = {};
+						tmp2[1].split(",").forEach(optVal => {
+							let tmp3 = optVal.split(":", 2);
+							if (tmp3[0] && tmp3[1]) {
+								options[tmp3[0].replace(/\s/g, '')] = tmp3[1].replace(/\s/g, '');
+							}
+						});
 					}
 				}
-				
-				let val = "";
-				let tagList = tags.split("|");
-				let tag = "";
-				for (let i=0; i<tagList.length; i++) {
-					tag = tagList[i];
-					let keys = tag.replace(/\s/g, '').split(".");
-					val = img.exifdata;
-					keys.forEach(key => {
-						if (val) {
-							val = val[key];
-						}
-					});
+			}
+			
+			let val = "";
+			let tagList = tags.split("|");
+			let tag = "";
+			for (let i=0; i<tagList.length; i++) {
+				tag = tagList[i];
+				let keys = tag.replace(/\s/g, '').split(".");
+				val = imgExifData;
+				keys.forEach(key => {
 					if (val) {
-						break
+						val = val[key];
 					}
-				};
-				if (!val) {
-					return "";
+				});
+				if (val) {
+					break
 				}
-				if (/DateTime/.test(tag)) {
-					let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
-					if (!options) {
-						options = {year: "numeric", month: "2-digit", day: "2-digit"};
-					}
-					val = date.toLocaleDateString(undefined, options);
+			};
+			if (!val) {
+				return "";
+			}
+			if (/DateTime/.test(tag)) {
+				let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
+				if (!options) {
+					options = {year: "numeric", month: "2-digit", day: "2-digit"};
 				}
-				return prefix + val + suffix;
-			});
-			exifElement.innerHTML = html;
+				val = date.toLocaleDateString(undefined, options);
+			}
+			return prefix + val + suffix;
+		});
+		exifElement.innerHTML = html;
 	}
 
 	reconfigure() {
@@ -1210,6 +1232,7 @@ class WallpanelView extends HuiView {
 		img.setAttribute('data-loading', true);
 		img.exifdata = null;
 		img.imagePath = null;
+		img.parentElement.querySelector('.wallpanel-screensaver-image-info-exif').innerHTML = "";
 		
 		if (config.image_url.startsWith("media-source://media_source")) {
 			this.updateImageFromMediaSource(img);
