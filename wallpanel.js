@@ -1085,6 +1085,7 @@ class WallpanelView extends HuiView {
 			if (!imgExifData) {
 				return "";
 			}
+			imgExifData["image"] = {path: imagePath};
 			let prefix = "";
 			let suffix = "";
 			let options = null;
