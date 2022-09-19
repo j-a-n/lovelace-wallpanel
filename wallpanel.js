@@ -1005,7 +1005,6 @@ class WallpanelView extends HuiView {
 	fetchEXIFInfo(img) {
 		let wp = this;
 		if (exifDataCache[img.imagePath]) {
-			wp.setEXIFImageInfo(img.imagePath);
 			return;
 		}
 		if (exifDataCacheKeys.length >= exifDataCacheMaxSize) {
@@ -1023,7 +1022,7 @@ class WallpanelView extends HuiView {
 			exifDataCacheKeys.push(tmpImg.imagePath);
 			exifDataCache[tmpImg.imagePath] = tmpImg.exifdata;
 			wp.setEXIFImageInfo(tmpImg.imagePath);
-
+			
 			let exifLong = tmpImg.exifdata["GPSLongitude"];
 			let exifLat = tmpImg.exifdata["GPSLatitude"];
 			if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
@@ -1073,6 +1072,11 @@ class WallpanelView extends HuiView {
 			exifElement = this.imageTwoInfoExif;
 		}
 		if (!exifElement) {
+			return;
+		}
+
+		if ((!config.show_exif_info) || (!exifDataCache[imagePath])) {
+			exifElement.innerHTML = "";
 			return;
 		}
 		
@@ -1230,9 +1234,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		img.setAttribute('data-loading', true);
-		img.exifdata = null;
 		img.imagePath = null;
-		img.parentElement.querySelector('.wallpanel-screensaver-image-info-exif').innerHTML = "";
 		
 		if (config.image_url.startsWith("media-source://media_source")) {
 			this.updateImageFromMediaSource(img);
@@ -1269,7 +1271,12 @@ class WallpanelView extends HuiView {
 			newActive = this.imageOneContainer;
 		}
 		if (config.debug) console.debug(`Switching active image to '${newActive.id}'`);
-		
+
+		let newImg = newActive.children[0];
+		if (newImg.imagePath) {
+			this.setEXIFImageInfo(newImg.imagePath);
+		}
+
 		if (newActive.style.opacity != 1) {
 			newActive.style.opacity = 1;
 		}
