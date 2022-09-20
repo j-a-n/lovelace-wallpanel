@@ -983,7 +983,7 @@ class WallpanelView extends HuiView {
 			if (!img) return;
 			img.addEventListener('load', function() {
 				img.setAttribute('data-loading', false);
-				if (config.show_exif_info && img.imagePath && /.*\.jpe?g$/.test(img.imagePath)) {
+				if (config.show_exif_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
 					wp.fetchEXIFInfo(img);
 				}
 			});
