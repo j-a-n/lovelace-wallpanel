@@ -57,6 +57,7 @@ You can set the following configuration parameters for every individual Home Ass
 | Config                           | Description                                                                                            | Default   |
 | ---------------------------------| ------------------------------------------------------------------------------------------------------ | --------- |
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
+| enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, wallpanel is enabled on all tabs. | []   |
 | debug                            | Show debug output?                                                                                     | false     |
 | hide_toolbar                     | Hide the upper panel toolbar?                                                                          | false     |
 | hide_sidebar                     | Hide the navigation sidebar?                                                                           | false     |
@@ -108,6 +109,8 @@ wallpanel:
 ```yaml
 wallpanel:
   enabled: true
+  enabled_on_tabs:
+    - default_view
   debug: false
   hide_toolbar: true
   hide_sidebar: true

@@ -108,9 +108,10 @@
 	}
 }
 
-const version = "4.1";
+const version = "4.2";
 const defaultConfig = {
 	enabled: false,
+	enabled_on_tabs: [],
 	debug: false,
 	hide_toolbar: false,
 	hide_sidebar: false,
@@ -151,6 +152,7 @@ const defaultConfig = {
 
 let config = {};
 let activePanelUrl = null;
+let activePanelTab = null;
 let fullscreen = false;
 let screenWakeLock = new ScreenWakeLock();
 let wallpanel = null;
@@ -264,13 +266,28 @@ function updateConfig() {
 	if (config.debug) console.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
 	
 	if (wallpanel) {
-		if (config.enabled) {
+		if (isActive()) {
 			wallpanel.reconfigure();
 		}
 		else if (wallpanel.screensaverStartedAt > 0) {
 			wallpanel.stopScreensaver();
 		}
 	}
+}
+
+
+function isActive() {
+	if (!config.enabled) {
+		return false;
+	}
+	if (config.enabled_on_tabs && config.enabled_on_tabs.length > 0 && activePanelTab && !config.enabled_on_tabs.includes(activePanelTab)) {
+		return false;
+	}
+	const params = new URLSearchParams(window.location.search);
+	if (params.get("edit") == "1") {
+		return false;
+	}
+	return true;
 }
 
 
@@ -498,10 +515,10 @@ class WallpanelView extends HuiView {
 
 		this.updateProfile();
 
-		if (!config.enabled || !activePanelUrl) {
+		if (!isActive()) {
 			return;
 		}
-
+		
 		const screensaver_entity = insertBrowserID(config.screensaver_entity);
 
 		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
@@ -1324,9 +1341,8 @@ class WallpanelView extends HuiView {
 
 	startScreensaver() {
 		if (config.debug) console.debug("Start screensaver");
-		const params = new URLSearchParams(window.location.search);
-		if (params.get("edit") == "1") {
-			if (config.debug) console.debug("Dashboard in edit mode, not starting screensaver");
+		if (!isActive()) {
+			if (config.debug) console.debug("Wallpanel not active, not starting screensaver");
 			return;
 		}
 
@@ -1506,23 +1522,49 @@ wallpanel = document.createElement("wallpanel-view");
 document.body.appendChild(wallpanel);
 
 
+function activateWallpanel() {
+	updateConfig();
+	setToolbarHidden(config.hide_toolbar);
+	setSidebarHidden(config.hide_sidebar);
+}
+
+
+function deactivateWallpanel() {
+	if (wallpanel.screensaverStartedAt > 0) {
+		wallpanel.stopScreensaver();
+	}
+}
+
+
 window.setInterval(() => {
 	let pl = getHaPanelLovelace();
+	let changed = false;
 	if (!pl && activePanelUrl) {
 		if (config.debug) console.debug("No dashboard active");
 		activePanelUrl = null;
-		if (wallpanel.screensaverStartedAt > 0) {
-			wallpanel.stopScreensaver();
+		activePanelTab = null;
+		changed = true;
+	}
+	else if (pl && pl.panel && pl.panel.url_path) {
+		let tab = window.location.pathname.split("/").slice(-1)[0];
+		if (activePanelUrl != pl.panel.url_path) {
+			if (config.debug) console.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
+			activePanelUrl = pl.panel.url_path;
+			activePanelTab = tab;
+			changed = true;
+		}
+		else if (activePanelTab != tab) {
+			if (config.debug) console.debug(`Active tab switched from '${activePanelTab}' to '${tab}'`);
+			activePanelTab = tab;
+			changed = true;
 		}
 	}
-	else if (pl && pl.panel && pl.panel.url_path && activePanelUrl != pl.panel.url_path) {
-		if (config.debug) console.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
-		activePanelUrl = pl.panel.url_path;
-		updateConfig();
-		const params = new URLSearchParams(window.location.search);
-		if (params.get("edit") != "1") {
-			setToolbarHidden(config.hide_toolbar);
-			setSidebarHidden(config.hide_sidebar);
+	if (changed) {
+		if (isActive()) {
+			activateWallpanel();
+		}
+		else {
+			deactivateWallpanel();
 		}
 	}
 }, 1000);
