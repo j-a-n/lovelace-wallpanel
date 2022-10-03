@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "4.3";
+const version = "4.4";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1284,15 +1284,20 @@ class WallpanelView extends HuiView {
 
 		let curActive = this.imageOneContainer;
 		let newActive = this.imageTwoContainer;
+		let exifElement = this.imageTwoInfoExif;
 		if (this.imageTwoContainer.style.opacity == 1) {
 			curActive = this.imageTwoContainer;
 			newActive = this.imageOneContainer;
+			exifElement = this.imageOneInfoExif;
 		}
 		if (config.debug) console.debug(`Switching active image to '${newActive.id}'`);
 
 		let newImg = newActive.children[0];
 		if (newImg.imagePath) {
 			this.setEXIFImageInfo(newImg.imagePath);
+		}
+		else {
+			exifElement.innerHTML = "";
 		}
 
 		if (newActive.style.opacity != 1) {
