@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "4.2";
+const version = "4.3";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1533,6 +1533,8 @@ function deactivateWallpanel() {
 	if (wallpanel.screensaverStartedAt > 0) {
 		wallpanel.stopScreensaver();
 	}
+	setToolbarHidden(false);
+	setSidebarHidden(false);
 }
 
 
