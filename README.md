@@ -598,4 +598,7 @@ This project is inspired by:
 - https://github.com/richtr/NoSleep.js
 - https://github.com/madeInLagny/mil-no-sleep
 
+# Reviews / Tutorials
+- [SmartHomeScene - WallPanel: Home Assistant Screensaver for your wall-mounted control panel](https://smarthomescene.com/guides/wallpanel-home-assistant-screensaver-for-your-wall-mounted-control-panel)
+
 
