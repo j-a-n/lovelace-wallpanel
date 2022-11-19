@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "4.4";
+const version = "4.5";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -838,6 +838,10 @@ class WallpanelView extends HuiView {
 		this.infoBoxContent.innerHTML = '';
 		this.__badges = [];
 		this.__cards = [];
+		
+		this.shadowRoot.querySelectorAll(".wp-card").forEach(card => {
+			card.parentElement.removeChild(card);
+		})
 
 		if (config.badges) {
 			const div = document.createElement('div');
@@ -866,16 +870,26 @@ class WallpanelView extends HuiView {
 				const cardElement = this.createCardElement(cardConfig);
 				cardElement.hass = this.hass;
 				this.__cards.push(cardElement);
+				let parent = this.infoBoxContent;
 				const div = document.createElement('div');
+				div.classList.add("wp-card");
 				div.style.width = 'var(--wp-card-width)';
 				div.style.padding = 'var(--wp-card-padding)';
 				div.style.margin = 'var(--wp-card-margin)';
 				div.style.backdropFilter = 'var(--wp-card-backdrop-filter)';
 				for (const attr in style) {
-					div.style.setProperty(attr, style[attr]);
+					if (attr == "parent") {
+						let pel = this.shadowRoot.getElementById(style[attr]);
+						if (pel) {
+							parent = pel;
+						}
+					}
+					else {
+						div.style.setProperty(attr, style[attr]);
+					}
 				}
 				div.append(cardElement);
-				this.infoBoxContent.appendChild(div);
+				parent.appendChild(div);
 			});
 		}
 		
