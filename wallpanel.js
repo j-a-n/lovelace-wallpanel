@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "4.5";
+const version = "4.4";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
