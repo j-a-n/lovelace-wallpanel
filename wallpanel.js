@@ -1465,6 +1465,11 @@ class WallpanelView extends HuiView {
 				let p = screenWakeLock._player;
 				html += `Screen wake lock video: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
 			}
+			let imagePath = wallpanel.imageList[wallpanel.imageIndex];
+			if (imagePath) {
+				html += `Current image: ${imagePath}`;
+			}
+
 			this.debugBox.innerHTML = html;
 			this.debugBox.scrollTop = this.debugBox.scrollHeight;
 		}
