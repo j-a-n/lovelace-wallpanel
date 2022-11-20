@@ -615,6 +615,7 @@ class WallpanelView extends HuiView {
 		this.debugBox.style.width = '100%';
 		this.debugBox.style.height = '60%';
 		this.debugBox.style.background = '#00000099';
+		this.debugBox.style.color = '#ffffff';
 		this.debugBox.style.zIndex = 1001;
 		this.debugBox.style.visibility = 'hidden';
 		this.debugBox.style.fontFamily = 'monospace';
