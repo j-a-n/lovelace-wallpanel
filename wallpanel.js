@@ -1028,8 +1028,11 @@ class WallpanelView extends HuiView {
 						if (config.debug) console.debug(`Removing image from list: ${img.imagePath}`);
 						wp.imageList.splice(idx, 1);
 					}
+					wp.updateImage(img);
 				}
-				wp.updateImage(img);
+				else {
+					wp.displayMessage(`Failed to load image: ${img.src}`, 5000)
+				}
 			})
 		});
 	}
