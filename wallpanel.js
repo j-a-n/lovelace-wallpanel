@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "4.4";
+const version = "4.5";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -682,6 +682,13 @@ class WallpanelView extends HuiView {
 		this.infoContainer.style.transition = 'opacity 2000ms ease-in-out';
 		this.infoContainer.style.padding = '25px';
 
+		this.fixedInfoContainer.removeAttribute('style');
+		this.fixedInfoContainer.style.position = 'fixed';
+		this.fixedInfoContainer.style.top = 0;
+		this.fixedInfoContainer.style.left = 0;
+		this.fixedInfoContainer.style.width = '100%';
+		this.fixedInfoContainer.style.height = '100%';
+		
 		this.infoBox.removeAttribute('style');
 		this.infoBox.style.width = 'fit-content';
 		this.infoBox.style.height = 'fit-content';
@@ -691,6 +698,8 @@ class WallpanelView extends HuiView {
 		this.infoBox.style.setProperty('--wp-card-margin', '5px');
 		this.infoBox.style.setProperty('--wp-card-backdrop-filter', 'none');
 		
+		this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
+
 		this.screensaverOverlay.removeAttribute('style');
 		this.screensaverOverlay.style.position = 'absolute';
 		this.screensaverOverlay.style.top = 0;
@@ -732,6 +741,12 @@ class WallpanelView extends HuiView {
 						for (const attr in config.style[elId]) {
 							if (config.debug) console.debug(`Setting style attribute ${attr} to ${config.style[elId][attr]}`);
 							el.style.setProperty(attr, config.style[elId][attr]);
+						}
+						if (el == this.infoBox) {
+							this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
+						}
+						else if (el == this.infoBoxContent) {
+							this.fixedInfoBoxContent.style.cssText = this.infoBoxContent.style.cssText;
 						}
 					}
 					else {
@@ -953,6 +968,15 @@ class WallpanelView extends HuiView {
 		this.infoContainer = document.createElement('div');
 		this.infoContainer.id = 'wallpanel-screensaver-info-container';
 
+		this.fixedInfoContainer = document.createElement('div');
+		this.fixedInfoContainer.id = 'wallpanel-screensaver-fixed-info-container';
+
+		this.fixedInfoBox = document.createElement('div');
+		this.fixedInfoBox.id = 'wallpanel-screensaver-fixed-info-box';
+
+		this.fixedInfoBoxContent = document.createElement('div');
+		this.fixedInfoBoxContent.id = 'wallpanel-screensaver-fixed-info-box-content';
+
 		this.screensaverContainer.appendChild(this.infoContainer);
 
 		this.infoBoxPosX = document.createElement('div');
@@ -972,6 +996,10 @@ class WallpanelView extends HuiView {
 		this.infoBoxPosX.appendChild(this.infoBox);
 		this.infoBoxPosY.appendChild(this.infoBoxPosX);
 		this.infoContainer.appendChild(this.infoBoxPosY);
+
+		this.fixedInfoBox.appendChild(this.fixedInfoBoxContent);
+		this.fixedInfoContainer.appendChild(this.fixedInfoBox);
+		this.infoContainer.appendChild(this.fixedInfoContainer);
 
 		this.screensaverOverlay = document.createElement('div');
 		this.screensaverOverlay.id = 'wallpanel-screensaver-overlay';
