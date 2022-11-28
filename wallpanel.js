@@ -130,6 +130,7 @@ const defaultConfig = {
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
 	image_excludes: [],
+	show_progress_bar: false,
 	show_exif_info: false,
 	fetch_address_data: false,
 	exif_info_template: '${DateTimeOriginal}',
@@ -166,6 +167,16 @@ let classStyles = {
 		"background": "#00000055",
 		"backdrop-filter": "blur(2px)",
 		"border-radius": "0.1em"
+	},
+	"wallpanel-progress": {
+		"position": "absolute",
+		"bottom": "0",
+		"height": "2px",
+		"width": "100%",
+	},
+	"wallpanel-progress-inner": {
+		"height": "100%",
+		"background-color": "white"
 	}
 }
 let exifDataCache = {};
@@ -799,6 +810,14 @@ class WallpanelView extends HuiView {
 					transform: translate3d(0, ${maxY}px, 0);
 				}
 			}
+			@keyframes horizontalProgress {
+				0% {
+				  width: 0%;
+				}
+				100% {
+				  width: 100%;
+				}
+			}
 			${classCss}
 		`
 	}
@@ -912,6 +931,28 @@ class WallpanelView extends HuiView {
 		setTimeout(this.updateShadowStyle.bind(this), 500);
 	}
 
+	createProgressbarDiv(wrapper) {
+		const div = document.createElement('div');
+		div.className = 'wallpanel-progress';
+		const inner = document.createElement('div');
+		inner.className = 'wallpanel-progress-inner';
+		inner.id = 'wallpanel-progress-inner';
+		inner.style.animation =
+		    `horizontalProgress ${config.display_time}s linear`;
+		div.appendChild(inner);
+		wrapper.appendChild(div);
+	}
+
+	restartProgressBarAnimation() {
+		if (!config.show_progress_bar) {
+			return;
+		}
+		// Restart CSS animation.
+		const oldDiv = this.shadowRoot.getElementById('wallpanel-progress-inner');
+		const newDiv = oldDiv.cloneNode(true);
+		oldDiv.parentNode.replaceChild(newDiv, oldDiv);
+	}
+
 	connectedCallback() {
 		this.style.zIndex = 1000;
 		this.style.visibility = 'hidden';
@@ -964,6 +1005,10 @@ class WallpanelView extends HuiView {
 		this.imageTwoContainer.appendChild(this.imageTwo);
 		this.imageTwoContainer.appendChild(this.imageTwoInfoContainer);
 		this.screensaverContainer.appendChild(this.imageTwoContainer);
+
+		if (config.show_progress_bar) {
+			this.createProgressbarDiv(this.screensaverContainer);
+		}
 		
 		this.infoContainer = document.createElement('div');
 		this.infoContainer.id = 'wallpanel-screensaver-info-container';
@@ -1353,6 +1398,8 @@ class WallpanelView extends HuiView {
 			curActive.style.opacity = 0;
 		}
 
+		this.restartProgressBarAnimation();
+
 		// Load next image after fade out
 		let wp = this;
 		setTimeout(function() {
@@ -1399,6 +1446,7 @@ class WallpanelView extends HuiView {
 
 		this.updateStyle();
 		this.setupScreensaver();
+		this.restartProgressBarAnimation();
 		
 		if (config.keep_screen_on_time > 0) {
 			let wp = this;
