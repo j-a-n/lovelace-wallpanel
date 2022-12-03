@@ -234,10 +234,20 @@ Available option names are: `year`, `month`, `day`, `weekday`, `hour`, `minute` 
 Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
 See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
 
+The `ImagePath` placeholder is replaced with the full pathname to the current image.
+
 **Example**
 ```yaml
 show_exif_info: true
 exif_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
+```
+
+```yaml
+show_exif_info: true
+exif_info_template: >-
+    <span style="font-family: 'Roboto Condensed', sans-serif; font-size: 1em; font-weight: 400; color: #999;">
+      ${ImagePath}
+    </span>
 ```
 
 The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
