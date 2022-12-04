@@ -669,7 +669,7 @@ class WallpanelView extends HuiView {
 		this.imageTwoContainer.style.left = 0;
 		this.imageTwoContainer.style.width = '100%';
 		this.imageTwoContainer.style.height = '100%';
-		this.imageTwoContainer.style.opacity = 1;
+		this.imageTwoContainer.style.opacity = 0;
 		
 		this.imageTwo.removeAttribute('style');
 		this.imageTwo.style.position = 'relative';
