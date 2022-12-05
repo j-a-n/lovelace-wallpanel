@@ -1171,12 +1171,18 @@ class WallpanelView extends HuiView {
 	}
 
 	createImagePathExifObject(imagePath) {
-		const ret = {url: imagePath};
-		const components = imagePath.split(config.image_url);
-		if (components.length > 1 && components[1]) {
-			ret['relativePath'] = components[1].substring(1);
+		const imageInfo = {url: imagePath};
+
+		const extractPathComponentToImageInfo = (key, stringToSplitOn) => {
+			const components = imagePath.split(stringToSplitOn);
+			if (components.length > 1 && components[1]) {
+				imageInfo[key] = components[1].substring(1);
+			}
 		}
-		return ret;
+		extractPathComponentToImageInfo('path', 'media-source://media_source');
+		extractPathComponentToImageInfo('relativePath', config.image_url);
+
+		return imageInfo;
 	}
 	
 	setEXIFImageInfo(imagePath) {

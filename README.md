@@ -235,7 +235,7 @@ Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
 See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
 
 The `image.relativePath` placeholder is replaced with the pathname to the current image, relative to the `image_url`
-configuration parameter. `image.url` is the complete URL of the image.
+configuration parameter. `image.url` is the complete URL of the image, while `image.path` is the image path.
 
 **Examples**
 
