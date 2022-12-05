@@ -234,19 +234,23 @@ Available option names are: `year`, `month`, `day`, `weekday`, `hour`, `minute` 
 Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
 See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
 
-The `ImagePath` placeholder is replaced with the full pathname to the current image.
+The `image.relativePath` placeholder is replaced with the pathname to the current image, relative to the `image_url`
+configuration parameter. `image.url` is the complete URL of the image.
 
-**Example**
+**Examples**
+
+Display location and date
 ```yaml
 show_exif_info: true
 exif_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
 ```
 
+Display image path
 ```yaml
 show_exif_info: true
 exif_info_template: >-
     <span style="font-family: 'Roboto Condensed', sans-serif; font-size: 1em; font-weight: 400; color: #999;">
-      ${ImagePath}
+      ${image.relativePath}
     </span>
 ```
 

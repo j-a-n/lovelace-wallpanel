@@ -1170,13 +1170,13 @@ class WallpanelView extends HuiView {
 		});
 	}
 
-	cleanImagePathForDisplay(imagePath) {
-		// imagePath is of the form 'media-source://media_source/local/foo/bar.jpg'.
-		const components = imagePath.split('media_source/local/');
-		if (components.length < 2 || !components[1]) {
-			return imagePath;
+	createImagePathExifObject(imagePath) {
+		const ret = {url: imagePath};
+		const components = imagePath.split(config.image_url);
+		if (components.length > 1 && components[1]) {
+			ret['relativePath'] = components[1].substring(1);
 		}
-		return components[1];
+		return ret;
 	}
 	
 	setEXIFImageInfo(imagePath) {
@@ -1202,8 +1202,7 @@ class WallpanelView extends HuiView {
 			if (!imgExifData) {
 				return "";
 			}
-			imgExifData["image"] = {path: imagePath};
-			imgExifData["ImagePath"] = this.cleanImagePathForDisplay(imagePath);
+			imgExifData["image"] = this.createImagePathExifObject(imagePath);;
 			let prefix = "";
 			let suffix = "";
 			let options = null;
