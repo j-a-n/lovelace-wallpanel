@@ -721,6 +721,7 @@ class WallpanelView extends HuiView {
 	}
 
 	updateStyle() {
+		this.screensaverOverlay.style.background = '#00000000';
 		this.debugBox.style.visibility = config.debug ? 'visible' : 'hidden';
 		//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
 		this.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
@@ -812,10 +813,10 @@ class WallpanelView extends HuiView {
 			}
 			@keyframes horizontalProgress {
 				0% {
-				  width: 0%;
+					width: 0%;
 				}
 				100% {
-				  width: 100%;
+					width: 100%;
 				}
 			}
 			${classCss}
@@ -1536,15 +1537,7 @@ class WallpanelView extends HuiView {
 
 		if (config.black_screen_after_time > 0 && now - this.screensaverStartedAt >= config.black_screen_after_time*1000) {
 			if (config.debug) console.debug("Setting screen to black");
-			if (this.imageOneContainer.style.visibility != 'hidden') {
-				this.imageOneContainer.style.visibility = 'hidden';
-			}
-			if (this.imageTwoContainer.style.visibility != 'hidden') {
-				this.imageTwoContainer.style.visibility = 'hidden';
-			}
-			if (this.infoContainer.style.visibility != 'hidden') {
-				this.infoContainer.style.visibility = 'hidden';
-			}
+			this.screensaverOverlay.style.background = '#000000';
 		}
 		else if (config.image_url) {
 			if (now - this.lastImageUpdate >= config.display_time*1000) {
