@@ -4,7 +4,7 @@
  */
 
 
- class ScreenWakeLock {
+class ScreenWakeLock {
 	constructor() {
 		this.enabled = false;
 		this.error = null;
@@ -108,7 +108,7 @@
 	}
 }
 
-const version = "4.6";
+const version = "4.6.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -225,11 +225,11 @@ function mergeConfig(target, ...sources) {
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
 	const user = elHass.__hass.user.name ? elHass.__hass.user.name.toLowerCase().replace(/\s/g, '_') : null;
-	
+
 	config = {};
 	mergeConfig(config, defaultConfig);
 	mergeConfig(config, getHaPanelLovelaceConfig());
-	
+
 	let paramConfig = {}
 	for (let [key, value] of params) {
 		if (key.startsWith("wp_")) {
@@ -275,7 +275,7 @@ function updateConfig() {
 		config.idle_time = 0;
 	}
 	if (config.debug) console.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
-	
+
 	if (wallpanel) {
 		if (isActive()) {
 			wallpanel.reconfigure();
@@ -396,7 +396,7 @@ function findImages(hass, mediaContentId) {
 			excludeRegExp.push(new RegExp(imageExclude));
 		}
 	}
-	
+
 	return new Promise(
 		function(resolve, reject) {
 			hass.callWS({
@@ -494,7 +494,7 @@ function enterFullscreen() {
 class WallpanelView extends HuiView {
 	constructor() {
 		super();
-		
+
 		this.imageList = [];
 		this.imageIndex = -1;
 		this.lastImageListUpdate;
@@ -510,11 +510,11 @@ class WallpanelView extends HuiView {
 		this.lastMove = null;
 		this.lastCorner = 0; // 0 - top left, 1 - bottom left, 2 - bottom right, 3 - top right
 		this.translateInterval = null;
-		
+
 		this.__hass = elHass.__hass;
 		this.__cards = [];
 		this.__badges = [];
-		
+
 		elHass.provideHass(this);
 		setInterval(this.timer.bind(this), 1000);
 	}
@@ -529,13 +529,13 @@ class WallpanelView extends HuiView {
 		if (!isActive()) {
 			return;
 		}
-		
+
 		const screensaver_entity = insertBrowserID(config.screensaver_entity);
 
 		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
 			let lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
 			let state = this.__hass.states[screensaver_entity].state;
-			
+
 			if (state == "off" && this.screensaverStartedAt && lastChanged.getTime() - this.screensaverStartedAt > 0) {
 				this.stopScreensaver();
 			}
@@ -617,7 +617,7 @@ class WallpanelView extends HuiView {
 		this.messageBox.style.fontSize = '5vh';
 		this.messageBox.style.textAlign = 'center';
 		this.messageBox.style.transition = 'visibility 200ms ease-in-out';
-		
+
 		this.debugBox.removeAttribute('style');
 		this.debugBox.style.position = 'fixed';
 		this.debugBox.style.pointerEvents = "none";
@@ -633,7 +633,7 @@ class WallpanelView extends HuiView {
 		this.debugBox.style.fontSize = '12px';
 		this.debugBox.style.overflowWrap = 'break-word';
 		this.debugBox.style.overflowY = 'auto';
-		
+
 		this.screensaverContainer.removeAttribute('style');
 		this.screensaverContainer.style.position = 'fixed';
 		this.screensaverContainer.style.top = 0;
@@ -641,7 +641,7 @@ class WallpanelView extends HuiView {
 		this.screensaverContainer.style.width = '100vw';
 		this.screensaverContainer.style.height = '100vh';
 		this.screensaverContainer.style.background = '#000000';
-		
+
 		this.imageOneContainer.removeAttribute('style');
 		this.imageOneContainer.style.position = 'absolute';
 		this.imageOneContainer.style.top = 0;
@@ -649,7 +649,7 @@ class WallpanelView extends HuiView {
 		this.imageOneContainer.style.width = '100%';
 		this.imageOneContainer.style.height = '100%';
 		this.imageOneContainer.style.opacity = 1;
-		
+
 		this.imageOne.removeAttribute('style');
 		this.imageOne.style.position = 'relative';
 		this.imageOne.style.width = '100%';
@@ -670,7 +670,7 @@ class WallpanelView extends HuiView {
 		this.imageTwoContainer.style.width = '100%';
 		this.imageTwoContainer.style.height = '100%';
 		this.imageTwoContainer.style.opacity = 0;
-		
+
 		this.imageTwo.removeAttribute('style');
 		this.imageTwo.style.position = 'relative';
 		this.imageTwo.style.width = '100%';
@@ -683,7 +683,7 @@ class WallpanelView extends HuiView {
 		this.imageTwoInfoContainer.style.left = 0;
 		this.imageTwoInfoContainer.style.width = '100%';
 		this.imageTwoInfoContainer.style.height = '100%';
-		
+
 		this.infoContainer.removeAttribute('style');
 		this.infoContainer.style.position = 'absolute';
 		this.infoContainer.style.top = 0;
@@ -699,7 +699,7 @@ class WallpanelView extends HuiView {
 		this.fixedInfoContainer.style.left = 0;
 		this.fixedInfoContainer.style.width = '100%';
 		this.fixedInfoContainer.style.height = '100%';
-		
+
 		this.infoBox.removeAttribute('style');
 		this.infoBox.style.width = 'fit-content';
 		this.infoBox.style.height = 'fit-content';
@@ -708,7 +708,7 @@ class WallpanelView extends HuiView {
 		this.infoBox.style.setProperty('--wp-card-padding', '0px');
 		this.infoBox.style.setProperty('--wp-card-margin', '5px');
 		this.infoBox.style.setProperty('--wp-card-backdrop-filter', 'none');
-		
+
 		this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
 
 		this.screensaverOverlay.removeAttribute('style');
@@ -729,7 +729,7 @@ class WallpanelView extends HuiView {
 		this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time*1000)}ms ease-in-out`;
 		this.imageOne.style.objectFit = config.image_fit;
 		this.imageTwo.style.objectFit = config.image_fit;
-		
+
 		if (config.info_animation_duration_x) {
 			this.infoBoxPosX.style.animation = `moveX ${config.info_animation_duration_x}s ${config.info_animation_timing_function_x} infinite alternate`;
 		}
@@ -743,7 +743,7 @@ class WallpanelView extends HuiView {
 		else {
 			this.infoBoxPosY.style.animation = '';
 		}
-		
+
 		if (config.style) {
 			for (const elId in config.style) {
 				if (elId.startsWith('wallpanel-') && elId != 'wallpanel-shadow-host' && !classStyles[elId]) {
@@ -774,7 +774,7 @@ class WallpanelView extends HuiView {
 		let maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) * 2 - parseInt(computed.paddingRight) * 2 - this.infoBox.offsetWidth;
 		let maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) * 2 - parseInt(computed.paddingBottom) * 2 - this.infoBox.offsetHeight;
 		let host = '';
-		
+
 		if (config.style) {
 			if (config.style['wallpanel-shadow-host']) {
 				for (const attr in config.style['wallpanel-shadow-host']) {
@@ -796,7 +796,7 @@ class WallpanelView extends HuiView {
 			}
 			classCss += `}\n`;
 		}
-		
+
 		this.shadowStyle.innerHTML = `
 			:host {
 				${host}
@@ -849,9 +849,9 @@ class WallpanelView extends HuiView {
 				{ opacity: 1 }
 			];
 			this.infoBox.animate(
-				keyframes, { 
+				keyframes, {
 					duration: Math.round(config.info_move_fade_duration * 1000),
-					iterations: 1 
+					iterations: 1
 				}
 			);
 		}
@@ -865,7 +865,7 @@ class WallpanelView extends HuiView {
 		}
 		wp.translateInterval = setInterval(function() {
 			wp.infoBoxPosX.style.transform = `translate3d(${x}px, 0px, 0px)`;
-			wp.infoBoxPosY.style.transform = `translate3d(0px, ${y}px, 0px)`;	
+			wp.infoBoxPosY.style.transform = `translate3d(0px, ${y}px, 0px)`;
 		}, ms);
 	}
 
@@ -874,7 +874,7 @@ class WallpanelView extends HuiView {
 		this.infoBoxContent.innerHTML = '';
 		this.__badges = [];
 		this.__cards = [];
-		
+
 		this.shadowRoot.querySelectorAll(".wp-card").forEach(card => {
 			card.parentElement.removeChild(card);
 		})
@@ -928,7 +928,7 @@ class WallpanelView extends HuiView {
 				parent.appendChild(div);
 			});
 		}
-		
+
 		setTimeout(this.updateShadowStyle.bind(this), 500);
 	}
 
@@ -962,13 +962,13 @@ class WallpanelView extends HuiView {
 
 		this.messageBox = document.createElement('div');
 		this.messageBox.id = 'wallpanel-message-box';
-		
+
 		this.debugBox = document.createElement('div');
 		this.debugBox.id = 'wallpanel-debug-box';
-	
+
 		this.screensaverContainer = document.createElement('div');
 		this.screensaverContainer.id = 'wallpanel-screensaver-container';
-		
+
 		this.imageOneContainer = document.createElement('div');
 		this.imageOneContainer.id = 'wallpanel-screensaver-image-one-container';
 
@@ -982,7 +982,7 @@ class WallpanelView extends HuiView {
 		this.imageOneInfoExif = document.createElement('div');
 		this.imageOneInfoExif.className = 'wallpanel-screensaver-image-info-exif';
 		this.imageOneInfoExif.id = 'wallpanel-screensaver-image-one-info-exif';
-		
+
 		this.imageOneInfoContainer.appendChild(this.imageOneInfoExif);
 		this.imageOneContainer.appendChild(this.imageOne);
 		this.imageOneContainer.appendChild(this.imageOneInfoContainer);
@@ -990,14 +990,14 @@ class WallpanelView extends HuiView {
 
 		this.imageTwoContainer = document.createElement('div');
 		this.imageTwoContainer.id = 'wallpanel-screensaver-image-two-container';
-		
+
 		this.imageTwo = document.createElement('img');
 		this.imageTwo.id = 'wallpanel-screensaver-image-two';
 		this.imageTwo.setAttribute('data-loading', false);
 
 		this.imageTwoInfoContainer = document.createElement('div');
 		this.imageTwoInfoContainer.id = 'wallpanel-screensaver-image-two-info-container';
-		
+
 		this.imageTwoInfoExif = document.createElement('div');
 		this.imageTwoInfoExif.className = 'wallpanel-screensaver-image-info-exif';
 		this.imageTwoInfoExif.id = 'wallpanel-screensaver-image-two-info-exif';
@@ -1010,7 +1010,7 @@ class WallpanelView extends HuiView {
 		if (config.show_progress_bar) {
 			this.createProgressbarDiv(this.screensaverContainer);
 		}
-		
+
 		this.infoContainer = document.createElement('div');
 		this.infoContainer.id = 'wallpanel-screensaver-info-container';
 
@@ -1033,7 +1033,7 @@ class WallpanelView extends HuiView {
 
 		this.infoBox = document.createElement('div');
 		this.infoBox.id = 'wallpanel-screensaver-info-box';
-		
+
 		this.infoBoxContent = document.createElement('div');
 		this.infoBoxContent.id = 'wallpanel-screensaver-info-box-content';
 		this.infoBoxContent.style.display = 'grid';
@@ -1049,11 +1049,11 @@ class WallpanelView extends HuiView {
 
 		this.screensaverOverlay = document.createElement('div');
 		this.screensaverOverlay.id = 'wallpanel-screensaver-overlay';
-		
+
 		this.screensaverContainer.appendChild(this.screensaverOverlay);
 
 		this.shadowStyle = document.createElement('style');
-		
+
 		let shadow = this.attachShadow({mode: 'open'});
 		shadow.appendChild(this.shadowStyle);
 		shadow.appendChild(this.screensaverContainer);
@@ -1084,7 +1084,7 @@ class WallpanelView extends HuiView {
 				wp.updateShadowStyle();
 			}
 		});
-		
+
 		[this.imageOne, this.imageTwo].forEach(function(img) {
 			if (!img) return;
 			img.addEventListener('load', function() {
@@ -1131,7 +1131,7 @@ class WallpanelView extends HuiView {
 			exifDataCacheKeys.push(tmpImg.imagePath);
 			exifDataCache[tmpImg.imagePath] = tmpImg.exifdata;
 			wp.setEXIFImageInfo(tmpImg.imagePath);
-			
+
 			let exifLong = tmpImg.exifdata["GPSLongitude"];
 			let exifLat = tmpImg.exifdata["GPSLatitude"];
 			if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
@@ -1139,11 +1139,11 @@ class WallpanelView extends HuiView {
 				let latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
 				m = (tmpImg.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
 				let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
-			
+
 				const xhr = new XMLHttpRequest();
 				xhr.onload = function(event) {
-					if (this.status == 200 || this.status === 0) {	
-						let info = JSON.parse(xhr.responseText); 
+					if (this.status == 200 || this.status === 0) {
+						let info = JSON.parse(xhr.responseText);
 						if (config.debug) console.debug("nominatim data:", info);
 						if (info && info.address) {
 							exifDataCache[tmpImg.imagePath].address = info.address;
@@ -1155,11 +1155,11 @@ class WallpanelView extends HuiView {
 						delete exifDataCache[tmpImg.imagePath];
 					}
 				}
-				xhr.onerror = function(event) { 
+				xhr.onerror = function(event) {
 					console.error("nominatim error:", event);
 					delete exifDataCache[tmpImg.imagePath];
 				}
-				xhr.ontimeout = function(event) { 
+				xhr.ontimeout = function(event) {
 					console.error("nominatim timeout:", event);
 					delete exifDataCache[tmpImg.imagePath];
 				}
@@ -1185,7 +1185,7 @@ class WallpanelView extends HuiView {
 
 		return imageInfo;
 	}
-	
+
 	setEXIFImageInfo(imagePath) {
 		let imgExifData = exifDataCache[imagePath];
 		let exifElement = null;
@@ -1203,7 +1203,7 @@ class WallpanelView extends HuiView {
 			exifElement.innerHTML = "";
 			return;
 		}
-		
+
 		let html = config.exif_info_template;
 		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
 			if (!imgExifData) {
@@ -1235,7 +1235,7 @@ class WallpanelView extends HuiView {
 					}
 				}
 			}
-			
+
 			let val = "";
 			let tagList = tags.split("|");
 			let tag = "";
@@ -1314,7 +1314,7 @@ class WallpanelView extends HuiView {
 		if (config.debug) console.debug(`Updating image '${img.id}' from '${imageUrl}'`);
 		img.src = imageUrl;
 	}
-	
+
 	updateImageFromMediaSource(img) {
 		if (this.imageList.length == 0) {
 			return;
@@ -1353,23 +1353,23 @@ class WallpanelView extends HuiView {
 			}
 		);
 	}
-	
+
 	updateImage(img) {
 		if (!config.image_url) {
 			return;
 		}
 		img.setAttribute('data-loading', true);
 		img.imagePath = null;
-		
+
 		if (config.image_url.startsWith("media-source://media_source")) {
 			this.updateImageFromMediaSource(img);
 		}
 		else {
 			this.updateImageFromUrl(img);
 		}
-		
+
 	}
-	
+
 	preloadImages() {
 		if (config.debug) console.debug("Preloading images");
 		this.updateImage(this.imageOne);
@@ -1381,11 +1381,11 @@ class WallpanelView extends HuiView {
 
 	switchActiveImage(crossfadeMillis = null) {
 		this.lastImageUpdate = Date.now();
-		
+
 		if (crossfadeMillis === null) {
 			crossfadeMillis = Math.round(config.crossfade_time*1000);
 		}
-		
+
 		this.imageOneContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
 		this.imageTwoContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
 
@@ -1432,7 +1432,7 @@ class WallpanelView extends HuiView {
 			wp.hideMessage();
 		}, timeout);
 	}
-	
+
 	hideMessage() {
 		if (!this.messageBoxTimeout) {
 			return;
@@ -1463,17 +1463,17 @@ class WallpanelView extends HuiView {
 		this.updateStyle();
 		this.setupScreensaver();
 		this.restartProgressBarAnimation();
-		
+
 		if (config.keep_screen_on_time > 0) {
 			let wp = this;
-			setTimeout(function() { 
+			setTimeout(function() {
 				if (wp.screensaverStartedAt && !screenWakeLock.enabled) {
 					console.error("Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD");
 					wp.displayMessage("Please interact with the screen for a moment to request wake lock.", 15000)
 				}
 			}, 2000);
 		}
-		
+
 		this.lastMove = Date.now();
 		this.lastImageUpdate = Date.now();
 		this.screensaverStartedAt = Date.now();
@@ -1482,9 +1482,9 @@ class WallpanelView extends HuiView {
 			this.bodyOverflowOrig = document.body.style.overflow;
 			document.body.style.overflow = 'hidden';
 		}
-	
+
 		this.createInfoBoxContent();
-		
+
 		this.style.visibility = 'visible';
 		this.style.opacity = 1;
 
@@ -1496,14 +1496,14 @@ class WallpanelView extends HuiView {
 			}, (config.fade_in_time+1)*1000);
 		}
 	}
-	
+
 	stopScreensaver() {
 		if (config.debug) console.debug("Stop screensaver");
-		
+
 		this.screensaverStartedAt = null;
 		this.screensaverStoppedAt = Date.now();
 		document.body.style.overflow = this.bodyOverflowOrig;
-		
+
 		this.hideMessage();
 
 		this.style.transition = '';
@@ -1511,18 +1511,18 @@ class WallpanelView extends HuiView {
 		this.style.visibility = 'hidden';
 		this.infoBoxPosX.style.animation = '';
 		this.infoBoxPosY.style.animation = '';
-	
+
 		this.idleSince = Date.now();
 		if (screenWakeLock.enabled) {
 			screenWakeLock.disable();
 		}
-		
+
 		this.setScreensaverEntityState();
 	}
 
 	updateScreensaver() {
 		let now = Date.now();
-		
+
 		if (config.info_move_interval > 0 && now - this.lastMove >= config.info_move_interval*1000) {
 			if (config.info_move_pattern === 'random') {
 				this.randomMove();
@@ -1635,7 +1635,6 @@ document.body.appendChild(wallpanel);
 
 
 function activateWallpanel() {
-	updateConfig();
 	setToolbarHidden(config.hide_toolbar);
 	setSidebarHidden(config.hide_sidebar);
 }
@@ -1674,6 +1673,7 @@ window.setInterval(() => {
 		}
 	}
 	if (changed) {
+		updateConfig();
 		if (isActive()) {
 			activateWallpanel();
 		}
@@ -1687,7 +1687,7 @@ window.setInterval(() => {
 
 /**
  * https://github.com/exif-js/exif-js
- * 
+ *
  * Copyright (c) 2008 Jacob Seidelin
  * Released under the MIT License
  */
@@ -2047,7 +2047,7 @@ function getImageData(img, callback) {
 		img.iptcdata = iptcdata || {};
 		if (EXIF.isXmpEnabled) {
 			var xmpdata= findXMPinJPEG(binFile);
-			img.xmpdata = xmpdata || {};               
+			img.xmpdata = xmpdata || {};
 		}
 		if (callback) {
 			callback.call(img);
@@ -2566,7 +2566,7 @@ function findXMPinJPEG(file) {
 
 function xml2json(xml) {
 	var json = {};
-	
+
 	if (xml.nodeType == 1) { // element node
 		if (xml.attributes.length > 0) {
 		json['@attributes'] = {};
@@ -2578,7 +2578,7 @@ function xml2json(xml) {
 	} else if (xml.nodeType == 3) { // text node
 		return xml.nodeValue;
 	}
-	
+
 	// deal with children
 	if (xml.hasChildNodes()) {
 		for(var i = 0; i < xml.childNodes.length; i++) {
@@ -2596,7 +2596,7 @@ function xml2json(xml) {
 		}
 		}
 	}
-	
+
 	return json;
 }
 
