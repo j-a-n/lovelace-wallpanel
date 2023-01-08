@@ -427,6 +427,7 @@ style:
   wallpanel-screensaver-info-box-content:
     '--ha-card-background': none
     '--ha-card-box-shadow': none
+    '--ha-card-border-width': 0px
     '--primary-background-color': '#111111'
     '--secondary-background-color': '#202020'
     '--primary-text-color': '#e1e1e1'
@@ -446,6 +447,7 @@ style:
   wallpanel-screensaver-info-box-content:
     '--ha-card-background': none
     '--ha-card-box-shadow': none
+    '--ha-card-border-width': 0px
     '--primary-background-color': '#fafafa'
     '--secondary-background-color': '#e5e5e5'
     '--primary-text-color': '#212121'
@@ -461,6 +463,7 @@ style:
   wallpanel-screensaver-info-box-content:
     '--ha-card-background': none
     '--ha-card-box-shadow': none
+    '--ha-card-border-width': 0px
     text-shadow: -0.5px -0.5px 0 rgb(17, 17, 17), 0.5px -0.5px 0 rgb(17, 17, 17), -0.5px 0.5px 0 rgb(17, 17, 17), 0.5px 0.5px 0 rgb(17, 17, 17)
     '--primary-text-color': '#ffffff'
     '--secondary-text-color': '#dddddd'
