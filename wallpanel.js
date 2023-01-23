@@ -387,6 +387,27 @@ function navigate(path, keepSearch=true) {
 	);
 }
 
+//add suport for the new unsplash api
+function getAPIResponse(array) {
+    var http = new XMLHttpRequest();
+    http.responseType = "json";
+    http.open("GET", config.image_url, true);
+    http.onload  = function() {
+       if (this.status == 200 || this.status === 0) {
+			var jsonResponse = http.response;
+			for (let i = 0;i < jsonResponse.length;i++) {
+			    var url = jsonResponse[i].urls.raw + "&w=${width}&h=${height}&auto=format?sig=${timestamp}";
+			    array.push(url);
+			}
+		} else {
+		    //bad request
+			//get random images...
+			array.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
+		}
+    };
+    http.send(null);
+    return Promise.resolve(array);
+}
 
 function findImages(hass, mediaContentId) {
 	if (config.debug) console.debug(`findImages: ${mediaContentId}`);
@@ -1065,7 +1086,11 @@ class WallpanelView extends HuiView {
 
 		if (config.idle_time > 0 && config.image_url) {
 			if (config.image_url.startsWith("media-source://media_source")) {
-				this.updateImageList(this.preloadImages.bind(this));
+				this.updateImageListMediaSource(this.preloadImages.bind(this));
+			}
+			//handle unsplash api url
+			if (config.image_url.startsWith("https://api.unsplash")) {
+				this.updateImageListAPI(this.preloadImages.bind(this));
 			}
 			else {
 				this.preloadImages();
@@ -1268,13 +1293,15 @@ class WallpanelView extends HuiView {
 	}
 
 	reconfigure() {
-		this.updateImageList();
+		this.updateImageListMediaSource();
+		this.updateImageListAPI();
 		this.setDefaultStyle();
 		this.updateStyle();
 		this.createInfoBoxContent();
 	}
 
-	updateImageList(callback) {
+    //rename for clarity 
+	updateImageListMediaSource(callback) {
 		if (!config.image_url || !config.image_url.startsWith("media-source://media_source")) return;
 		if (this.updatingImageList) return;
 		this.lastImageListUpdate = Date.now();
@@ -1301,6 +1328,27 @@ class WallpanelView extends HuiView {
 		)
 	}
 
+    //add suport for the new unsplash api
+    updateImageListAPI(callback) {
+		if (!config.image_url || !config.image_url.startsWith("https://api.unsplash")) return;
+		if (this.updatingImageList) return;
+		var urls = [];
+		this.lastImageListUpdate = Date.now();
+		this.updatingImageList = true;
+		getAPIResponse(urls).then(
+		    result => {
+		        this.imageList = result.sort();
+        		this.updatingImageList = false;
+                if (config.debug) {
+        		    console.debug("Image list is now:", this.imageList);
+                }
+        		if (callback) {
+        			callback();
+        		}
+	        }
+	   )
+	}
+	
 	updateImageFromUrl(img) {
 		let width = this.screensaverContainer.clientWidth;
 		let height = this.screensaverContainer.clientHeight;
@@ -1315,6 +1363,7 @@ class WallpanelView extends HuiView {
 		img.src = imageUrl;
 	}
 
+    //rename for clarity
 	updateImageFromMediaSource(img) {
 		if (this.imageList.length == 0) {
 			return;
@@ -1354,6 +1403,38 @@ class WallpanelView extends HuiView {
 		);
 	}
 
+    //add suport for the new unsplash api
+    updateImageFromAPI(img) {
+		if (this.imageList.length == 0) {
+			return;
+		}
+		if (config.image_order == "random") {
+			if (this.imageList.length > 1) {
+				let imageIndex = this.imageIndex;
+				while (imageIndex == this.imageIndex) {
+					imageIndex = Math.floor(Math.random() * this.imageList.length);
+				}
+				this.imageIndex = imageIndex;
+			}
+		}
+		else {
+			this.imageIndex++;
+		}
+		if (this.imageIndex >= this.imageList.length) {
+			this.imageIndex = 0;
+		}
+		let width = this.screensaverContainer.clientWidth;
+    	let height = this.screensaverContainer.clientHeight;
+    	let timestamp_ms = Date.now();
+    	let timestamp = Math.floor(timestamp_ms / 1000);
+    	var url = this.imageList[this.imageIndex];
+    	url = url.replace(/\${width}/g, width);
+		url = url.replace(/\${height}/g, height);
+		url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
+		url = url.replace(/\${timestamp}/g, timestamp);
+		img.src = url;
+	}
+	
 	updateImage(img) {
 		if (!config.image_url) {
 			return;
@@ -1363,6 +1444,10 @@ class WallpanelView extends HuiView {
 
 		if (config.image_url.startsWith("media-source://media_source")) {
 			this.updateImageFromMediaSource(img);
+		}
+		//handle unsplash api url
+		else if (config.image_url.startsWith("https://api.unsplash")) {
+		    this.updateImageFromAPI(img);
 		}
 		else {
 			this.updateImageFromUrl(img);
@@ -1544,7 +1629,11 @@ class WallpanelView extends HuiView {
 				this.switchActiveImage();
 			}
 			if (now - this.lastImageListUpdate >= config.image_list_update_interval*1000) {
-				this.updateImageList();
+			    if (config.image_url.startsWith("https://api.unsplash")) {
+			       this.updateImageListAPI(); 
+			    } else {
+			        this.updateImageListMediaSource();
+			    }
 			}
 		}
 		else {
