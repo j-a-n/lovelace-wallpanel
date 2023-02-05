@@ -1333,7 +1333,7 @@ class WallpanelView extends HuiView {
 				if (config.debug) console.debug(`Got unsplash API response`);
 				http.response.forEach(entry => {
 					if (config.debug) console.debug(entry);
-					urls.push(entry.urls.raw + "&w=${width}&h=${height}&auto=format&sig=${timestamp}");
+					urls.push(entry.urls.raw + "&w=${width}&h=${height}&auto=format");
 				});
 			} else {
 				console.warn("Unsplash API error, get random images", http);
