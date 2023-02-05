@@ -372,15 +372,18 @@ function setSidebarHidden(hidden) {
 
 function setToolbarHidden(hidden) {
 	try {
-		let appToolbar = elHaMain.shadowRoot
-		.querySelector("ha-panel-lovelace").shadowRoot
-		.querySelector("hui-root").shadowRoot
-		.querySelector("app-toolbar");
+		let huiRoot = elHaMain.shadowRoot
+			.querySelector("ha-panel-lovelace").shadowRoot
+			.querySelector("hui-root").shadowRoot;
+		let view = huiRoot.querySelector("#view");
+		let appToolbar = huiRoot.querySelector("app-toolbar");
 		if (hidden) {
 			appToolbar.style.setProperty("display", "none");
+			view.style.minHeight = "100vh";
 		}
 		else {
 			appToolbar.style.removeProperty("display");
+			view.style.removeProperty("min-height");
 		}
 		window.dispatchEvent(new Event('resize'));
 	}
