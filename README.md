@@ -219,11 +219,11 @@ image_excludes:
   - '/@eaDir'
 ```
 
-## EXIF info
+## Image info
 Set `show_image_info` to `true` to show info on top of images if available.
 This will only work for local jpeg images.
 
-The EXIF info can be formatted by specifying HTML code in `image_info_template`.
+The image info can be formatted by specifying HTML code in `image_info_template`.
 Placeholders like `${EXIF-tag-name}` will be replaced with the corresponding EXIF tag value.
 See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for available EXIF tag names.
 
@@ -266,7 +266,7 @@ image_info_template: >-
     </span>
 ```
 
-The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
+The CSS class `wallpanel-screensaver-image-info` can be used to style the image info.
 See section "Styles".
 
 ## Badges and cards
@@ -360,7 +360,7 @@ The most important element IDs are:
 - `wallpanel-screensaver-container`
 - `wallpanel-screensaver-info-box`
 - `wallpanel-screensaver-info-box-content`
-- `wallpanel-screensaver-image-info-exif`
+- `wallpanel-screensaver-image-info`
 - `wallpanel-screensaver-overlay`
 
 Use the `style` configuration attribute and add a key for the element ID for which you want to set style attributes.
@@ -397,12 +397,12 @@ cards:
       '--ha-card-background': '#990000'
 ```
 
-The CSS class `wallpanel-screensaver-image-info-exif` can be used to style the EXIF info.
+The CSS class `wallpanel-screensaver-image-info` can be used to style the image info layer.
 
 **Example and default:**
 ```yaml
 style:
-  wallpanel-screensaver-image-info-exif:
+  wallpanel-screensaver-image-info:
     position: 'absolute'
     bottom: '0.5em'
     right: '0.5em'
@@ -416,7 +416,7 @@ style:
 **Another example:**
 ```yaml
 style:
-  wallpanel-screensaver-image-info-exif:
+  wallpanel-screensaver-image-info:
     position: 'absolute'
     bottom: '0.5em'
     right: '1.0em'
