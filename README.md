@@ -23,11 +23,11 @@ The recommended way is to install this plugin using HACS.
 * Select the `Lovelace` as category.
 * Click the `ADD` button.
 
-### Install plugin 
+### Install plugin
 * Search for `WallPanel` in the Frontend repository list
 * Click on the repository card
 * Click on `Install this repository in HACS`
-* Select the latest version 
+* Select the latest version
 * Click on `Download`
 
 
@@ -44,7 +44,7 @@ The recommended way is to upgrade this plugin using HACS.
 * Search for `WallPanel` in the Frontend repository list
 * Click on the repository card
 * Click on `Install this repository in HACS`
-* Select the latest version 
+* Select the latest version
 * Click on `Download`
 
 ## Manual upgrade
@@ -121,7 +121,7 @@ wallpanel:
   keep_screen_on_time: 86400
   black_screen_after_time: 7200
   control_reactivation_time: 1.0
-  screensaver_stop_navigation_path: /lovelace/default_view 
+  screensaver_stop_navigation_path: /lovelace/default_view
   image_url: 'http://picsum.photos/${width}/${height}?random=${timestamp}'
   image_fit: cover
   image_list_update_interval: 3600
@@ -186,12 +186,14 @@ You can narrow down the images from unsplash.com using certain search terms, for
 
 Example of using images from api.unsplash.com (new api):
 
-```
+```yaml
 image_order: random
 image_list_update_interval: 3600
-image_url: >-
-  https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&collections=COLLECTION_ID&count=50
+image_url: https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=dogs
 ```
+
+See [Unsplash API documentation (Get a random photo)](https://unsplash.com/documentation#get-a-random-photo) for details.
+
 
 It is also possible to use images from the Home Assistant Local Media source.
 Just set the `image_url` to a media-source URL as displayed in the URL of the Home Assistant Media Browser.
@@ -547,12 +549,12 @@ main (default) configuration with the settings defined in the referenced profile
 
 There are three different options to activate a profile:
 
-A) Activation by a query string parameter: 
+A) Activation by a query string parameter:
 `http://hass:8123/lovelace/default_view?wp_profile="night"`
 
 B) Dynamically activation by using an input_text or input_select helper.
 For the example, an input_text helper named `wallpanel_profile` must be created in HA.
-The profile can then be changed by setting the status of `input_text.wallpanel_profile` either 
+The profile can then be changed by setting the status of `input_text.wallpanel_profile` either
 manually or by an (e.g. time based) automation. Changing the value of the helper to the
 (exact) name of the profile will change the display immediately. Any value different to
 the defined additional profiles will switch back to the default/standard definitions
