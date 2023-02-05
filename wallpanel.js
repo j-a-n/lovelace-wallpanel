@@ -131,9 +131,9 @@ const defaultConfig = {
 	image_order: 'sorted', // sorted / random
 	image_excludes: [],
 	show_progress_bar: false,
-	show_exif_info: false,
+	show_image_info: false,
 	fetch_address_data: false,
-	exif_info_template: '${DateTimeOriginal}',
+	image_info_template: '${DateTimeOriginal}',
 	info_animation_duration_x: 0,
 	info_animation_duration_y: 0,
 	info_animation_timing_function_x: 'ease',
@@ -158,7 +158,7 @@ let fullscreen = false;
 let screenWakeLock = new ScreenWakeLock();
 let wallpanel = null;
 let classStyles = {
-	"wallpanel-screensaver-image-info-exif": {
+	"wallpanel-screensaver-image-info": {
 		"position": "absolute",
 		"bottom": "0.5em",
 		"right": "0.5em",
@@ -179,9 +179,9 @@ let classStyles = {
 		"background-color": "white"
 	}
 }
-let exifDataCache = {};
-let exifDataCacheKeys = [];
-const exifDataCacheMaxSize = 1000;
+let imageInfoCache = {};
+let imageInfoCacheKeys = [];
+const imageInfoCacheMaxSize = 1000;
 
 const elHass = document.querySelector("body > home-assistant");
 const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
@@ -270,6 +270,14 @@ function updateConfig() {
 			// Unsplash API currently places a limit of 50 requests per hour
 			config.image_list_update_interval = 90;
 		}
+	}
+	if (config.exif_info_template) {
+		// Old key => new key
+		config.image_info_template = config.exif_info_template;
+	}
+	if (config.show_exif_info) {
+		// Old key => new key
+		config.show_image_info = config.show_exif_info;
 	}
 	if (!config.enabled) {
 		config.debug = false;
@@ -989,11 +997,11 @@ class WallpanelView extends HuiView {
 		this.imageOneInfoContainer = document.createElement('div');
 		this.imageOneInfoContainer.id = 'wallpanel-screensaver-image-one-info-container';
 
-		this.imageOneInfoExif = document.createElement('div');
-		this.imageOneInfoExif.className = 'wallpanel-screensaver-image-info-exif';
-		this.imageOneInfoExif.id = 'wallpanel-screensaver-image-one-info-exif';
+		this.imageOneInfo = document.createElement('div');
+		this.imageOneInfo.className = 'wallpanel-screensaver-image-info';
+		this.imageOneInfo.id = 'wallpanel-screensaver-image-one-info';
 
-		this.imageOneInfoContainer.appendChild(this.imageOneInfoExif);
+		this.imageOneInfoContainer.appendChild(this.imageOneInfo);
 		this.imageOneContainer.appendChild(this.imageOne);
 		this.imageOneContainer.appendChild(this.imageOneInfoContainer);
 		this.screensaverContainer.appendChild(this.imageOneContainer);
@@ -1008,11 +1016,11 @@ class WallpanelView extends HuiView {
 		this.imageTwoInfoContainer = document.createElement('div');
 		this.imageTwoInfoContainer.id = 'wallpanel-screensaver-image-two-info-container';
 
-		this.imageTwoInfoExif = document.createElement('div');
-		this.imageTwoInfoExif.className = 'wallpanel-screensaver-image-info-exif';
-		this.imageTwoInfoExif.id = 'wallpanel-screensaver-image-two-info-exif';
+		this.imageTwoInfo = document.createElement('div');
+		this.imageTwoInfo.className = 'wallpanel-screensaver-image-info';
+		this.imageTwoInfo.id = 'wallpanel-screensaver-image-two-info';
 
-		this.imageTwoInfoContainer.appendChild(this.imageTwoInfoExif);
+		this.imageTwoInfoContainer.appendChild(this.imageTwoInfo);
 		this.imageTwoContainer.appendChild(this.imageTwo);
 		this.imageTwoContainer.appendChild(this.imageTwoInfoContainer);
 		this.screensaverContainer.appendChild(this.imageTwoContainer);
@@ -1099,7 +1107,7 @@ class WallpanelView extends HuiView {
 			if (!img) return;
 			img.addEventListener('load', function() {
 				img.setAttribute('data-loading', false);
-				if (config.show_exif_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
+				if (config.show_image_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
 					wp.fetchEXIFInfo(img);
 				}
 			});
@@ -1123,24 +1131,25 @@ class WallpanelView extends HuiView {
 
 	fetchEXIFInfo(img) {
 		let wp = this;
-		if (exifDataCache[img.imagePath]) {
+		if (imageInfoCache[img.imageDataKey]) {
 			return;
 		}
-		if (exifDataCacheKeys.length >= exifDataCacheMaxSize) {
-			let oldest = exifDataCacheKeys.shift();
-			if (exifDataCache[oldest]) {
-				delete exifDataCache[oldest];
+		if (imageInfoCacheKeys.length >= imageInfoCacheMaxSize) {
+			let oldest = imageInfoCacheKeys.shift();
+			if (imageInfoCache[oldest]) {
+				delete imageInfoCache[oldest];
 			}
 		}
 
 		const tmpImg = document.createElement("img");
-		tmpImg.imagePath = img.imagePath;
 		tmpImg.src = img.src;
+		tmpImg.imagePath = img.imagePath;
+		tmpImg.imageDataKey = img.imageDataKey;
 		getImageData(tmpImg, function() {
 			if (config.debug) console.debug("EXIF data:", tmpImg.exifdata);
-			exifDataCacheKeys.push(tmpImg.imagePath);
-			exifDataCache[tmpImg.imagePath] = tmpImg.exifdata;
-			wp.setEXIFImageInfo(tmpImg.imagePath);
+			imageInfoCacheKeys.push(tmpImg.imageDataKey);
+			imageInfoCache[tmpImg.imageDataKey] = tmpImg.exifdata;
+			wp.setImageDataInfo(tmpImg);
 
 			let exifLong = tmpImg.exifdata["GPSLongitude"];
 			let exifLat = tmpImg.exifdata["GPSLatitude"];
@@ -1156,22 +1165,22 @@ class WallpanelView extends HuiView {
 						let info = JSON.parse(xhr.responseText);
 						if (config.debug) console.debug("nominatim data:", info);
 						if (info && info.address) {
-							exifDataCache[tmpImg.imagePath].address = info.address;
-							wp.setEXIFImageInfo(tmpImg.imagePath);
+							imageInfoCache[tmpImg.imageDataKey].address = info.address;
+							wp.setImageDataInfo(tmpImg);
 						}
 					}
 					else {
 						console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
-						delete exifDataCache[tmpImg.imagePath];
+						delete imageInfoCache[tmpImg.imageDataKey];
 					}
 				}
 				xhr.onerror = function(event) {
 					console.error("nominatim error:", event);
-					delete exifDataCache[tmpImg.imagePath];
+					delete imageInfoCache[tmpImg.imageDataKey];
 				}
 				xhr.ontimeout = function(event) {
 					console.error("nominatim timeout:", event);
-					delete exifDataCache[tmpImg.imagePath];
+					delete imageInfoCache[tmpImg.imageDataKey];
 				}
 				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
 				//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
@@ -1181,7 +1190,7 @@ class WallpanelView extends HuiView {
 		});
 	}
 
-	createImagePathExifObject(imagePath) {
+	createImagePathInfoObject(imagePath) {
 		const imageInfo = {url: imagePath};
 
 		const extractPathComponentToImageInfo = (key, stringToSplitOn) => {
@@ -1196,30 +1205,32 @@ class WallpanelView extends HuiView {
 		return imageInfo;
 	}
 
-	setEXIFImageInfo(imagePath) {
-		let imgExifData = exifDataCache[imagePath];
-		let exifElement = null;
-		if (this.imageOne.imagePath == imagePath) {
-			exifElement = this.imageOneInfoExif;
+	setImageDataInfo(img) {
+		let imageInfo = imageInfoCache[img.imageDataKey];
+		let infoElement = null;
+		if (this.imageOne.imageDataKey == img.imageDataKey) {
+			infoElement = this.imageOneInfo;
 		}
-		else if (this.imageTwo.imagePath == imagePath) {
-			exifElement = this.imageTwoInfoExif;
+		else if (this.imageTwo.imageDataKey == img.imageDataKey) {
+			infoElement = this.imageTwoInfo;
 		}
-		if (!exifElement) {
+		if (!infoElement) {
 			return;
 		}
 
-		if ((!config.show_exif_info) || (!exifDataCache[imagePath])) {
-			exifElement.innerHTML = "";
+		if ((!config.show_image_info) || (!imageInfo)) {
+			infoElement.innerHTML = "";
 			return;
 		}
 
-		let html = config.exif_info_template;
+		let html = config.image_info_template;
 		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
-			if (!imgExifData) {
+			if (!imageInfo) {
 				return "";
 			}
-			imgExifData["image"] = this.createImagePathExifObject(imagePath);;
+			if (img.imagePath) {
+				imageInfo["image"] = this.createImagePathInfoObject(img.imagePath);
+			}
 			let prefix = "";
 			let suffix = "";
 			let options = null;
@@ -1252,7 +1263,7 @@ class WallpanelView extends HuiView {
 			for (let i=0; i<tagList.length; i++) {
 				tag = tagList[i];
 				let keys = tag.replace(/\s/g, '').split(".");
-				val = imgExifData;
+				val = imageInfo;
 				keys.forEach(key => {
 					if (val) {
 						val = val[key];
@@ -1274,7 +1285,7 @@ class WallpanelView extends HuiView {
 			}
 			return prefix + val + suffix;
 		});
-		exifElement.innerHTML = html;
+		infoElement.innerHTML = html;
 	}
 
 	reconfigure() {
@@ -1323,6 +1334,7 @@ class WallpanelView extends HuiView {
 		this.lastImageListUpdate = Date.now();
 		let wp = this;
 		let urls = [];
+		let data = {};
 		const http = new XMLHttpRequest();
 		http.responseType = "json";
 		// count: The number of photos to return. (Default: 1; max: 30)
@@ -1332,13 +1344,16 @@ class WallpanelView extends HuiView {
 				if (config.debug) console.debug(`Got unsplash API response`);
 				http.response.forEach(entry => {
 					if (config.debug) console.debug(entry);
-					urls.push(entry.urls.raw + "&w=${width}&h=${height}&auto=format");
+					const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
+					urls.push(url);
+					data[url] = entry;
 				});
 			} else {
 				console.warn("Unsplash API error, get random images", http);
 				urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
 			}
 			wp.imageList = urls;
+			imageInfoCache = data;
 			if (config.debug) console.debug("Image list from unsplash is now:", wp.imageList);
 			if (callback) {
 				callback();
@@ -1388,6 +1403,7 @@ class WallpanelView extends HuiView {
 		if (!imagePath) {
 			return;
 		}
+		img.imageDataKey = imagePath;
 		img.imagePath = imagePath;
 		imagePath = imagePath.replace(/^media-source:\/\/media_source/, '/media');
 		this.hass.callWS({
@@ -1409,6 +1425,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		this.updateImageIndex();
+		img.imageDataKey = this.imageList[this.imageIndex];
 		this.updateImageFromUrl(img, this.imageList[this.imageIndex]);
 	}
 
@@ -1432,9 +1449,10 @@ class WallpanelView extends HuiView {
 
 	preloadImages() {
 		if (config.debug) console.debug("Preloading images");
-		this.updateImage(this.imageOne);
 		let wp = this;
+		this.updateImage(wp.imageOne);
 		setTimeout(function() {
+			wp.setImageDataInfo(wp.imageOne);
 			wp.updateImage(wp.imageTwo);
 		}, 1000);
 	}
@@ -1451,21 +1469,16 @@ class WallpanelView extends HuiView {
 
 		let curActive = this.imageOneContainer;
 		let newActive = this.imageTwoContainer;
-		let exifElement = this.imageTwoInfoExif;
+		let infoElement = this.imageTwoInfo;
 		if (this.imageTwoContainer.style.opacity == 1) {
 			curActive = this.imageTwoContainer;
 			newActive = this.imageOneContainer;
-			exifElement = this.imageOneInfoExif;
+			infoElement = this.imageOneInfo;
 		}
 		if (config.debug) console.debug(`Switching active image to '${newActive.id}'`);
 
 		let newImg = newActive.children[0];
-		if (newImg.imagePath) {
-			this.setEXIFImageInfo(newImg.imagePath);
-		}
-		else {
-			exifElement.innerHTML = "";
-		}
+		this.setImageDataInfo(newImg);
 
 		if (newActive.style.opacity != 1) {
 			newActive.style.opacity = 1;
