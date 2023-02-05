@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.6.1";
+const version = "4.7";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
