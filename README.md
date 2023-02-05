@@ -77,10 +77,10 @@ You can set the following configuration parameters for every individual Home Ass
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.                           | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
-| show_progress_bar                      | Show animated progress bar towards next image being displayed?                     | false     |
-| show_exif_info                   | Show exif info on top of image? Only available for local jpeg images.                                  | false      |
+| show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
+| show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data. And images from the new Unsplash API. The name was `show_exif_info` before version 4.7. | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
-| exif_info_template               | Format of EXIF image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. | ${DateTimeOriginal} |
+| image_info_template              | Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The name was `exif_info_template` before version 4.7. | ${DateTimeOriginal} |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).      | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation).      | 0          |
 | info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movement in x-direction.              | ease       |
@@ -127,9 +127,9 @@ wallpanel:
   image_list_update_interval: 3600
   image_order: 'sorted'
   image_excludes: []
-  show_exif_info: false
+  show_image_info: false
   fetch_address_data: true
-  exif_info_template: '${address.town|address.city!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long}'
+  image_info_template: '${address.town|address.city!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long}'
   screensaver_entity: input_boolean.wallpanel_screensaver
   info_animation_duration_x: 30
   info_animation_duration_y: 11
@@ -190,6 +190,8 @@ Example of using images from api.unsplash.com (new api):
 image_order: random
 image_list_update_interval: 3600
 image_url: https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=dogs
+show_image_info: true
+image_info_template: '<span style="color:#990000">//</span> ${description}'
 ```
 
 See [Unsplash API documentation (Get a random photo)](https://unsplash.com/documentation#get-a-random-photo) for details.
@@ -218,10 +220,10 @@ image_excludes:
 ```
 
 ## EXIF info
-Set `show_exif_info` to `true` to show info on top of images if available.
+Set `show_image_info` to `true` to show info on top of images if available.
 This will only work for local jpeg images.
 
-The EXIF info can be formatted by specifying HTML code in `exif_info_template`.
+The EXIF info can be formatted by specifying HTML code in `image_info_template`.
 Placeholders like `${EXIF-tag-name}` will be replaced with the corresponding EXIF tag value.
 See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for available EXIF tag names.
 
@@ -251,14 +253,14 @@ configuration parameter. `image.url` is the complete URL of the image, while `im
 
 Display location and date
 ```yaml
-show_exif_info: true
-exif_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
+show_image_info: true
+image_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
 ```
 
 Display image path
 ```yaml
-show_exif_info: true
-exif_info_template: >-
+show_image_info: true
+image_info_template: >-
     <span style="font-family: 'Roboto Condensed', sans-serif; font-size: 1em; font-weight: 400; color: #999;">
       ${image.relativePath}
     </span>
