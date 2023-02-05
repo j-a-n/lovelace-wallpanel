@@ -1303,9 +1303,7 @@ class WallpanelView extends HuiView {
 		findImages(this.hass, mediaContentId).then(
 			result => {
 				this.imageList = result.sort();
-				if (config.debug) {
-					console.debug("Image list from media-source is now:", this.imageList);
-				}
+				if (config.debug) console.debug("Image list from media-source is now:", this.imageList);
 				this.updatingImageList = false;
 				if (callback) {
 					callback();
@@ -1327,7 +1325,8 @@ class WallpanelView extends HuiView {
 		let urls = [];
 		const http = new XMLHttpRequest();
 		http.responseType = "json";
-		http.open("GET", config.image_url, true);
+		// count: The number of photos to return. (Default: 1; max: 30)
+		http.open("GET", `${config.image_url}&count=30`, true);
 		http.onload = function() {
 			if (http.status == 200 || http.status === 0) {
 				if (config.debug) console.debug(`Got unsplash API response`);
@@ -1340,7 +1339,7 @@ class WallpanelView extends HuiView {
 				urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
 			}
 			wp.imageList = urls;
-			console.error("Image list from unsplash is now:", wp.imageList);
+			if (config.debug) console.debug("Image list from unsplash is now:", wp.imageList);
 			if (callback) {
 				callback();
 			}
