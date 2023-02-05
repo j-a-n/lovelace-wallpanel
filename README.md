@@ -78,9 +78,9 @@ You can set the following configuration parameters for every individual Home Ass
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.                           | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
 | show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
-| show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data. And images from the new Unsplash API. The name was `show_exif_info` before version 4.7. | false      |
+| show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data and images from the new Unsplash API. The config name was `show_exif_info` before version 4.7. | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
-| image_info_template              | Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The name was `exif_info_template` before version 4.7. | ${DateTimeOriginal} |
+| image_info_template              | Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The config name was `exif_info_template` before version 4.7. | ${DateTimeOriginal} |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).      | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation).      | 0          |
 | info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movement in x-direction.              | ease       |
@@ -191,7 +191,7 @@ image_order: random
 image_list_update_interval: 3600
 image_url: https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=dogs
 show_image_info: true
-image_info_template: '<span style="color:#990000">//</span> ${description}'
+image_info_template: '<span style="color:#990000">//</span> ${description|alt_description}'
 ```
 
 See [Unsplash API documentation (Get a random photo)](https://unsplash.com/documentation#get-a-random-photo) for details.
