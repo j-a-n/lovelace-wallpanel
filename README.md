@@ -616,6 +616,12 @@ wallpanel:
   profile_entity: input_text.screensaver_profile_${browser_id}
 ```
 
+You can wake the screen lock with the javascript code below from a browser mod service.
+
+```
+document.getElementsByTagName("wallpanel-view")[0].stopScreensaver();
+```
+
 
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
