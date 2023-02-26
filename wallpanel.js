@@ -1284,7 +1284,7 @@ class WallpanelView extends HuiView {
 				if (!options) {
 					options = {year: "numeric", month: "2-digit", day: "2-digit"};
 				}
-				val = date.toLocaleDateString(undefined, options);
+				val = date.toLocaleDateString(elHass.__hass.locale.language, options);
 			}
 			return prefix + val + suffix;
 		});
