@@ -315,6 +315,7 @@ function isActive() {
 
 
 function imageSourceType() {
+	if (config.image_url.startsWith("media-entity://")) return "media-entity";
 	if (config.image_url.startsWith("media-source://media_source")) return "media-source";
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
 	return "url";
@@ -1085,7 +1086,7 @@ class WallpanelView extends HuiView {
 		this.updateStyle();
 
 		if (config.idle_time > 0 && config.image_url) {
-			if (imageSourceType() == "url") {
+			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
 				this.preloadImages();
 			}
 			else {
@@ -1376,7 +1377,24 @@ class WallpanelView extends HuiView {
 		url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
 		url = url.replace(/\${timestamp}/g, timestamp);
 		if (config.debug) console.debug(`Updating image '${img.id}' from '${url}'`);
-		img.src = url;
+		if (imageSourceType() == "media-entity") {
+			this.updateImageUrlWithHttpFetch(img, url);
+		} else {
+			img.src = url;
+		}
+	}
+
+	updateImageUrlWithHttpFetch(img, url) {
+		var http = new XMLHttpRequest();
+		http.onload = function() {
+			if (this.status == 200 || this.status === 0) {
+				img.src = "data:image/jpeg;base64," + arrayBufferToBase64(http.response);
+			}
+			http = null;
+		};
+		http.open("GET", url, true);
+		http.responseType = "arraybuffer";
+		http.send(null);
 	}
 
 	updateImageIndex() {
@@ -1432,6 +1450,18 @@ class WallpanelView extends HuiView {
 		this.updateImageFromUrl(img, this.imageList[this.imageIndex]);
 	}
 
+	updateImageFromMediaEntity(img) {
+		const imageEntity = config.image_url.replace(/^media-entity:\/\//, '')
+		const entity = this.hass.states[imageEntity];
+		if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
+			return;
+		}
+		let entityPicture = entity.attributes.entity_picture;
+		let querySuffix = entityPicture.indexOf('?') > 0 ? '&' : '?';
+		querySuffix += "width=${width}&height=${height}";
+		this.updateImageFromUrl(img, entityPicture + querySuffix);
+	}
+
 	updateImage(img) {
 		if (!config.image_url) {
 			return;
@@ -1445,6 +1475,9 @@ class WallpanelView extends HuiView {
 		else if (imageSourceType() == "unsplash-api") {
 			this.updateImageFromUnsplashAPI(img);
 		}
+		else if (imageSourceType() == "media-entity") {
+			this.updateImageFromMediaEntity(img);
+		}
 		else {
 			this.updateImageFromUrl(img, config.image_url);
 		}
@@ -1456,8 +1489,29 @@ class WallpanelView extends HuiView {
 		this.updateImage(wp.imageOne);
 		setTimeout(function() {
 			wp.setImageDataInfo(wp.imageOne);
-			wp.updateImage(wp.imageTwo);
+			if (imageSourceType() !== "media-entity") {
+				wp.updateImage(wp.imageTwo);
+			}
 		}, 1000);
+	}
+
+	switchActiveEntityImage(crossfadeMillis = null) {
+		this.lastImageUpdate = Date.now();
+		let next = this.imageTwoContainer.children[0];
+		let current = this.imageOneContainer.children[0];
+		if (this.imageTwoContainer.style.opacity == 1) {
+			next = this.imageOneContainer.children[0];
+			current = this.imageTwoContainer.children[0];
+		}
+		const wp = this;
+		const onLoad = function(e) {
+			next.removeEventListener('load', onLoad);
+			if (next.complete && next.src !== current.src) {
+				wp.switchActiveImage(crossfadeMillis)
+			}
+		}
+		next.addEventListener('load', onLoad);
+		this.updateImage(next);
 	}
 
 	switchActiveImage(crossfadeMillis = null) {
@@ -1493,10 +1547,13 @@ class WallpanelView extends HuiView {
 		this.restartProgressBarAnimation();
 
 		// Load next image after fade out
-		let wp = this;
-		setTimeout(function() {
-			wp.updateImage(curActive.children[0]);
-		}, crossfadeMillis);
+		// only if not media-entity, which will not yet have changed already
+		if (imageSourceType() !== "media-entity") {
+			let wp = this;
+			setTimeout(function() {
+				wp.updateImage(curActive.children[0]);
+			}, crossfadeMillis);
+		}
 	}
 
 	displayMessage(message, timeout=15000) {
@@ -1617,7 +1674,11 @@ class WallpanelView extends HuiView {
 		}
 		else if (config.image_url) {
 			if (now - this.lastImageUpdate >= config.display_time*1000) {
-				this.switchActiveImage();
+				if (imageSourceType() === "media-entity") {
+					this.switchActiveEntityImage();
+				} else {
+					this.switchActiveImage();
+				}
 			}
 			if (now - this.lastImageListUpdate >= config.image_list_update_interval*1000) {
 				this.updateImageList();
@@ -2089,6 +2150,15 @@ function imageHasData(img) {
 	return !!(img.exifdata);
 }
 
+function arrayBufferToBase64(buffer) {
+    var binary = '';
+    var bytes = new Uint8Array( buffer );
+    var len = bytes.byteLength;
+    for (var i = 0; i < len; i++) {
+        binary += String.fromCharCode( bytes[ i ] );
+    }
+    return btoa(binary);
+}
 
 function base64ToArrayBuffer(base64, contentType) {
 	contentType = contentType || base64.match(/^data\:([^\;]+)\;base64,/mi)[1] || ''; // e.g. 'data:image/jpeg;base64,...' => 'image/jpeg'

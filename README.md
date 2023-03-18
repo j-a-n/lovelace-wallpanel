@@ -167,7 +167,9 @@ wallpanel:
 
 ## image_url
 Screensaver images will be fetched from this URL.
-This can be any HTTP URL or a Home Assistant media-source URL.
+This can be any HTTP URL, a Home Assistant media-source URL or a Home Assistant entity that has the entity_picture attribute.
+
+### Http url
 
 The default value is: `http://picsum.photos/${width}/${height}?random=${timestamp}`
 
@@ -196,6 +198,7 @@ image_info_template: '<span style="color:#990000">//</span> ${description|alt_de
 
 See [Unsplash API documentation (Get a random photo)](https://unsplash.com/documentation#get-a-random-photo) for details.
 
+### Media-source url
 
 It is also possible to use images from the Home Assistant Local Media source.
 Just set the `image_url` to a media-source URL as displayed in the URL of the Home Assistant Media Browser.
@@ -208,6 +211,18 @@ Instead of using `media-source://media_source/` as `image_url` you can just use 
 - `/media1/folder1` = Images in `folder1` of the Local Media directory named `media1`
 
 Tip: If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
+
+### Entity with entity_picture attribute
+
+When an entity has the `entity_picture` attribute you can use the image to be shown when the screensaver starts. If the image is dynamic, for example when using a `camera` entity, the image will change when the `entity_picture` resolves to a changed image. You can control how often the the image is checked by adjusting the `display_time` settting. To use an entity as source for images, set the `image_url` setting to `media-entity://<entity_id>`.
+
+
+Example:
+
+```yaml
+display_time: 15
+image_url: media-entity://camera.my_camera_entity_id
+```
 
 ## image_excludes
 A list of regular expressions which can be used to exclude files and directories from local media sources.
