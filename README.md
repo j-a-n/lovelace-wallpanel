@@ -98,6 +98,10 @@ You can set the following configuration parameters for every individual Home Ass
 ## Home Assistant Dashboard configuration
 You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).
 
+* Click Overview in your sidebar.
+* Click the three dots menu (top-right) and click on Edit Dashboard.
+* Click the three dots menu again and click on Raw configuration editor.
+
 **Short example**:
 ```yaml
 wallpanel:
