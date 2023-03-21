@@ -101,6 +101,7 @@ You can add the configuration to your Home Assistant Dashboard configuration yam
 * Click Overview in your sidebar.
 * Click the three dots menu (top-right) and click on Edit Dashboard.
 * Click the three dots menu again and click on Raw configuration editor.
+* Add the `wallpanel` configuration above anything else.
 
 **Short example**:
 ```yaml
