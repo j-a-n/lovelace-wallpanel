@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.7.1";
+const version = "4.8.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1433,7 +1433,9 @@ class WallpanelView extends HuiView {
 			expires: 60
 		}).then(
 			result => {
-				img.src = `${document.location.origin}${result.path}`;
+				let src = `${document.location.origin}${result.path}`;
+				if (config.debug) console.debug(`Setting image src: ${src}`);
+				img.src = src;
 			},
 			error => {
 				console.error("auth/sign_path error:", error);
