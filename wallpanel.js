@@ -359,9 +359,11 @@ function setSidebarHidden(hidden) {
 		elHaMain.shadowRoot.querySelector("ha-sidebar").style.visibility = (hidden ? "hidden" : "visible");
 		if (hidden) {
 			elHaMain.style.setProperty("--app-drawer-width", 0);
+			elHaMain.style.setProperty("--mdc-drawer-width", 0);
 		}
 		else {
 			elHaMain.style.removeProperty("--app-drawer-width");
+			elHaMain.style.removeProperty("--mdc-drawer-width");
 		}
 		window.dispatchEvent(new Event('resize'));
 	}
@@ -378,13 +380,19 @@ function setToolbarHidden(hidden) {
 			.querySelector("hui-root").shadowRoot;
 		let view = huiRoot.querySelector("#view");
 		let appToolbar = huiRoot.querySelector("app-toolbar");
+		if (!appToolbar) {
+			// Changed with 2023.04
+			appToolbar = huiRoot.querySelector("div.toolbar");
+		}
 		if (hidden) {
 			appToolbar.style.setProperty("display", "none");
 			view.style.minHeight = "100vh";
+			view.style.marginTop = "0px";
 		}
 		else {
 			appToolbar.style.removeProperty("display");
 			view.style.removeProperty("min-height");
+			view.style.removeProperty("margin-top");
 		}
 		window.dispatchEvent(new Event('resize'));
 	}
