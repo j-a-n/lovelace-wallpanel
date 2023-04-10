@@ -174,7 +174,7 @@ wallpanel:
 Screensaver images will be fetched from this URL.
 This can be any HTTP URL, a Home Assistant media-source URL or a Home Assistant entity that has the entity_picture attribute.
 
-### HTTP url
+### HTTP URL
 
 The default value is: `http://picsum.photos/${width}/${height}?random=${timestamp}`
 
@@ -203,7 +203,7 @@ image_info_template: '<span style="color:#990000">//</span> ${description|alt_de
 
 See [Unsplash API documentation (Get a random photo)](https://unsplash.com/documentation#get-a-random-photo) for details.
 
-### Media-source url
+### Media-source URL
 
 It is also possible to use images from the Home Assistant Local Media source.
 Just set the `image_url` to a media-source URL as displayed in the URL of the Home Assistant Media Browser.
