@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.9.1";
+const version = "4.10.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1220,21 +1220,6 @@ class WallpanelView extends HuiView {
 		});
 	}
 
-	createImagePathInfoObject(imagePath) {
-		const imageInfo = {url: imagePath};
-
-		const extractPathComponentToImageInfo = (key, stringToSplitOn) => {
-			const components = imagePath.split(stringToSplitOn);
-			if (components.length > 1 && components[1]) {
-				imageInfo[key] = components[1].substring(1);
-			}
-		}
-		extractPathComponentToImageInfo('path', 'media-source://media_source');
-		extractPathComponentToImageInfo('relativePath', config.image_url);
-
-		return imageInfo;
-	}
-
 	setImageDataInfo(img) {
 		let imageInfo = imageInfoCache[img.imageDataKey];
 		let infoElement = null;
@@ -1259,7 +1244,16 @@ class WallpanelView extends HuiView {
 				return "";
 			}
 			if (img.imagePath) {
-				imageInfo["image"] = this.createImagePathInfoObject(img.imagePath);
+				imageInfo.image = {
+					url: img.imagePath,
+					path: img.imagePath.replace("media-source://media_source/", ""),
+					relativePath: img.imagePath.replace(config.image_url, "").replace(/^\/+/, ""),
+					folderName: ""
+				};
+				const parts = img.imagePath.split("/");
+				if (parts.length >= 2) {
+					imageInfo.image.folderName = parts[parts.length - 2]; 
+				}
 			}
 			let prefix = "";
 			let suffix = "";

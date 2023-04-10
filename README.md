@@ -268,6 +268,7 @@ See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/Ja
 
 The `image.relativePath` placeholder is replaced with the pathname to the current image, relative to the `image_url`
 configuration parameter. `image.url` is the complete URL of the image, while `image.path` is the image path.
+`image.folderName` contains the name of the parent folder.
 
 **Examples**
 
