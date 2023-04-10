@@ -361,14 +361,23 @@ function getCurrentView() {
 
 function setSidebarHidden(hidden) {
 	try {
-		elHaMain.shadowRoot.querySelector("ha-sidebar").style.visibility = (hidden ? "hidden" : "visible");
+		let drawer = elHaMain.shadowRoot.querySelector("ha-drawer");
+		if (drawer) {
+			drawer = drawer.shadowRoot.querySelector(".mdc-drawer");
+		}
 		if (hidden) {
 			elHaMain.style.setProperty("--app-drawer-width", 0);
 			elHaMain.style.setProperty("--mdc-drawer-width", 0);
+			if (drawer) {
+				drawer.style.setProperty("display", "none");
+			}
 		}
 		else {
 			elHaMain.style.removeProperty("--app-drawer-width");
 			elHaMain.style.removeProperty("--mdc-drawer-width");
+			if (drawer) {
+				drawer.style.removeProperty("display");
+			}
 		}
 		window.dispatchEvent(new Event('resize'));
 	}
