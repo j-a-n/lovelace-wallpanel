@@ -540,6 +540,7 @@ class WallpanelView extends HuiView {
 		this.blockEventsUntil = 0;
 		this.screensaverStartedAt;
 		this.screensaverStoppedAt = new Date();
+		this.infoBoxContentCreatedDate;
 		this.idleSince = Date.now();
 		this.bodyOverflowOrig = null;
 		this.lastProfileSet = insertBrowserID(config.profile);
@@ -909,6 +910,7 @@ class WallpanelView extends HuiView {
 
 	createInfoBoxContent() {
 		if (config.debug) console.debug("Creating info box content");
+		this.infoBoxContentCreatedDate = new Date();
 		this.infoBoxContent.innerHTML = '';
 		this.__badges = [];
 		this.__cards = [];
@@ -1671,7 +1673,13 @@ class WallpanelView extends HuiView {
 	}
 
 	updateScreensaver() {
-		let now = Date.now();
+		let currentDate = new Date();
+		let now = currentDate.getTime();
+		if (this.infoBoxContentCreatedDate && this.infoBoxContentCreatedDate.getDate() != currentDate.getDate()) {
+			// Day changed since creation of info box content.
+			// Recreate to update energy cards / energy collection start / end date.
+			this.createInfoBoxContent();
+		}
 
 		if (config.info_move_interval > 0 && now - this.lastMove >= config.info_move_interval*1000) {
 			if (config.info_move_pattern === 'random') {
