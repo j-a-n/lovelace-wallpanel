@@ -361,6 +361,10 @@ function getCurrentView() {
 
 function setSidebarHidden(hidden) {
 	try {
+		let sidebar = elHaMain.shadowRoot.querySelector("ha-sidebar");
+		if (sidebar) {
+			sidebar.style.visibility = (hidden ? "hidden" : "visible");
+		}
 		let drawer = elHaMain.shadowRoot.querySelector("ha-drawer");
 		if (drawer) {
 			drawer = drawer.shadowRoot.querySelector(".mdc-drawer");
