@@ -144,7 +144,7 @@ const defaultConfig = {
 	style: {},
 	badges: [],
 	cards: [
-		{type: 'weather-forecast', entity: 'weather.home', show_forecast: true}
+		{type: 'weather-forecast', entity: 'weather.forecast_5_on_northumberland', show_forecast: true}
 	],
 	profile: '',
 	profile_entity: '',
