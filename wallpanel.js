@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.10.0";
+const version = "4.10.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -562,6 +562,8 @@ class WallpanelView extends HuiView {
 		this.translateInterval = null;
 		this.lastClickTime = 0; 
 		this.clickCount = 0;
+		this.energyCollectionUpdateInterval = 60;
+		this.lastEnergyCollectionUpdate = 0;
 
 		this.__hass = elHass.__hass;
 		this.__cards = [];
@@ -956,6 +958,7 @@ class WallpanelView extends HuiView {
 					style = cardConfig.wp_style;
 					delete cardConfig.wp_style;
 				}
+				cardConfig.collection_key = "energy_wallpanel";
 				const cardElement = this.createCardElement(cardConfig);
 				cardElement.hass = this.hass;
 				this.__cards.push(cardElement);
@@ -1682,6 +1685,13 @@ class WallpanelView extends HuiView {
 	updateScreensaver() {
 		let currentDate = new Date();
 		let now = currentDate.getTime();
+
+		if (now - this.lastEnergyCollectionUpdate >= this.energyCollectionUpdateInterval * 1000) {
+			if (this.hass.connection._energy_wallpanel) {
+				this.hass.connection._energy_wallpanel.refresh();
+			}
+			this.lastEnergyCollectionUpdate = now;
+		}
 		if (this.infoBoxContentCreatedDate && this.infoBoxContentCreatedDate.getDate() != currentDate.getDate()) {
 			// Day changed since creation of info box content.
 			// Recreate to update energy cards / energy collection start / end date.
