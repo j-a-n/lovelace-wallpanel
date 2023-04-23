@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.10.1";
+const version = "4.10.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -562,6 +562,7 @@ class WallpanelView extends HuiView {
 		this.translateInterval = null;
 		this.lastClickTime = 0; 
 		this.clickCount = 0;
+		this.energyCollectionUpdateEnabled = false;
 		this.energyCollectionUpdateInterval = 60;
 		this.lastEnergyCollectionUpdate = 0;
 
@@ -929,6 +930,7 @@ class WallpanelView extends HuiView {
 		this.infoBoxContent.innerHTML = '';
 		this.__badges = [];
 		this.__cards = [];
+		this.energyCollectionUpdateEnabled = false;
 
 		this.shadowRoot.querySelectorAll(".wp-card").forEach(card => {
 			card.parentElement.removeChild(card);
@@ -958,7 +960,10 @@ class WallpanelView extends HuiView {
 					style = cardConfig.wp_style;
 					delete cardConfig.wp_style;
 				}
-				cardConfig.collection_key = "energy_wallpanel";
+				if (cardConfig.type && cardConfig.type.includes("energy")) {
+					cardConfig.collection_key = "energy_wallpanel";
+					this.energyCollectionUpdateEnabled = true;
+				}
 				const cardElement = this.createCardElement(cardConfig);
 				cardElement.hass = this.hass;
 				this.__cards.push(cardElement);
@@ -1686,7 +1691,7 @@ class WallpanelView extends HuiView {
 		let currentDate = new Date();
 		let now = currentDate.getTime();
 
-		if (now - this.lastEnergyCollectionUpdate >= this.energyCollectionUpdateInterval * 1000) {
+		if (this.energyCollectionUpdateEnabled && now - this.lastEnergyCollectionUpdate >= this.energyCollectionUpdateInterval * 1000) {
 			if (this.hass.connection._energy_wallpanel) {
 				this.hass.connection._energy_wallpanel.refresh();
 			}
