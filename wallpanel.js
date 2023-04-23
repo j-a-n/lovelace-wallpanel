@@ -315,6 +315,9 @@ function isActive() {
 
 
 function imageSourceType() {
+	if (!config.image_url) {
+		return "";
+	}
 	if (config.image_url.startsWith("media-entity://")) return "media-entity";
 	if (config.image_url.startsWith("media-source://media_source")) return "media-source";
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
@@ -1145,30 +1148,32 @@ class WallpanelView extends HuiView {
 			}
 		});
 
-		[this.imageOne, this.imageTwo].forEach(function(img) {
-			if (!img) return;
-			img.addEventListener('load', function() {
-				img.setAttribute('data-loading', false);
-				if (config.show_image_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
-					wp.fetchEXIFInfo(img);
-				}
-			});
-			img.addEventListener('error', function() {
-				img.setAttribute('data-loading', false);
-				console.error(`Failed to load image: ${img.src}`);
-				if (img.imagePath) {
-					const idx = wp.imageList.indexOf(img.imagePath);
-					if (idx > -1) {
-						if (config.debug) console.debug(`Removing image from list: ${img.imagePath}`);
-						wp.imageList.splice(idx, 1);
+		if (config.image_url) {
+			[this.imageOne, this.imageTwo].forEach(function(img) {
+				if (!img) return;
+				img.addEventListener('load', function() {
+					img.setAttribute('data-loading', false);
+					if (config.show_image_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
+						wp.fetchEXIFInfo(img);
 					}
-					wp.updateImage(img);
-				}
-				else {
-					wp.displayMessage(`Failed to load image: ${img.src}`, 5000)
-				}
-			})
-		});
+				});
+				img.addEventListener('error', function() {
+					img.setAttribute('data-loading', false);
+					console.error(`Failed to load image: ${img.src}`);
+					if (img.imagePath) {
+						const idx = wp.imageList.indexOf(img.imagePath);
+						if (idx > -1) {
+							if (config.debug) console.debug(`Removing image from list: ${img.imagePath}`);
+							wp.imageList.splice(idx, 1);
+						}
+						wp.updateImage(img);
+					}
+					else {
+						wp.displayMessage(`Failed to load image: ${img.src}`, 5000)
+					}
+				})
+			});
+		}
 	}
 
 	fetchEXIFInfo(img) {
