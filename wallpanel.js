@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.10.2";
+const version = "4.10.3";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -363,6 +363,23 @@ function getCurrentView() {
 
 
 function setSidebarHidden(hidden) {
+	try {
+		const haIconButton = elHaMain.shadowRoot
+			.querySelector("ha-panel-lovelace").shadowRoot
+			.querySelector("hui-root").shadowRoot
+			.querySelector("div.toolbar")
+			.querySelector("ha-menu-button").shadowRoot
+			.querySelector("ha-icon-button");
+		if (hidden) {
+			haIconButton.style.display = "none";
+		}
+		else {
+			haIconButton.style.removeProperty("display");
+		}
+	}
+	catch (e) {
+		if (config.debug) console.debug(e);
+	}
 	try {
 		let sidebar = elHaMain.shadowRoot.querySelector("ha-sidebar");
 		if (sidebar) {
