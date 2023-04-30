@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.10.4";
+const version = "4.10.5";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -382,18 +382,22 @@ function setSidebarHidden(hidden) {
 	catch (e) {
 		if (config.debug) console.debug(e);
 	}
+	
 	try {
 		let sidebar = elHaMain.shadowRoot.querySelector("ha-sidebar");
 		if (sidebar) {
 			sidebar.style.visibility = (hidden ? "hidden" : "visible");
 		}
+		
 		let drawer = elHaMain.shadowRoot.querySelector("ha-drawer");
 		if (drawer) {
 			drawer = drawer.shadowRoot.querySelector(".mdc-drawer");
 		}
 		if (hidden) {
+			
 			elHaMain.style.setProperty("--app-drawer-width", 0);
 			elHaMain.style.setProperty("--mdc-drawer-width", 0);
+			elHaMain.style.setProperty("--mdc-top-app-bar-width", "100%");
 			if (drawer) {
 				drawer.style.setProperty("display", "none");
 			}
@@ -401,6 +405,7 @@ function setSidebarHidden(hidden) {
 		else {
 			elHaMain.style.removeProperty("--app-drawer-width");
 			elHaMain.style.removeProperty("--mdc-drawer-width");
+			elHaMain.style.removeProperty("--mdc-top-app-bar-width");
 			if (drawer) {
 				drawer.style.removeProperty("display");
 			}
@@ -410,6 +415,7 @@ function setSidebarHidden(hidden) {
 	catch (e) {
 		if (config.debug) console.debug(e);
 	}
+	
 }
 
 function setToolbarHidden(hidden) {
