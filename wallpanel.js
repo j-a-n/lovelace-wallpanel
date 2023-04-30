@@ -364,11 +364,13 @@ function getCurrentView() {
 
 function setSidebarHidden(hidden) {
 	try {
-		const haIconButton = elHaMain.shadowRoot
+		const haMenuButton = elHaMain.shadowRoot
 			.querySelector("ha-panel-lovelace").shadowRoot
 			.querySelector("hui-root").shadowRoot
 			.querySelector("div.toolbar")
-			.querySelector("ha-menu-button").shadowRoot
+			.querySelector("ha-menu-button");
+		haMenuButton.style.display = (hidden ? "none" : "initial");
+		const haIconButton = haMenuButton.shadowRoot
 			.querySelector("ha-icon-button");
 		if (hidden) {
 			haIconButton.style.display = "none";
