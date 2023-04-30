@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.10.3";
+const version = "4.10.4";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -412,7 +412,6 @@ function setSidebarHidden(hidden) {
 	}
 }
 
-
 function setToolbarHidden(hidden) {
 	try {
 		let huiRoot = elHaMain.shadowRoot
@@ -427,12 +426,14 @@ function setToolbarHidden(hidden) {
 		if (hidden) {
 			appToolbar.style.setProperty("display", "none");
 			view.style.minHeight = "100vh";
-			view.style.marginTop = "0px";
+			view.style.marginTop = "0";
+			view.style.paddingTop = "0";
 		}
 		else {
 			appToolbar.style.removeProperty("display");
 			view.style.removeProperty("min-height");
 			view.style.removeProperty("margin-top");
+			view.style.removeProperty("padding-top");
 		}
 		window.dispatchEvent(new Event('resize'));
 	}
@@ -782,7 +783,7 @@ class WallpanelView extends HuiView {
 		this.infoBox.style.height = 'fit-content';
 		this.infoBox.style.borderRadius = '10px';
 		this.infoBox.style.setProperty('--wp-card-width', '500px');
-		this.infoBox.style.setProperty('--wp-card-padding', '0px');
+		this.infoBox.style.setProperty('--wp-card-padding', '0');
 		this.infoBox.style.setProperty('--wp-card-margin', '5px');
 		this.infoBox.style.setProperty('--wp-card-backdrop-filter', 'none');
 
@@ -941,8 +942,8 @@ class WallpanelView extends HuiView {
 			clearInterval(wp.translateInterval);
 		}
 		wp.translateInterval = setInterval(function() {
-			wp.infoBoxPosX.style.transform = `translate3d(${x}px, 0px, 0px)`;
-			wp.infoBoxPosY.style.transform = `translate3d(0px, ${y}px, 0px)`;
+			wp.infoBoxPosX.style.transform = `translate3d(${x}px, 0, 0)`;
+			wp.infoBoxPosY.style.transform = `translate3d(0, ${y}px, 0)`;
 		}, ms);
 	}
 
