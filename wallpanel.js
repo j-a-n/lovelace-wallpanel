@@ -372,11 +372,19 @@ function setSidebarHidden(hidden) {
 		haMenuButton.style.display = (hidden ? "none" : "initial");
 		const haIconButton = haMenuButton.shadowRoot
 			.querySelector("ha-icon-button");
+		const divDot = haMenuButton.shadowRoot
+			.querySelector("div.dot");
 		if (hidden) {
 			haIconButton.style.display = "none";
+			if (divDot) {
+				divDot.style.display = "none";
+			}
 		}
 		else {
 			haIconButton.style.removeProperty("display");
+			if (divDot) {
+				divDot.style.removeProperty("display");
+			}
 		}
 	}
 	catch (e) {
