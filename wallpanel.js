@@ -1676,6 +1676,7 @@ class WallpanelView extends HuiView {
 	}
 
 	startScreensaver() {
+		updateConfig();
 		if (config.debug) console.debug("Start screensaver");
 		if (!isActive()) {
 			if (config.debug) console.debug("Wallpanel not active, not starting screensaver");
