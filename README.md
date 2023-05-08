@@ -70,6 +70,7 @@ You can set the following configuration parameters for every individual Home Ass
 | keep_screen_on_time              | Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).                         | 0         |
 | black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled).              | 0         |
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
+| stop_screensaver_on_mouse_move   | Stop screensaver on mouse movement?                                                                    | true      |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
@@ -91,6 +92,7 @@ You can set the following configuration parameters for every individual Home Ass
 | style                            | Additional CSS styles for wallpanel elements.                                                          | {}         |
 | badges                           | Badges to display in info box. See below for details.                                                  | []         |
 | cards                            | Cards to display in info box. See below for details.                                                   | See below  |
+| card_interaction                 | Allow interaction with the cards displayed in the info box?                                            | false      |
 | profiles                         | Configuration profiles. See below for details.                                                         | {}         |
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
 | profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
@@ -143,6 +145,7 @@ wallpanel:
   info_move_pattern: random
   info_move_interval: 0
   info_move_fade_duration: 2.0
+  card_interaction: true
   style:
     wallpanel-screensaver-info-box:
       font-size: 8vh
@@ -298,17 +301,25 @@ You can use the same yaml config, as used in the Home Assistant Dashboard config
 
 Example (and default) for cards:
 ```yaml
-cards:
-  - type: weather-forecast
-    entity: weather.home
-    show_forecast: true
+wallpanel:
+  cards:
+    - type: weather-forecast
+      entity: weather.home
+      show_forecast: true
+```
+
+If you want to interact with the cards, as in the dashboard, you can set `card_interaction` to `true`.
+```yaml
+wallpanel:
+  card_interaction: true
 ```
 
 Example for badges:
 ```yaml
-badges:
-  - entity: person.somebody
-  - entity: sun.sun
+wallpanel:
+  badges:
+    - entity: person.somebody
+    - entity: sun.sun
 ```
 
 ## Info box animation
