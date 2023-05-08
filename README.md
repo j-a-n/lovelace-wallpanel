@@ -224,13 +224,22 @@ Tip: If you click on the far right side of the screen while the screen saver is 
 
 When an entity has the `entity_picture` attribute you can use the image to be shown when the screensaver starts. If the image is dynamic, for example when using a `camera` entity, the image will change when the `entity_picture` resolves to a changed image. You can control how often the the image is checked by adjusting the `display_time` settting. To use an entity as source for images, set the `image_url` setting to `media-entity://<entity_id>`.
 
-
 Example:
 
 ```yaml
 display_time: 15
 image_url: media-entity://camera.my_camera_entity_id
 ```
+
+With the `entity_picture` you can combine this integration with the [Google Photos Integration](https://github.com/Daanoz/ha-google-photos) extension from [Daanoz](https://github.com/Daanoz) to display your photos.
+
+Example:
+
+```yaml
+image_url: media-entity://camera.google_photos_favorites_media
+```
+
+See [Google Photos Integration README](https://github.com/Daanoz/ha-google-photos#readme) for details.
 
 ## image_excludes
 A list of regular expressions which can be used to exclude files and directories from local media sources.
