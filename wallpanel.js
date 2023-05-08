@@ -591,7 +591,6 @@ class WallpanelView extends HuiView {
 		this.screensaverStoppedAt = new Date();
 		this.infoBoxContentCreatedDate;
 		this.idleSince = Date.now();
-		this.bodyOverflowOrig = null;
 		this.lastProfileSet = insertBrowserID(config.profile);
 		this.lastMove = null;
 		this.lastCorner = 0; // 0 - top left, 1 - bottom left, 2 - bottom right, 3 - top right
@@ -1013,9 +1012,13 @@ class WallpanelView extends HuiView {
 					cardConfig.collection_key = "energy_wallpanel";
 					this.energyCollectionUpdateEnabled = true;
 				}
+				cardConfig.tap_action = {"action": "more-info"};
+				cardConfig.hold_action = {"action": "more-info"};
 				const cardElement = this.createCardElement(cardConfig);
 				cardElement.hass = this.hass;
+				
 				this.__cards.push(cardElement);
+
 				let parent = this.infoBoxContent;
 				const div = document.createElement('div');
 				div.classList.add("wp-card");
@@ -1033,6 +1036,9 @@ class WallpanelView extends HuiView {
 					else {
 						div.style.setProperty(attr, style[attr]);
 					}
+				}
+				if (config.card_interaction) {
+					div.style.pointerEvents = "initial";
 				}
 				div.append(cardElement);
 				parent.appendChild(div);
@@ -1197,7 +1203,12 @@ class WallpanelView extends HuiView {
 				wp.updateShadowStyle();
 			}
 		});
-
+		window.addEventListener("hass-more-info", event => {
+			if (wp.screensaverStartedAt) {
+				wp.moreInfoDialogToForeground();
+			}
+		});
+		
 		if (config.image_url) {
 			[this.imageOne, this.imageTwo].forEach(function(img) {
 				if (!img) return;
@@ -1224,6 +1235,33 @@ class WallpanelView extends HuiView {
 				})
 			});
 		}
+	}
+
+	getMoreInfoDialog() {
+		const moreInfoDialog = elHass.shadowRoot.querySelector("ha-more-info-dialog");
+		if (!moreInfoDialog) {
+			return;
+		}
+		const dialog = moreInfoDialog.shadowRoot.querySelector("ha-dialog");
+		if (dialog) {
+			return dialog;
+		}
+	}
+
+	moreInfoDialogToForeground() {
+		const wp = this;
+		function showDialog(attempt = 1) {
+			const dialog = wp.getMoreInfoDialog();
+			if (dialog) {
+				dialog.style.position = "absolute";
+				dialog.style.zIndex = wp.style.zIndex + 1;
+				return;
+			}
+			if (attempt < 10) {
+				setTimeout(showDialog, 50, attempt + 1);
+			}
+		}
+		showDialog();
 	}
 
 	fetchEXIFInfo(img) {
@@ -1701,11 +1739,8 @@ class WallpanelView extends HuiView {
 		this.lastImageUpdate = Date.now();
 		this.screensaverStartedAt = Date.now();
 		this.screensaverStoppedAt = null;
-		if (document.body.style.overflow != 'hidden') {
-			this.bodyOverflowOrig = document.body.style.overflow;
-			document.body.style.overflow = 'hidden';
-		}
-
+		document.documentElement.style.overflow = 'hidden';
+		
 		this.createInfoBoxContent();
 
 		this.style.visibility = 'visible';
@@ -1718,6 +1753,7 @@ class WallpanelView extends HuiView {
 				navigate(config.screensaver_stop_navigation_path);
 			}, (config.fade_in_time+1)*1000);
 		}
+
 	}
 
 	stopScreensaver() {
@@ -1725,8 +1761,9 @@ class WallpanelView extends HuiView {
 
 		this.screensaverStartedAt = null;
 		this.screensaverStoppedAt = Date.now();
-		document.body.style.overflow = this.bodyOverflowOrig;
-
+		
+		document.documentElement.style.removeProperty("overflow");
+		
 		this.hideMessage();
 
 		this.style.transition = '';
@@ -1867,6 +1904,9 @@ class WallpanelView extends HuiView {
 		}
 
 		if (config.card_interaction) {
+			if (this.getMoreInfoDialog()) {
+				return;
+			}
 			const boxIds = ["wallpanel-screensaver-info-box-content", "wallpanel-screensaver-fixed-info-box-content"];
 			for (let i=0; i<boxIds.length; i++) {
 				const contentBox = this.shadowRoot.getElementById(boxIds[i]);
@@ -1878,6 +1918,7 @@ class WallpanelView extends HuiView {
 				}
 			}
 		}
+
 		if (isClick) {
 			evt.preventDefault();
 		}
@@ -1928,7 +1969,7 @@ class WallpanelView extends HuiView {
 updateConfig();
 customElements.define("wallpanel-view", WallpanelView);
 wallpanel = document.createElement("wallpanel-view");
-document.body.appendChild(wallpanel);
+elHaMain.shadowRoot.appendChild(wallpanel);
 
 
 function activateWallpanel() {
