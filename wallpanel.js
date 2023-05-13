@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.11.0";
+const version = "4.11.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1012,8 +1012,6 @@ class WallpanelView extends HuiView {
 					cardConfig.collection_key = "energy_wallpanel";
 					this.energyCollectionUpdateEnabled = true;
 				}
-				cardConfig.tap_action = {"action": "more-info"};
-				cardConfig.hold_action = {"action": "more-info"};
 				const cardElement = this.createCardElement(cardConfig);
 				cardElement.hass = this.hass;
 				

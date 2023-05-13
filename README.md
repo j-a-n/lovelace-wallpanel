@@ -239,7 +239,7 @@ Example:
 image_url: media-entity://camera.google_photos_favorites_media
 ```
 
-See [Google Photos Integration README](https://github.com/Daanoz/ha-google-photos#readme) for details.
+See [Google Photos Integration README](https://github.com/Daanoz/ha-google-photos#lovelace-wall-panel) for details.
 
 ## image_excludes
 A list of regular expressions which can be used to exclude files and directories from local media sources.
