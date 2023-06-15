@@ -657,10 +657,10 @@ wallpanel:
   profile_entity: input_text.screensaver_profile_${browser_id}
 ```
 
-You can wake the screen lock with the javascript code below from a browser mod service.
+You can stop the screensaver with the javascript code below from a browser mod service.
 
-```
-document.getElementsByTagName("wallpanel-view")[0].stopScreensaver();
+```javascript
+document.querySelector("home-assistant").shadowRoot.querySelector("home-assistant-main").shadowRoot.querySelector("wallpanel-view").stopScreensaver();
 ```
 
 # Debug mode
