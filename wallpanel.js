@@ -368,7 +368,6 @@ function setSidebarHidden(hidden) {
 			.querySelector("hui-root").shadowRoot
 			.querySelector("div.toolbar")
 			.querySelector("ha-menu-button");
-		haMenuButton.style.display = (hidden ? "none" : "initial");
 		const haIconButton = haMenuButton.shadowRoot
 			.querySelector("ha-icon-button");
 		const divDot = haMenuButton.shadowRoot
