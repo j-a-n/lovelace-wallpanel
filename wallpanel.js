@@ -126,6 +126,7 @@ const defaultConfig = {
 	screensaver_stop_navigation_path: '',
 	screensaver_entity: '',
 	stop_screensaver_on_mouse_move: true,
+	stop_screensaver_on_location_change: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
@@ -159,6 +160,7 @@ let activePanelTab = null;
 let fullscreen = false;
 let screenWakeLock = new ScreenWakeLock();
 let wallpanel = null;
+let skipDisableScreensaverOnLocationChanged = false;
 let classStyles = {
 	"wallpanel-screensaver-image-info": {
 		"position": "absolute",
@@ -599,6 +601,7 @@ class WallpanelView extends HuiView {
 		this.energyCollectionUpdateEnabled = false;
 		this.energyCollectionUpdateInterval = 60;
 		this.lastEnergyCollectionUpdate = 0;
+		this.screensaverStopNavigationPathTimeout = null;
 
 		this.__hass = elHass.__hass;
 		this.__cards = [];
@@ -1746,9 +1749,13 @@ class WallpanelView extends HuiView {
 		this.setScreensaverEntityState();
 
 		if (config.screensaver_stop_navigation_path) {
-			setTimeout(() => {
+			this.screensaverStopNavigationPathTimeout = setTimeout(() => {
+				skipDisableScreensaverOnLocationChanged = true;
 				navigate(config.screensaver_stop_navigation_path);
-			}, (config.fade_in_time+1)*1000);
+				setTimeout(() => {
+					skipDisableScreensaverOnLocationChanged = false;
+				}, 250);
+			}, (config.fade_in_time + 1) * 1000);
 		}
 
 	}
@@ -1761,6 +1768,9 @@ class WallpanelView extends HuiView {
 		
 		document.documentElement.style.removeProperty("overflow");
 		
+		if (this.screensaverStopNavigationPathTimeout) {
+			clearTimeout(this.screensaverStopNavigationPathTimeout);
+		}
 		this.hideMessage();
 
 		this.style.transition = '';
@@ -1962,13 +1972,6 @@ class WallpanelView extends HuiView {
 	}
 }
 
-
-updateConfig();
-customElements.define("wallpanel-view", WallpanelView);
-wallpanel = document.createElement("wallpanel-view");
-elHaMain.shadowRoot.appendChild(wallpanel);
-
-
 function activateWallpanel() {
 	setToolbarHidden(config.hide_toolbar);
 	setSidebarHidden(config.hide_sidebar);
@@ -1983,8 +1986,10 @@ function deactivateWallpanel() {
 	setSidebarHidden(false);
 }
 
-
-window.setInterval(() => {
+function locationChanged() {
+	if (config.stop_screensaver_on_location_change && !skipDisableScreensaverOnLocationChanged) {
+		wallpanel.stopScreensaver();
+	}
 	let pl = getHaPanelLovelace();
 	let changed = false;
 	if (!pl && activePanelUrl) {
@@ -2016,9 +2021,18 @@ window.setInterval(() => {
 			deactivateWallpanel();
 		}
 	}
-}, 1000);
+}
 
+window.addEventListener("location-changed", event => {
+	if (config.debug) console.debug("location-changed", event);
+	locationChanged();
+});
 
+updateConfig();
+customElements.define("wallpanel-view", WallpanelView);
+wallpanel = document.createElement("wallpanel-view");
+elHaMain.shadowRoot.appendChild(wallpanel);
+locationChanged();
 
 /**
  * https://github.com/exif-js/exif-js
