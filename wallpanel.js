@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.12.0";
+const version = "4.12.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -2023,16 +2023,18 @@ function locationChanged() {
 	}
 }
 
-window.addEventListener("location-changed", event => {
-	if (config.debug) console.debug("location-changed", event);
+setTimeout(function() {
+	updateConfig();
+	customElements.define("wallpanel-view", WallpanelView);
+	wallpanel = document.createElement("wallpanel-view");
+	elHaMain.shadowRoot.appendChild(wallpanel);
 	locationChanged();
-});
+	window.addEventListener("location-changed", event => {
+		if (config.debug) console.debug("location-changed", event);
+		locationChanged();
+	});
+}, 25);
 
-updateConfig();
-customElements.define("wallpanel-view", WallpanelView);
-wallpanel = document.createElement("wallpanel-view");
-elHaMain.shadowRoot.appendChild(wallpanel);
-locationChanged();
 
 /**
  * https://github.com/exif-js/exif-js
