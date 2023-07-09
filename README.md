@@ -80,6 +80,8 @@ You can set the following configuration parameters for every individual Home Ass
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.                           | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
+| image_animation_ken_burns        | Apply a Ken Burns effect (panning and zooming) to the images?                                          | false      |
+| image_animation_ken_burns_zoom   | Zoom level for the Ken Burns effect.                                                                   | 1.3        |
 | show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
 | show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data and images from the new Unsplash API. The config name was `show_exif_info` before version 4.7. | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |

@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.13.0";
+const version = "4.14.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -144,6 +144,8 @@ const defaultConfig = {
 	info_move_pattern: 'random',
 	info_move_interval: 0,
 	info_move_fade_duration: 2.0,
+	image_animation_ken_burns: false,
+	image_animation_ken_burns_zoom: 1.3,
 	style: {},
 	badges: [],
 	cards: [
@@ -932,6 +934,15 @@ class WallpanelView extends HuiView {
 					width: 100%;
 				}
 			}
+			@keyframes kenBurnsEffect {
+				0% {
+					transform-origin: bottom left;
+					transform: scale(1.0);
+				}
+				100% {
+					transform: scale(${config.image_animation_ken_burns_zoom});
+				}
+			}
 			${classCss}
 		`
 	}
@@ -1077,6 +1088,24 @@ class WallpanelView extends HuiView {
 		oldDiv.parentNode.replaceChild(newDiv, oldDiv);
 	}
 
+	restartKenBurnsEffect() {
+		if (!config.image_animation_ken_burns) {
+			return;
+		}
+		const activeImage = this.getActiveImageElement();
+		activeImage.style.animation = "none";
+		setTimeout(function() {
+			activeImage.style.animation = `kenBurnsEffect ${config.display_time + Math.ceil(config.crossfade_time * 2) + 1}s ease`;
+		}, 50);
+	}
+
+	getActiveImageElement() {
+		if (this.imageOneContainer.style.opacity == 1) {
+			return this.imageOne;
+		}
+		return this.imageTwo;
+	}
+	
 	connectedCallback() {
 		this.style.zIndex = 1000;
 		this.style.visibility = 'hidden';
@@ -1094,7 +1123,7 @@ class WallpanelView extends HuiView {
 
 		this.imageOneContainer = document.createElement('div');
 		this.imageOneContainer.id = 'wallpanel-screensaver-image-one-container';
-
+		
 		this.imageOne = document.createElement('img');
 		this.imageOne.id = 'wallpanel-screensaver-image-one';
 		this.imageOne.setAttribute('data-loading', false);
@@ -1680,6 +1709,7 @@ class WallpanelView extends HuiView {
 		}
 
 		this.restartProgressBarAnimation();
+		this.restartKenBurnsEffect();
 
 		// Load next image after fade out
 		// only if not media-entity, which will not yet have changed already
@@ -1732,6 +1762,7 @@ class WallpanelView extends HuiView {
 		this.updateStyle();
 		this.setupScreensaver();
 		this.restartProgressBarAnimation();
+		this.restartKenBurnsEffect();
 
 		if (config.keep_screen_on_time > 0) {
 			let wp = this;
@@ -3179,4 +3210,3 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
-
