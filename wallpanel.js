@@ -108,12 +108,13 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.12.1";
+const version = "4.13.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
 	debug: false,
 	hide_toolbar: false,
+	hide_toolbar_action_icons: false,
 	hide_sidebar: false,
 	fullscreen: false,
 	idle_time: 15,
@@ -448,6 +449,13 @@ function setToolbarHidden(hidden) {
 			view.style.removeProperty("min-height");
 			view.style.removeProperty("margin-top");
 			view.style.removeProperty("padding-top");
+			let actionItems = appToolbar.querySelector("div.action-items");
+			if (config.hide_toolbar_action_icons) {
+				actionItems.style.setProperty("display", "none");
+			}
+			else {
+				actionItems.style.setProperty("display", "flex");
+			}
 		}
 		window.dispatchEvent(new Event('resize'));
 	}
@@ -3171,3 +3179,4 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
+
