@@ -95,8 +95,8 @@ You can set the following configuration parameters for every individual Home Ass
 | info_move_interval               | Interval of movement of the info box in seconds (0 = no movement).                                     | 0          |
 | info_move_fade_duration          | Duration of the fade-in and fade-out animation of the info box in case of movement (0 = no animation). | 2.0        |
 | style                            | Additional CSS styles for wallpanel elements.                                                          | {}         |
-| badges                           | Badges to display in info box. See below for details.                                                  | []         |
-| cards                            | Cards to display in info box. See below for details.                                                   | See below  |
+| badges                           | Badges to display in info box. Set to [] to show no badges at all. See below for details.              | []         |
+| cards                            | Cards to display in info box. Set to [] to show no cards at all. See below for details.                | See below  |
 | card_interaction                 | Allow interaction with the cards displayed in the info box?                                            | false      |
 | profiles                         | Configuration profiles. See below for details.                                                         | {}         |
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
