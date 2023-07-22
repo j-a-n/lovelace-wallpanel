@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.15.0";
+const version = "4.16.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -191,6 +191,7 @@ let classStyles = {
 let imageInfoCache = {};
 let imageInfoCacheKeys = [];
 const imageInfoCacheMaxSize = 1000;
+let configEntityStates = {};
 
 const elHass = document.querySelector("body > home-assistant");
 const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
@@ -224,7 +225,26 @@ function mergeConfig(target, ...sources) {
 				if (!target[key]) Object.assign(target, { [key]: {} });
 				mergeConfig(target[key], source[key]);
 			} else {
-				Object.assign(target, { [key]: source[key] });
+				let val = source[key];
+				function replacer(match, entityId, offset, string) {
+					if (!(entityId in configEntityStates)) {
+						configEntityStates[entityId] = "";
+						const entity = elHass.__hass.states[entityId];
+						if (entity) {
+							configEntityStates[entityId] = entity.state;
+						}
+						else {
+							console.error(`Entity used in placeholder not found: ${entityId} (${match})`)
+						}
+					}
+					const state = configEntityStates[entityId];
+					if (config.debug) console.debug(`Replace ${match} with ${state}`);
+					return state;
+				}
+				if (typeof val === 'string' || val instanceof String) {
+					val = val.replace(/\$\{entity:\s*([^}]+\.[^}]+)\}/g, replacer);
+				}
+				Object.assign(target, { [key]: val });
 			}
 		}
 	}
@@ -267,7 +287,7 @@ function updateConfig() {
 		config = mergeConfig(config, config.profiles[profile]);
 		if (config.debug) console.debug(`Profile set from entity state: ${profile}`);
 	}
-	
+
 	if (config.show_images) {
 		if (config.image_url.startsWith("/")) {
 			config.image_url = `media-source://media_source${config.image_url}`;
@@ -618,7 +638,8 @@ class WallpanelView extends HuiView {
 		this.energyCollectionUpdateInterval = 60;
 		this.lastEnergyCollectionUpdate = 0;
 		this.screensaverStopNavigationPathTimeout = null;
-
+		this.currentImageUrl = config.image_url;
+		
 		this.__hass = elHass.__hass;
 		this.__cards = [];
 		this.__badges = [];
@@ -632,8 +653,19 @@ class WallpanelView extends HuiView {
 		if (config.debug) console.debug("Update hass");
 		this.__hass = hass;
 
-		this.updateProfile();
-
+		let changed = false;
+		for (const entityId in configEntityStates) {
+			const entity = this.__hass.states[entityId];
+			if (entity && entity.state != configEntityStates[entityId]) {
+				configEntityStates[entityId] = entity.state;
+				changed = true;
+			}
+		}
+		let profileUpdated = this.updateProfile();
+		if (!profileUpdated && changed) {
+			updateConfig();
+		}
+		
 		if (!isActive()) {
 			return;
 		}
@@ -692,8 +724,10 @@ class WallpanelView extends HuiView {
 				if (config.debug) console.debug(`Set profile to ${profile}`);
 				this.lastProfileSet = profile;
 				updateConfig();
+				return true;
 			}
 		}
+		return false;
 	}
 
 	timer() {
@@ -719,7 +753,9 @@ class WallpanelView extends HuiView {
 		this.messageBox.style.width = '100%';
 		this.messageBox.style.height = '10%';
 		this.messageBox.style.zIndex = 1001;
-		this.messageBox.style.visibility = 'hidden';
+		if (!this.screensaverStartedAt) {
+			this.messageBox.style.visibility = 'hidden';
+		}
 		//this.messageBox.style.margin = '5vh auto auto auto';
 		this.messageBox.style.padding = '5vh 0 0 0';
 		this.messageBox.style.fontSize = '5vh';
@@ -736,7 +772,9 @@ class WallpanelView extends HuiView {
 		this.debugBox.style.background = '#00000099';
 		this.debugBox.style.color = '#ffffff';
 		this.debugBox.style.zIndex = 1001;
-		this.debugBox.style.visibility = 'hidden';
+		if (!this.screensaverStartedAt) {
+			this.debugBox.style.visibility = 'hidden';
+		}
 		this.debugBox.style.fontFamily = 'monospace';
 		this.debugBox.style.fontSize = '12px';
 		this.debugBox.style.overflowWrap = 'break-word';
@@ -750,16 +788,20 @@ class WallpanelView extends HuiView {
 		this.screensaverContainer.style.height = '100vh';
 		this.screensaverContainer.style.background = '#000000';
 
-		this.imageOneContainer.removeAttribute('style');
+		if (!this.screensaverStartedAt) {
+			this.imageOneContainer.removeAttribute('style');
+			this.imageOneContainer.style.opacity = 1;
+		}
 		this.imageOneContainer.style.position = 'absolute';
 		this.imageOneContainer.style.pointerEvents = "none";
 		this.imageOneContainer.style.top = 0;
 		this.imageOneContainer.style.left = 0;
 		this.imageOneContainer.style.width = '100%';
 		this.imageOneContainer.style.height = '100%';
-		this.imageOneContainer.style.opacity = 1;
-
-		this.imageOne.removeAttribute('style');
+		
+		if (!this.screensaverStartedAt) {
+			this.imageOne.removeAttribute('style');
+		}
 		this.imageOne.style.position = 'relative';
 		this.imageOne.style.pointerEvents = "none";
 		this.imageOne.style.width = '100%';
@@ -774,22 +816,26 @@ class WallpanelView extends HuiView {
 		this.imageOneInfoContainer.style.width = '100%';
 		this.imageOneInfoContainer.style.height = '100%';
 
-		this.imageTwoContainer.removeAttribute('style');
+		if (!this.screensaverStartedAt) {
+			this.imageTwoContainer.removeAttribute('style');
+			this.imageTwoContainer.style.opacity = 0;
+		}
 		this.imageTwoContainer.style.position = 'absolute';
 		this.imageTwoContainer.style.pointerEvents = "none";
 		this.imageTwoContainer.style.top = 0;
 		this.imageTwoContainer.style.left = 0;
 		this.imageTwoContainer.style.width = '100%';
 		this.imageTwoContainer.style.height = '100%';
-		this.imageTwoContainer.style.opacity = 0;
-
-		this.imageTwo.removeAttribute('style');
+		
+		if (!this.screensaverStartedAt) {
+			this.imageTwo.removeAttribute('style');
+		}
 		this.imageTwo.style.position = 'relative';
 		this.imageTwo.style.pointerEvents = "none";
 		this.imageTwo.style.width = '100%';
 		this.imageTwo.style.height = '100%';
 		this.imageTwo.style.objectFit = 'contain';
-
+		
 		this.imageTwoInfoContainer.removeAttribute('style');
 		this.imageTwoInfoContainer.style.position = 'absolute';
 		this.imageTwoInfoContainer.style.pointerEvents = "none";
@@ -1225,12 +1271,12 @@ class WallpanelView extends HuiView {
 		this.setDefaultStyle();
 		this.updateStyle();
 
-		if (config.idle_time > 0 && config.show_images) {
+		if (config.show_images && config.idle_time > 0) {
 			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
 				this.preloadImages();
 			}
 			else {
-				this.updateImageList(this.preloadImages.bind(this));
+				this.updateImageList(true);
 			}
 		}
 
@@ -1465,24 +1511,32 @@ class WallpanelView extends HuiView {
 	}
 
 	reconfigure() {
-		this.updateImageList();
+		if (config.show_images && config.idle_time > 0 && this.currentImageUrl != config.image_url) {
+			this.currentImageUrl = config.image_url;
+			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
+				this.preloadImages();
+			}
+			else {
+				this.updateImageList(true);
+			}
+		}
 		this.setDefaultStyle();
 		this.updateStyle();
 		this.createInfoBoxContent();
 	}
 
-	updateImageList(callback) {
+	updateImageList(preload = false) {
 		if (!config.image_url || this.updatingImageList) return;
 
 		if (imageSourceType() == "unsplash-api") {
-			this.updateImageListFromUnsplashAPI(callback);
+			this.updateImageListFromUnsplashAPI(preload);
 		}
 		else if (imageSourceType() == "media-source") {
-			this.updateImageListFromMediaSource(callback);
+			this.updateImageListFromMediaSource(preload);
 		}
 	}
 
-	updateImageListFromMediaSource(callback) {
+	updateImageListFromMediaSource(preload) {
 		this.updatingImageList = true;
 		this.lastImageListUpdate = Date.now();
 		let mediaContentId = config.image_url;
@@ -1492,8 +1546,8 @@ class WallpanelView extends HuiView {
 				this.imageList = result.sort();
 				if (config.debug) console.debug("Image list from media-source is now:", this.imageList);
 				this.updatingImageList = false;
-				if (callback) {
-					callback();
+				if (preload) {
+					wp.preloadImages();
 				}
 			},
 			error => {
@@ -1505,7 +1559,7 @@ class WallpanelView extends HuiView {
 		)
 	}
 
-	updateImageListFromUnsplashAPI(callback) {
+	updateImageListFromUnsplashAPI(preload) {
 		this.updatingImageList = true;
 		this.lastImageListUpdate = Date.now();
 		let wp = this;
@@ -1528,11 +1582,12 @@ class WallpanelView extends HuiView {
 				console.warn("Unsplash API error, get random images", http);
 				urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
 			}
+			wp.updatingImageList = false;
 			wp.imageList = urls;
 			imageInfoCache = data;
 			if (config.debug) console.debug("Image list from unsplash is now:", wp.imageList);
-			if (callback) {
-				callback();
+			if (preload) {
+				wp.preloadImages();
 			}
 		};
 		if (config.debug) console.debug(`Unsplash API request: ${config.image_url}`);
@@ -1657,16 +1712,27 @@ class WallpanelView extends HuiView {
 		}
 	}
 
+	preloadImage(img) {
+		if ((this.updatingImageList) || (img.getAttribute('data-loading') == "true") || (this.screensaverStartedAt && img.parentNode.style.opacity == 1)) {
+			return;
+		}
+		this.updateImage(img);
+		const wp = this;
+		setTimeout(function() {
+			wp.setImageDataInfo(img);
+		}, 1000);
+	}
+
 	preloadImages() {
 		if (config.debug) console.debug("Preloading images");
-		let wp = this;
-		this.updateImage(wp.imageOne);
-		setTimeout(function() {
-			wp.setImageDataInfo(wp.imageOne);
-			if (imageSourceType() !== "media-entity") {
-				wp.updateImage(wp.imageTwo);
-			}
-		}, 1000);
+		this.preloadImage(this.imageOne);
+
+		if (imageSourceType() !== "media-entity") {
+			const wp = this;
+			setTimeout(function() {
+				wp.preloadImage(wp.imageTwo);
+			}, 1000);
+		}
 	}
 
 	switchActiveEntityImage(crossfadeMillis = null) {
@@ -1947,6 +2013,7 @@ class WallpanelView extends HuiView {
 			if (isClick) {
 				this.blockEventsUntil = now + 1000;
 				this.hideMessage();
+				return;
 			}
 		}
 		

@@ -564,6 +564,22 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
 ![Grid layout](./doc/grid-layout.png)
 
 
+## Dynamic configuration using entities
+The wallpanel configuration can be changed dynamically by using input_text or input_select helpers.
+Placeholders can be used in the yaml configuration, which are replaced by the state value of the corresponding entity.
+These placeholders have the form `${entity:<entity-id>}`, where `<entity-id>` must be replaced by the ID of an existing HA entity.
+Whenever the state of such an entity changes, the configuration is updated immediately.
+
+For the example, an input_select helper named `wallpanel_image_url` must be created in HA.
+The enity ID of the helper will be `input_select.wallpanel_image_url` by default.
+A placeholder can now be inserted in the yaml configuration:
+```yaml
+wallpanel:
+  image_url: '${entity:input_select.wallpanel_image_url}'
+```
+Whenever the state of the entity is changed manually or by automation, the configuration is updated accordingly.
+
+
 ## Profiles
 With profiles you can easily switch between different configurations. The profiles definition is added at the end of the wallpanel definition. everything before this section represents the 'standard' or default profile.
 
