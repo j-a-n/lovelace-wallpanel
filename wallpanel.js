@@ -146,6 +146,7 @@ const defaultConfig = {
 	info_move_fade_duration: 2.0,
 	image_animation_ken_burns: false,
 	image_animation_ken_burns_zoom: 1.3,
+	image_animation_ken_burns_delay: 0,
 	style: {},
 	badges: [],
 	cards: [
@@ -1094,9 +1095,13 @@ class WallpanelView extends HuiView {
 		}
 		const activeImage = this.getActiveImageElement();
 		activeImage.style.animation = "none";
+		let delay = Math.floor(config.image_animation_ken_burns_delay * 1000);
+		if (delay < 50) {
+			delay = 50;
+		}
 		setTimeout(function() {
 			activeImage.style.animation = `kenBurnsEffect ${config.display_time + Math.ceil(config.crossfade_time * 2) + 1}s ease`;
-		}, 50);
+		}, delay);
 	}
 
 	getActiveImageElement() {
