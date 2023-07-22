@@ -292,6 +292,7 @@ function updateConfig() {
 		config.debug = false;
 		config.hide_toolbar = false;
 		config.hide_sidebar = false;
+		config.hide_toolbar_action_icons = false;
 		config.fullscreen = false;
 		config.idle_time = 0;
 	}
