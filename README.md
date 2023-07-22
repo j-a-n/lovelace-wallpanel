@@ -668,11 +668,22 @@ You can stop the screensaver with the javascript code below from a browser mod s
 document.querySelector("home-assistant").shadowRoot.querySelector("home-assistant-main").shadowRoot.querySelector("wallpanel-view").stopScreensaver();
 ```
 
+# Frequently Asked Questions
+## Dashboard cannot be edited
+After hiding the toolbar, I can no longer edit the dashboard. How can I recover?
+
+If you add `?edit=1` or `?wp_enabled=false` to the URL in the browser, wallpanel will not be active, so the toolbar will not be hidden either.
+You can also use `?wp_hide_toolbar=false` to only change this setting.
+
+Example: `http://192.168.1.1:8123/lovelace/default_view?wp_enabled=false`
+
+
 # Debug mode
 If debug mode is enabled, log messages are written to the browser console.
 In addition, an overlay is displayed in which status information is shown.
 The debug mode can be activated and deactivated via the configuration.
 You can also turn debug mode on and off by triple-clicking in the lower middle part of the screen while the screen saver is active.
+
 
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
