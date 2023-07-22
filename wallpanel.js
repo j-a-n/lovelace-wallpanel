@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.14.0";
+const version = "4.15.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -288,6 +288,10 @@ function updateConfig() {
 		config.stop_screensaver_on_mouse_move = false;
 	}
 	
+	if (params.get("edit") == "1") {
+		config.enabled = false;
+	}
+
 	if (!config.enabled) {
 		config.debug = false;
 		config.hide_toolbar = false;
@@ -314,10 +318,6 @@ function isActive() {
 		return false;
 	}
 	if (config.enabled_on_tabs && config.enabled_on_tabs.length > 0 && activePanelTab && !config.enabled_on_tabs.includes(activePanelTab)) {
-		return false;
-	}
-	const params = new URLSearchParams(window.location.search);
-	if (params.get("edit") == "1") {
 		return false;
 	}
 	return true;
