@@ -60,7 +60,7 @@ You can set the following configuration parameters for every individual Home Ass
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
 | enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, wallpanel is enabled on all tabs. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
-| hide_toolbar                     | Hide the upper panel toolbar?                                                                          | false     |
+| hide_toolbar                     | Hide the upper panel toolbar? Please see [FAQ](## Dashboard cannot be edited) how to edit your dashboard when toolbar is hidden. | false     |
 | hide_toolbar_action_icons        | Hide action items in the toolbar?                                                                      | false     |
 | hide_sidebar                     | Hide the navigation sidebar?                                                                           | false     |
 | fullscreen                       | Set browser window to fullscreen? <br>*Due to browser restrictions you will need to interact with the screen once to activate fullscreen mode after loading the dashboard page.* | false   |
