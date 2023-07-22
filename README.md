@@ -579,6 +579,11 @@ wallpanel:
 ```
 Whenever the state of the entity is changed manually or by automation, the configuration is updated accordingly.
 
+It is also possible to dynamically change only a part of the configuration value:
+```yaml
+wallpanel:
+  image_url: 'https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=${entity:input_text.wallpanel_unsplash_query}'
+```
 
 ## Profiles
 With profiles you can easily switch between different configurations. The profiles definition is added at the end of the wallpanel definition. everything before this section represents the 'standard' or default profile.
