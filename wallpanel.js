@@ -128,6 +128,7 @@ const defaultConfig = {
 	screensaver_entity: '',
 	stop_screensaver_on_mouse_move: true,
 	stop_screensaver_on_location_change: true,
+	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
@@ -266,8 +267,8 @@ function updateConfig() {
 		config = mergeConfig(config, config.profiles[profile]);
 		if (config.debug) console.debug(`Profile set from entity state: ${profile}`);
 	}
-
-	if (config.image_url) {
+	
+	if (config.show_images) {
 		if (config.image_url.startsWith("/")) {
 			config.image_url = `media-source://media_source${config.image_url}`;
 		}
@@ -278,6 +279,9 @@ function updateConfig() {
 			// Unsplash API currently places a limit of 50 requests per hour
 			config.image_list_update_interval = 90;
 		}
+	}
+	else {
+		config.show_images = false;
 	}
 
 	if (config.card_interaction) {
@@ -320,7 +324,7 @@ function isActive() {
 
 
 function imageSourceType() {
-	if (!config.image_url) {
+	if ((!config.show_images) || (!config.image_url)) {
 		return "";
 	}
 	if (config.image_url.startsWith("media-entity://")) return "media-entity";
@@ -1220,7 +1224,7 @@ class WallpanelView extends HuiView {
 		this.setDefaultStyle();
 		this.updateStyle();
 
-		if (config.idle_time > 0 && config.image_url) {
+		if (config.idle_time > 0 && config.show_images) {
 			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
 				this.preloadImages();
 			}
@@ -1251,7 +1255,7 @@ class WallpanelView extends HuiView {
 			}
 		});
 		
-		if (config.image_url) {
+		if (config.show_images) {
 			[this.imageOne, this.imageTwo].forEach(function(img) {
 				if (!img) return;
 				img.addEventListener('load', function() {
@@ -1632,7 +1636,7 @@ class WallpanelView extends HuiView {
 	}
 
 	updateImage(img) {
-		if (!config.image_url) {
+		if (!config.show_images) {
 			return;
 		}
 		img.setAttribute('data-loading', true);
@@ -1863,7 +1867,7 @@ class WallpanelView extends HuiView {
 			if (config.debug) console.debug("Setting screen to black");
 			this.screensaverOverlay.style.background = '#000000';
 		}
-		else if (config.image_url) {
+		else if (config.show_images) {
 			if (now - this.lastImageUpdate >= config.display_time*1000) {
 				if (imageSourceType() === "media-entity") {
 					this.switchActiveEntityImage();

@@ -75,6 +75,7 @@ You can set the following configuration parameters for every individual Home Ass
 | stop_screensaver_on_location_change | Stop screensaver on navigation (location-changed events)?                                           | true      |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
+| show_images                      | Show images if screensaver is active?                                                                  | true      |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
@@ -82,9 +83,8 @@ You can set the following configuration parameters for every individual Home Ass
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
 | image_animation_ken_burns        | Apply a Ken Burns effect (panning and zooming) to the images?                                          | false      |
 | image_animation_ken_burns_zoom   | Zoom level for the Ken Burns effect.                                                                   | 1.3        |
-| image_animation_ken_burns_delay  | Start Ken Burns effect with a delay (in secods).  vvvv                                                 | 0          |
-| show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
 | show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data and images from the new Unsplash API. The config name was `show_exif_info` before version 4.7. | false      |
+| show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
 | image_info_template              | Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The config name was `exif_info_template` before version 4.7. | ${DateTimeOriginal} |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).      | 0          |
@@ -668,7 +668,7 @@ You can stop the screensaver with the javascript code below from a browser mod s
 document.querySelector("home-assistant").shadowRoot.querySelector("home-assistant-main").shadowRoot.querySelector("wallpanel-view").stopScreensaver();
 ```
 
-# Frequently Asked Questions
+# FAQ - Frequently Asked Questions
 ## Dashboard cannot be edited
 After hiding the toolbar, I can no longer edit the dashboard. How can I recover?
 
