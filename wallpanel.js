@@ -322,6 +322,7 @@ function imageSourceType() {
 	if (!config.image_url) {
 		return "";
 	}
+	if (config.image_url.startsWith("custom-api")) return "custom-api";
 	if (config.image_url.startsWith("media-entity://")) return "media-entity";
 	if (config.image_url.startsWith("media-source://media_source")) return "media-source";
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
@@ -1380,77 +1381,82 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		let html = config.image_info_template;
-		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
-			if (!imageInfo) {
-				return "";
-			}
-			if (img.imagePath) {
-				imageInfo.image = {
-					url: img.imagePath,
-					path: img.imagePath.replace("media-source://media_source/", ""),
-					relativePath: img.imagePath.replace(config.image_url, "").replace(/^\/+/, ""),
-					folderName: ""
-				};
-				const parts = img.imagePath.split("/");
-				if (parts.length >= 2) {
-					imageInfo.image.folderName = parts[parts.length - 2]; 
+		if (imageSourceType() == 'custom-api')
+			html = imageInfo.date + " " + imageInfo.location
+		else {
+			let html = config.image_info_template;
+			html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
+				if (!imageInfo) {
+					return "";
 				}
-			}
-			let prefix = "";
-			let suffix = "";
-			let options = null;
-			if (tags.includes("!")) {
-				let tmp = tags.split("!");
-				tags = tmp[0];
-				for (let i=1; i<tmp.length; i++) {
-					let tmp2 = tmp[i].split("=", 2);
-					if (tmp2[0] == "prefix") {
-						prefix = tmp2[1];
-					}
-					else if (tmp2[0] == "suffix") {
-						suffix = tmp2[1];
-					}
-					else if (tmp2[0] == "options") {
-						options = {};
-						tmp2[1].split(",").forEach(optVal => {
-							let tmp3 = optVal.split(":", 2);
-							if (tmp3[0] && tmp3[1]) {
-								options[tmp3[0].replace(/\s/g, '')] = tmp3[1].replace(/\s/g, '');
-							}
-						});
+				if (img.imagePath) {
+					imageInfo.image = {
+						url: img.imagePath,
+						path: img.imagePath.replace("media-source://media_source/", ""),
+						relativePath: img.imagePath.replace(config.image_url, "").replace(/^\/+/, ""),
+						folderName: ""
+					};
+					const parts = img.imagePath.split("/");
+					if (parts.length >= 2) {
+						imageInfo.image.folderName = parts[parts.length - 2]; 
 					}
 				}
-			}
-
-			let val = "";
-			let tagList = tags.split("|");
-			let tag = "";
-			for (let i=0; i<tagList.length; i++) {
-				tag = tagList[i];
-				let keys = tag.replace(/\s/g, '').split(".");
-				val = imageInfo;
-				keys.forEach(key => {
+				let prefix = "";
+				let suffix = "";
+				let options = null;
+				if (tags.includes("!")) {
+					let tmp = tags.split("!");
+					tags = tmp[0];
+					for (let i=1; i<tmp.length; i++) {
+						let tmp2 = tmp[i].split("=", 2);
+						if (tmp2[0] == "prefix") {
+							prefix = tmp2[1];
+						}
+						else if (tmp2[0] == "suffix") {
+							suffix = tmp2[1];
+						}
+						else if (tmp2[0] == "options") {
+							options = {};
+							tmp2[1].split(",").forEach(optVal => {
+								let tmp3 = optVal.split(":", 2);
+								if (tmp3[0] && tmp3[1]) {
+									options[tmp3[0].replace(/\s/g, '')] = tmp3[1].replace(/\s/g, '');
+								}
+							});
+						}
+					}
+				}
+	
+				let val = "";
+				let tagList = tags.split("|");
+				let tag = "";
+				for (let i=0; i<tagList.length; i++) {
+					tag = tagList[i];
+					let keys = tag.replace(/\s/g, '').split(".");
+					val = imageInfo;
+					keys.forEach(key => {
+						if (val) {
+							val = val[key];
+						}
+					});
 					if (val) {
-						val = val[key];
+						break
 					}
-				});
-				if (val) {
-					break
+				};
+				if (!val) {
+					return "";
 				}
-			};
-			if (!val) {
-				return "";
-			}
-			if (/DateTime/.test(tag)) {
-				let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
-				if (!options) {
-					options = {year: "numeric", month: "2-digit", day: "2-digit"};
+				if (/DateTime/.test(tag)) {
+					let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
+					if (!options) {
+						options = {year: "numeric", month: "2-digit", day: "2-digit"};
+					}
+					val = date.toLocaleDateString(elHass.__hass.locale.language, options);
 				}
-				val = date.toLocaleDateString(elHass.__hass.locale.language, options);
-			}
-			return prefix + val + suffix;
-		});
+				return prefix + val + suffix;
+			});
+		}
+		
 		infoElement.innerHTML = html;
 	}
 
@@ -1464,6 +1470,9 @@ class WallpanelView extends HuiView {
 	updateImageList(callback) {
 		if (!config.image_url || this.updatingImageList) return;
 
+		if (imageSourceType() == "custom-api") {
+			this.updateImageListFromCustomAPI(callback);
+		}
 		if (imageSourceType() == "unsplash-api") {
 			this.updateImageListFromUnsplashAPI(callback);
 		}
@@ -1529,11 +1538,47 @@ class WallpanelView extends HuiView {
 		http.send();
 	}
 
+	updateImageListFromCustomAPI(callback) {
+		this.updatingImageList = true;
+		this.lastImageListUpdate = Date.now();
+		let wp = this;
+		let urls = [];
+		let data = {};
+		const http = new XMLHttpRequest();
+		http.responseType = "json";
+		let custom_api_url = config.image_url.replace('custom-api-', '');
+
+		http.open("GET", `${custom_api_url}`, true);
+		http.onload = function() {
+			if (http.status == 200 || http.status === 0) {
+				if (config.debug) console.debug(`Got custom API response`);
+				http.response.forEach(entry => {
+					if (config.debug) console.debug(entry);
+					const url = entry.url;
+					urls.push(url);
+					data[url] = entry;
+				});
+			} else {
+				console.warn("Custom API error, get random images", http);
+				urls.push(config.image_url);
+			}
+			wp.imageList = urls;
+			imageInfoCache = data;
+			if (config.debug) console.debug("Image list from custom api is now:", wp.imageList);
+			if (callback) {
+				callback();
+			}
+		};
+		if (config.debug) console.debug(`Custom API request: ${config.image_url}`);
+		http.send();
+	}
+
 	updateImageFromUrl(img, url) {
 		let width = this.screensaverContainer.clientWidth;
 		let height = this.screensaverContainer.clientHeight;
 		let timestamp_ms = Date.now();
 		let timestamp = Math.floor(timestamp_ms / 1000);
+		url = url.replace('custom-api-', '');
 		url = url.replace(/\${width}/g, width);
 		url = url.replace(/\${height}/g, height);
 		url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
@@ -1614,6 +1659,15 @@ class WallpanelView extends HuiView {
 		this.updateImageFromUrl(img, this.imageList[this.imageIndex]);
 	}
 
+	updateImageFromCustomAPI(img) {
+		if (this.imageList.length == 0) {
+			return;
+		}
+		this.updateImageIndex();
+		img.imageDataKey = this.imageList[this.imageIndex];
+		this.updateImageFromUrl(img, this.imageList[this.imageIndex]);
+	}
+
 	updateImageFromMediaEntity(img) {
 		const imageEntity = config.image_url.replace(/^media-entity:\/\//, '')
 		const entity = this.hass.states[imageEntity];
@@ -1638,6 +1692,9 @@ class WallpanelView extends HuiView {
 		}
 		else if (imageSourceType() == "unsplash-api") {
 			this.updateImageFromUnsplashAPI(img);
+		}
+		else if (imageSourceType() == "custom-api") {
+			this.updateImageFromCustomAPI(img);
 		}
 		else if (imageSourceType() == "media-entity") {
 			this.updateImageFromMediaEntity(img);
