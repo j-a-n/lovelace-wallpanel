@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.16.1";
+const version = "4.17.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -159,6 +159,7 @@ const defaultConfig = {
 	profiles: {}
 };
 
+let dashboardConfig = {};
 let config = {};
 let activePanelUrl = null;
 let activePanelTab = null;
@@ -257,7 +258,11 @@ function updateConfig() {
 
 	config = {};
 	mergeConfig(config, defaultConfig);
-	mergeConfig(config, getHaPanelLovelaceConfig());
+
+	if (Object.keys(dashboardConfig).length === 0) {
+		dashboardConfig = getHaPanelLovelaceConfig();
+	}
+	mergeConfig(config, dashboardConfig);
 
 	let paramConfig = {}
 	for (let [key, value] of params) {
@@ -412,7 +417,6 @@ function setSidebarHidden(hidden) {
 	
 	try {
 		const sidebar = elHaMain.shadowRoot.querySelector("ha-sidebar");
-		console.error(sidebar);
 		if (sidebar) {
 			sidebar.style.display = (hidden ? "none" : "");
 		}
@@ -2077,6 +2081,18 @@ function deactivateWallpanel() {
 	setSidebarHidden(false);
 }
 
+
+function reconfigure() {
+	updateConfig();
+	if (isActive()) {
+		activateWallpanel();
+	}
+	else {
+		deactivateWallpanel();
+	}
+}
+
+
 function locationChanged() {
 	if (config.stop_screensaver_on_location_change && !skipDisableScreensaverOnLocationChanged) {
 		wallpanel.stopScreensaver();
@@ -2104,13 +2120,7 @@ function locationChanged() {
 		}
 	}
 	if (changed) {
-		updateConfig();
-		if (isActive()) {
-			activateWallpanel();
-		}
-		else {
-			deactivateWallpanel();
-		}
+		reconfigure();
 	}
 }
 
@@ -2124,6 +2134,29 @@ setTimeout(function() {
 		if (config.debug) console.debug("location-changed", event);
 		locationChanged();
 	});
+	elHass.__hass.connection.subscribeEvents(
+		function(event) {
+			if (config.debug) console.debug("lovelace_updated", event);
+			if (event.data.url_path == activePanelUrl) {
+				elHass.__hass.connection.sendMessagePromise({
+					type: "lovelace/config",
+					url_path: activePanelUrl
+				})
+				.then((data) => {
+					dashboardConfig = {};
+					if (data.wallpanel) {
+						for (let key in data.wallpanel) {
+							if (key in defaultConfig) {
+								dashboardConfig[key] = data.wallpanel[key];
+							}
+						}
+					}
+					reconfigure();
+				});
+			}
+		},
+		"lovelace_updated"
+	);
 }, 25);
 
 
