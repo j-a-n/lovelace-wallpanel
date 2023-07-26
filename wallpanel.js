@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.16.0";
+const version = "4.16.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -394,73 +394,47 @@ function getCurrentView() {
 
 function setSidebarHidden(hidden) {
 	try {
-		const haMenuButton = elHaMain.shadowRoot
+		const menuButton = elHaMain.shadowRoot
 			.querySelector("ha-panel-lovelace").shadowRoot
 			.querySelector("hui-root").shadowRoot
-			.querySelector("div.toolbar")
 			.querySelector("ha-menu-button");
-		const haIconButton = haMenuButton.shadowRoot
-			.querySelector("ha-icon-button");
-		const divDot = haMenuButton.shadowRoot
-			.querySelector("div.dot");
 		if (hidden) {
-			haIconButton.style.display = "none";
-			if (divDot) {
-				divDot.style.display = "none";
-			}
+			menuButton.style.display = "none";
 		}
 		else {
-			haIconButton.style.removeProperty("display");
-			if (divDot) {
-				divDot.style.removeProperty("display");
-			}
+			menuButton.style.removeProperty("display");
 		}
 	}
 	catch (e) {
-		if (config.debug) console.debug(e);
+		if (config.debug) console.warn(e);
 	}
 	
 	try {
-		let sidebar = elHaMain.shadowRoot.querySelector("ha-sidebar");
+		const sidebar = elHaMain.shadowRoot.querySelector("ha-sidebar");
+		console.error(sidebar);
 		if (sidebar) {
-			sidebar.style.visibility = (hidden ? "hidden" : "visible");
-		}
-		
-		let drawer = elHaMain.shadowRoot.querySelector("ha-drawer");
-		if (drawer) {
-			drawer = drawer.shadowRoot.querySelector(".mdc-drawer");
+			sidebar.style.display = (hidden ? "none" : "");
 		}
 		if (hidden) {
-			
-			elHaMain.style.setProperty("--app-drawer-width", 0);
-			elHaMain.style.setProperty("--mdc-drawer-width", 0);
-			elHaMain.style.setProperty("--mdc-top-app-bar-width", "100%");
-			if (drawer) {
-				drawer.style.setProperty("display", "none");
-			}
+			elHaMain.style.setProperty("--mdc-drawer-width", "env(safe-area-inset-left)");
 		}
 		else {
-			elHaMain.style.removeProperty("--app-drawer-width");
 			elHaMain.style.removeProperty("--mdc-drawer-width");
-			elHaMain.style.removeProperty("--mdc-top-app-bar-width");
-			if (drawer) {
-				drawer.style.removeProperty("display");
-			}
 		}
 		window.dispatchEvent(new Event('resize'));
 	}
 	catch (e) {
-		if (config.debug) console.debug(e);
+		if (config.debug) console.warn(e);
 	}
-	
 }
+
 
 function setToolbarHidden(hidden) {
 	try {
-		let huiRoot = elHaMain.shadowRoot
+		const huiRoot = elHaMain.shadowRoot
 			.querySelector("ha-panel-lovelace").shadowRoot
 			.querySelector("hui-root").shadowRoot;
-		let view = huiRoot.querySelector("#view");
+		const view = huiRoot.querySelector("#view");
 		let appToolbar = huiRoot.querySelector("app-toolbar");
 		if (!appToolbar) {
 			// Changed with 2023.04
@@ -477,7 +451,7 @@ function setToolbarHidden(hidden) {
 			view.style.removeProperty("min-height");
 			view.style.removeProperty("margin-top");
 			view.style.removeProperty("padding-top");
-			let actionItems = appToolbar.querySelector("div.action-items");
+			const actionItems = appToolbar.querySelector("div.action-items");
 			if (config.hide_toolbar_action_icons) {
 				actionItems.style.setProperty("display", "none");
 			}
@@ -488,7 +462,7 @@ function setToolbarHidden(hidden) {
 		window.dispatchEvent(new Event('resize'));
 	}
 	catch (e) {
-		if (config.debug) console.debug(e);
+		if (config.debug) console.warn(e);
 	}
 }
 
