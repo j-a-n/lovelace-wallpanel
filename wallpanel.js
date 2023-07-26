@@ -2109,6 +2109,7 @@ function locationChanged() {
 		let tab = window.location.pathname.split("/").slice(-1)[0];
 		if (activePanelUrl != pl.panel.url_path) {
 			if (config.debug) console.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
+			dashboardConfig = {};
 			activePanelUrl = pl.panel.url_path;
 			activePanelTab = tab;
 			changed = true;
