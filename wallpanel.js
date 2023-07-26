@@ -288,7 +288,15 @@ function updateConfig() {
 		if (config.debug) console.debug(`Profile set from entity state: ${profile}`);
 	}
 
-	if (config.show_images) {
+	if (config.card_interaction) {
+		config.stop_screensaver_on_mouse_move = false;
+	}
+	
+	if (params.get("edit") == "1") {
+		config.enabled = false;
+	}
+
+	if (config.image_url) {
 		if (config.image_url.startsWith("/")) {
 			config.image_url = `media-source://media_source${config.image_url}`;
 		}
@@ -304,22 +312,15 @@ function updateConfig() {
 		config.show_images = false;
 	}
 
-	if (config.card_interaction) {
-		config.stop_screensaver_on_mouse_move = false;
-	}
-	
-	if (params.get("edit") == "1") {
-		config.enabled = false;
-	}
-
 	if (!config.enabled) {
 		config.debug = false;
 		config.hide_toolbar = false;
 		config.hide_sidebar = false;
 		config.hide_toolbar_action_icons = false;
 		config.fullscreen = false;
-		config.idle_time = 0;
+		config.show_images = false;
 	}
+
 	if (config.debug) console.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
 
 	if (wallpanel) {
@@ -1245,7 +1246,7 @@ class WallpanelView extends HuiView {
 		this.setDefaultStyle();
 		this.updateStyle();
 
-		if (config.show_images && config.idle_time > 0) {
+		if (config.show_images) {
 			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
 				this.preloadImages();
 			}
@@ -1485,7 +1486,7 @@ class WallpanelView extends HuiView {
 	}
 
 	reconfigure() {
-		if (config.show_images && config.idle_time > 0 && this.currentImageUrl != config.image_url) {
+		if (config.show_images && this.currentImageUrl != config.image_url) {
 			this.currentImageUrl = config.image_url;
 			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
 				this.preloadImages();
