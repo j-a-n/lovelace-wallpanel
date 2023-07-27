@@ -1514,7 +1514,7 @@ class WallpanelView extends HuiView {
 		if (!config.image_url || this.updatingImageList) return;
 
 		if (imageSourceType() == "custom-api") {
-			this.updateImageListFromCustomAPI(callback);
+			this.updateImageListFromCustomAPI(preload);
 		}
 		if (imageSourceType() == "unsplash-api") {
 			this.updateImageListFromUnsplashAPI(preload);
