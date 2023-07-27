@@ -60,7 +60,7 @@ You can set the following configuration parameters for every individual Home Ass
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
 | enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, wallpanel is enabled on all tabs. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
-| hide_toolbar                     | Hide the upper panel toolbar?                                                                          | false     |
+| hide_toolbar                     | Hide the upper panel toolbar? Please see [FAQ](#dashboard-cannot-be-edited) how to edit your dashboard when toolbar is hidden. | false     |
 | hide_toolbar_action_icons        | Hide action items in the toolbar?                                                                      | false     |
 | hide_sidebar                     | Hide the navigation sidebar?                                                                           | false     |
 | fullscreen                       | Set browser window to fullscreen? <br>*Due to browser restrictions you will need to interact with the screen once to activate fullscreen mode after loading the dashboard page.* | false   |
@@ -75,6 +75,7 @@ You can set the following configuration parameters for every individual Home Ass
 | stop_screensaver_on_location_change | Stop screensaver on navigation (location-changed events)?                                           | true      |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
+| show_images                      | Show images if screensaver is active?                                                                  | true      |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
@@ -82,8 +83,9 @@ You can set the following configuration parameters for every individual Home Ass
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
 | image_animation_ken_burns        | Apply a Ken Burns effect (panning and zooming) to the images?                                          | false      |
 | image_animation_ken_burns_zoom   | Zoom level for the Ken Burns effect.                                                                   | 1.3        |
-| show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
+| image_animation_ken_burns_delay  | Start Ken Burns effect with a delay (in seconds).                                                      | 0          |
 | show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data and images from the new Unsplash API. The config name was `show_exif_info` before version 4.7. | false      |
+| show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
 | image_info_template              | Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The config name was `exif_info_template` before version 4.7. | ${DateTimeOriginal} |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).      | 0          |
@@ -94,8 +96,8 @@ You can set the following configuration parameters for every individual Home Ass
 | info_move_interval               | Interval of movement of the info box in seconds (0 = no movement).                                     | 0          |
 | info_move_fade_duration          | Duration of the fade-in and fade-out animation of the info box in case of movement (0 = no animation). | 2.0        |
 | style                            | Additional CSS styles for wallpanel elements.                                                          | {}         |
-| badges                           | Badges to display in info box. See below for details.                                                  | []         |
-| cards                            | Cards to display in info box. See below for details.                                                   | See below  |
+| badges                           | Badges to display in info box. Set to [] to show no badges at all. See below for details.              | []         |
+| cards                            | Cards to display in info box. Set to [] to show no cards at all. See below for details.                | See below  |
 | card_interaction                 | Allow interaction with the cards displayed in the info box?                                            | false      |
 | profiles                         | Configuration profiles. See below for details.                                                         | {}         |
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
@@ -562,6 +564,27 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
 ![Grid layout](./doc/grid-layout.png)
 
 
+## Dynamic configuration using entities
+The wallpanel configuration can be changed dynamically by using input_text or input_select helpers.
+Placeholders can be used in the yaml configuration, which are replaced by the state value of the corresponding entity.
+These placeholders have the form `${entity:<entity-id>}`, where `<entity-id>` must be replaced by the ID of an existing HA entity.
+Whenever the state of such an entity changes, the configuration is updated immediately.
+
+For the example, an input_select helper named `wallpanel_image_url` must be created in HA.
+The enity ID of the helper will be `input_select.wallpanel_image_url` by default.
+A placeholder can now be inserted in the yaml configuration:
+```yaml
+wallpanel:
+  image_url: '${entity:input_select.wallpanel_image_url}'
+```
+Whenever the state of the entity is changed manually or by automation, the configuration is updated accordingly.
+
+It is also possible to dynamically change only a part of the configuration value:
+```yaml
+wallpanel:
+  image_url: 'https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=${entity:input_text.wallpanel_unsplash_query}'
+```
+
 ## Profiles
 With profiles you can easily switch between different configurations. The profiles definition is added at the end of the wallpanel definition. everything before this section represents the 'standard' or default profile.
 
@@ -667,11 +690,22 @@ You can stop the screensaver with the javascript code below from a browser mod s
 document.querySelector("home-assistant").shadowRoot.querySelector("home-assistant-main").shadowRoot.querySelector("wallpanel-view").stopScreensaver();
 ```
 
+# FAQ - Frequently Asked Questions
+## Dashboard cannot be edited
+After hiding the toolbar, I can no longer edit the dashboard. How can I recover?
+
+If you add `?edit=1` or `?wp_enabled=false` to the URL in the browser, wallpanel will not be active, so the toolbar will not be hidden either.
+You can also use `?wp_hide_toolbar=false` to only change this setting.
+
+Example: `http://192.168.1.1:8123/lovelace/default_view?wp_enabled=false`
+
+
 # Debug mode
 If debug mode is enabled, log messages are written to the browser console.
 In addition, an overlay is displayed in which status information is shown.
 The debug mode can be activated and deactivated via the configuration.
 You can also turn debug mode on and off by triple-clicking in the lower middle part of the screen while the screen saver is active.
+
 
 # Credits
 Thanks to Unsplash and to all the photographers for sharing their great photos!
