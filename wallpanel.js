@@ -1401,6 +1401,7 @@ class WallpanelView extends HuiView {
 	setImageDataInfo(img) {
 		let imageInfo = imageInfoCache[img.imageDataKey];
 		let infoElement = null;
+		let html = null;
 		if (this.imageOne.imageDataKey == img.imageDataKey) {
 			infoElement = this.imageOneInfo;
 		}
@@ -1416,10 +1417,10 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		if (imageSourceType() == 'custom-api')
+		if (imageSourceType() == 'custom-api') {
 			html = imageInfo.date + " " + imageInfo.location
-		else {
-			let html = config.image_info_template;
+		} else {
+			html = config.image_info_template;
 			html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
 				if (!imageInfo) {
 					return "";
@@ -1582,7 +1583,7 @@ class WallpanelView extends HuiView {
 		http.send();
 	}
 
-	updateImageListFromCustomAPI(callback) {
+	updateImageListFromCustomAPI(preload) {
 		this.updatingImageList = true;
 		this.lastImageListUpdate = Date.now();
 		let wp = this;
@@ -1590,8 +1591,8 @@ class WallpanelView extends HuiView {
 		let data = {};
 		const http = new XMLHttpRequest();
 		http.responseType = "json";
+		
 		let custom_api_url = config.image_url.replace('custom-api-', '');
-
 		http.open("GET", `${custom_api_url}`, true);
 		http.onload = function() {
 			if (http.status == 200 || http.status === 0) {
@@ -1606,11 +1607,12 @@ class WallpanelView extends HuiView {
 				console.warn("Custom API error, get random images", http);
 				urls.push(config.image_url);
 			}
+			wp.updatingImageList = false;
 			wp.imageList = urls;
 			imageInfoCache = data;
 			if (config.debug) console.debug("Image list from custom api is now:", wp.imageList);
-			if (callback) {
-				callback();
+			if (preload) {
+				wp.preloadImages();
 			}
 		};
 		if (config.debug) console.debug(`Custom API request: ${config.image_url}`);
