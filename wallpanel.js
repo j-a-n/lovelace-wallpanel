@@ -173,7 +173,8 @@ let classStyles = {
 		"bottom": "0.5em",
 		"right": "0.5em",
 		"padding": "0.1em 0.5em 0.1em 0.5em",
-		"font-size": "2em",
+		"color": "white",
+    	"font-size": "1em",
 		"background": "#00000055",
 		"backdrop-filter": "blur(2px)",
 		"border-radius": "0.1em"
@@ -187,6 +188,9 @@ let classStyles = {
 	"wallpanel-progress-inner": {
 		"height": "100%",
 		"background-color": "white"
+	},
+	"wallpanel-screensaver-image-info > span": {
+		"font-size": "3em"
 	}
 }
 let imageInfoCache = {};
@@ -1418,7 +1422,7 @@ class WallpanelView extends HuiView {
 		}
 
 		if (imageSourceType() == 'custom-api') {
-			html = imageInfo.date + " " + imageInfo.location
+			html = "<span>" + imageInfo.date + "</span> <p>" + imageInfo.location + "</p>"
 		} else {
 			html = config.image_info_template;
 			html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
