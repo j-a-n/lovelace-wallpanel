@@ -276,6 +276,7 @@ function updateConfig() {
 	}
 	config = mergeConfig(config, paramConfig);
 	const profile = insertBrowserID(config.profile);
+	
 	if (config.profiles && profile && config.profiles[profile]) {
 		config = mergeConfig(config, config.profiles[profile]);
 		if (config.debug) console.debug(`Profile set from config: ${profile}`);
@@ -2013,7 +2014,7 @@ class WallpanelView extends HuiView {
 			for (let i=0; i<boxIds.length; i++) {
 				const contentBox = this.shadowRoot.getElementById(boxIds[i]);
 				const pos = contentBox.getBoundingClientRect();
-				//console.log("pos: ", x, y, pos.left, pos.right, pos.top, pos.bottom);
+				if (config.debug) console.debug("Event position:", boxIds[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
 				if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
 					if (config.debug) console.debug(`Event on ${boxIds[i]}`);
 					return;
