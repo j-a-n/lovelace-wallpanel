@@ -309,7 +309,7 @@ function updateConfig() {
 		if (imageSourceType() == "media-source") {
 			config.image_url = config.image_url.replace(/\/+$/, '');
 		}
-		if (imageSourceType() == "unsplash-api" && config.image_list_update_interval > 90) {
+		if (imageSourceType() == "unsplash-api" && config.image_list_update_interval < 90) {
 			// Unsplash API currently places a limit of 50 requests per hour
 			config.image_list_update_interval = 90;
 		}
