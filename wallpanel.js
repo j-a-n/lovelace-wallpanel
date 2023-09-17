@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.17.0";
+const version = "4.17.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -330,6 +330,9 @@ function updateConfig() {
 	if (config.debug) console.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
 
 	if (wallpanel) {
+		if (!config.info_move_interval) {
+			wallpanel.moveInfoBox(0, 0);
+		}
 		if (isActive()) {
 			wallpanel.reconfigure();
 		}
@@ -1215,9 +1218,11 @@ class WallpanelView extends HuiView {
 
 		this.infoBoxPosX = document.createElement('div');
 		this.infoBoxPosX.id = 'wallpanel-screensaver-info-box-pos-x';
-
+		this.infoBoxPosX.x = '0';
+		
 		this.infoBoxPosY = document.createElement('div');
 		this.infoBoxPosY.id = 'wallpanel-screensaver-info-box-pos-y';
+		this.infoBoxPosX.y = '0';
 
 		this.infoBox = document.createElement('div');
 		this.infoBox.id = 'wallpanel-screensaver-info-box';
