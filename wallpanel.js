@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.18.0";
+const version = "4.18.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -173,7 +173,7 @@ let classStyles = {
 		"filter": "blur(15px)",
 		"background": "#00000000",
 		"background-position": "center",
-		"backgroundSize": "cover"
+		"background-size": "cover"
 	},
 	"wallpanel-screensaver-image-info": {
 		"position": "absolute",
