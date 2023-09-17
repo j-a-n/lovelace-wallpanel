@@ -79,6 +79,7 @@ You can set the following configuration parameters for every individual Home Ass
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
+| image_background                 | If set to `image`, the current image is also displayed as the background over the entire screen. Use the `wallpanel-screensaver-image-background` class to style the background. | color |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.                           | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
 | image_animation_ken_burns        | Apply a Ken Burns effect (panning and zooming) to the images?                                          | false      |
@@ -407,6 +408,7 @@ The most important element IDs are:
 - `wallpanel-screensaver-container`
 - `wallpanel-screensaver-info-box`
 - `wallpanel-screensaver-info-box-content`
+- `wallpanel-screensaver-image-background`
 - `wallpanel-screensaver-image-info`
 - `wallpanel-screensaver-overlay`
 
