@@ -1123,25 +1123,14 @@ class WallpanelView extends HuiView {
 		setTimeout(this.updateShadowStyle.bind(this), 500);
 	}
 
-	createProgressbarDiv(wrapper) {
-		const div = document.createElement('div');
-		div.className = 'wallpanel-progress';
-		const inner = document.createElement('div');
-		inner.className = 'wallpanel-progress-inner';
-		inner.id = 'wallpanel-progress-inner';
-		inner.style.animation = `horizontalProgress ${config.display_time}s linear`;
-		div.appendChild(inner);
-		wrapper.appendChild(div);
-	}
-
 	restartProgressBarAnimation() {
-		if (!config.show_progress_bar) {
+		if ((!config.show_progress_bar) || (!this.progressBarContainer)) {
 			return;
 		}
 		// Restart CSS animation.
-		const oldDiv = this.shadowRoot.getElementById('wallpanel-progress-inner');
-		const newDiv = oldDiv.cloneNode(true);
-		oldDiv.parentNode.replaceChild(newDiv, oldDiv);
+		const progressBarContainer = this.progressBarContainer.cloneNode(true);
+		this.progressBarContainer.parentNode.replaceChild(progressBarContainer, this.progressBarContainer);
+		this.progressBarContainer = progressBarContainer;
 	}
 
 	restartKenBurnsEffect() {
@@ -1229,10 +1218,18 @@ class WallpanelView extends HuiView {
 		this.imageTwoContainer.appendChild(this.imageTwoInfoContainer);
 		this.screensaverContainer.appendChild(this.imageTwoContainer);
 
-		if (config.show_progress_bar) {
-			this.createProgressbarDiv(this.screensaverContainer);
-		}
+		this.progressBarContainer = document.createElement('div');
+		this.progressBarContainer.className = 'wallpanel-progress';
+		this.progressBar = document.createElement('div');
+		this.progressBar.className = 'wallpanel-progress-inner';
+		this.progressBar.id = 'wallpanel-progress-inner';
+		this.progressBar.style.animation = `horizontalProgress ${config.display_time}s linear`;
+		this.progressBarContainer.appendChild(this.progressBar);
 
+		if (config.show_progress_bar) {
+			this.screensaverContainer.appendChild(this.progressBarContainer);
+		}
+	
 		this.infoContainer = document.createElement('div');
 		this.infoContainer.id = 'wallpanel-screensaver-info-container';
 
