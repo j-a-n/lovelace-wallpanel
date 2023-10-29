@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.18.1";
+const version = "4.19.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -848,6 +848,17 @@ class WallpanelView extends HuiView {
 		this.imageTwoInfoContainer.style.width = '100%';
 		this.imageTwoInfoContainer.style.height = '100%';
 
+		this.screensaverImageOverlay.removeAttribute('style');
+		this.screensaverImageOverlay.style.position = 'absolute';
+		if (config.card_interaction) {
+			this.screensaverImageOverlay.style.pointerEvents = 'none';
+		}
+		this.screensaverImageOverlay.style.top = 0;
+		this.screensaverImageOverlay.style.left = 0;
+		this.screensaverImageOverlay.style.width = '100%';
+		this.screensaverImageOverlay.style.height = '100%';
+		this.screensaverImageOverlay.style.background = '#00000000';
+
 		this.infoContainer.removeAttribute('style');
 		this.infoContainer.style.position = 'absolute';
 		this.infoContainer.style.pointerEvents = 'none';
@@ -1218,6 +1229,10 @@ class WallpanelView extends HuiView {
 		this.imageTwoContainer.appendChild(this.imageTwoInfoContainer);
 		this.screensaverContainer.appendChild(this.imageTwoContainer);
 
+		this.screensaverImageOverlay = document.createElement('div');
+		this.screensaverImageOverlay.id = 'wallpanel-screensaver-image-overlay';
+		this.screensaverContainer.appendChild(this.screensaverImageOverlay);
+
 		this.progressBarContainer = document.createElement('div');
 		this.progressBarContainer.className = 'wallpanel-progress';
 		this.progressBar = document.createElement('div');
@@ -1270,7 +1285,6 @@ class WallpanelView extends HuiView {
 
 		this.screensaverOverlay = document.createElement('div');
 		this.screensaverOverlay.id = 'wallpanel-screensaver-overlay';
-
 		this.screensaverContainer.appendChild(this.screensaverOverlay);
 
 		this.shadowStyle = document.createElement('style');

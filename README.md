@@ -410,6 +410,7 @@ The most important element IDs are:
 - `wallpanel-screensaver-info-box-content`
 - `wallpanel-screensaver-image-background`
 - `wallpanel-screensaver-image-info`
+- `wallpanel-screensaver-image-overlay`
 - `wallpanel-screensaver-overlay`
 
 Use the `style` configuration attribute and add a key for the element ID for which you want to set style attributes.
