@@ -135,6 +135,7 @@ const defaultConfig = {
 	image_order: 'sorted', // sorted / random
 	image_excludes: [],
 	image_background: 'color', // color / image
+	touch_zone_size_next_image: 15,
 	show_progress_bar: false,
 	show_image_info: false,
 	fetch_address_data: false,
@@ -2098,7 +2099,7 @@ class WallpanelView extends HuiView {
 			if (y) {
 				bottom = (this.screensaverContainer.clientHeight - y) / this.screensaverContainer.clientHeight;
 			}
-			if (right <= 0.15) {
+			if ((config.touch_zone_size_next_image > 0) && (right <= config.touch_zone_size_next_image / 100)) {
 				if (
 					isClick && (now - this.lastImageUpdate > 500) &&
 					(this.imageOne.getAttribute('data-loading') == "false") &&
