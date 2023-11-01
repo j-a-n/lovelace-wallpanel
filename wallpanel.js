@@ -1140,7 +1140,7 @@ class WallpanelView extends HuiView {
 		}
 		// Restart CSS animation.
 		const progressBarContainer = this.progressBarContainer.cloneNode(true);
-		this.progressBarContainer.parentNode.replaceChild(progressBarContainer, this.progressBarContainer);
+		this.screensaverContainer.replaceChild(progressBarContainer, this.progressBarContainer);
 		this.progressBarContainer = progressBarContainer;
 	}
 
