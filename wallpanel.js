@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.19.0";
+const version = "4.19.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1034,17 +1034,22 @@ class WallpanelView extends HuiView {
 	moveInfoBox(x, y) {
 		this.lastMove = Date.now();
 		if (config.info_move_fade_duration > 0) {
-			let keyframes = [
-				{ opacity: 1 },
-				{ opacity: 0, offset: 0.5 },
-				{ opacity: 1 }
-			];
-			this.infoBox.animate(
-				keyframes, {
-					duration: Math.round(config.info_move_fade_duration * 1000),
-					iterations: 1
-				}
-			);
+			if (this.infoBox.animate) {
+				let keyframes = [
+					{ opacity: 1 },
+					{ opacity: 0, offset: 0.5 },
+					{ opacity: 1 }
+				];
+				this.infoBox.animate(
+					keyframes, {
+						duration: Math.round(config.info_move_fade_duration * 1000),
+						iterations: 1
+					}
+				);
+			}
+			else {
+				console.warn("This browser does not support the animate() method, please set info_move_fade_duration to 0");
+			}
 		}
 		let wp = this;
 		let ms = Math.round(config.info_move_fade_duration * 500);
