@@ -2193,6 +2193,7 @@ function locationChanged() {
 }
 
 setTimeout(function() {
+	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 	updateConfig();
 	customElements.define("wallpanel-view", WallpanelView);
 	wallpanel = document.createElement("wallpanel-view");
