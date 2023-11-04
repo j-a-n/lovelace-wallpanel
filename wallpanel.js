@@ -1146,8 +1146,12 @@ class WallpanelView extends HuiView {
 		}
 		// Restart CSS animation.
 		const progressBarContainer = this.progressBarContainer.cloneNode(true);
-		this.screensaverContainer.replaceChild(progressBarContainer, this.progressBarContainer);
-		this.progressBarContainer = progressBarContainer;
+		try {
+			this.screensaverContainer.replaceChild(progressBarContainer, this.progressBarContainer);
+			this.progressBarContainer = progressBarContainer;
+		} catch {
+			// NotFoundError: Failed to execute 'replaceChild' on 'Node': The node to be replaced is not a child of this node. 
+		}
 	}
 
 	restartKenBurnsEffect() {
