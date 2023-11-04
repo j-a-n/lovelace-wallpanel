@@ -108,7 +108,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.20.0";
+const version = "4.20.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -367,7 +367,7 @@ function imageSourceType() {
 		return "";
 	}
 	if (config.image_url.startsWith("media-entity://")) return "media-entity";
-	if (config.image_url.startsWith("media-source://media_source")) return "media-source";
+	if (config.image_url.startsWith("media-source://")) return "media-source";
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
 	return "url";
 }
@@ -519,7 +519,7 @@ function findImages(hass, mediaContentId) {
 				mediaEntry => {
 					//console.debug(mediaEntry);
 					var promises = mediaEntry.children.map(child => {
-						let filename = child.media_content_id.replace(/^media-source:\/\/media_source/, '');
+						let filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, '');
 						for (let exclude of excludeRegExp) {
 							if (exclude.test(filename)) {
 								return;
@@ -1484,7 +1484,7 @@ class WallpanelView extends HuiView {
 			if (img.imagePath) {
 				imageInfo.image = {
 					url: img.imagePath,
-					path: img.imagePath.replace("media-source://media_source/", ""),
+					path: img.imagePath.replace(/^media-source:\/\/[^/]+/, ""),
 					relativePath: img.imagePath.replace(config.image_url, "").replace(/^\/+/, ""),
 					folderName: ""
 				};
@@ -1693,7 +1693,10 @@ class WallpanelView extends HuiView {
 		}
 		img.imageDataKey = imagePath;
 		img.imagePath = imagePath;
-		imagePath = imagePath.replace(/^media-source:\/\/media_source/, '/media');
+		// media-source://media_source/path => /media/path
+		// media-source://synology_dsm/path /synology_dsm/path
+		imagePath = imagePath.replace(/^media-source:\//, "");
+		imagePath = imagePath.replace(/\/media_source/, "/media");
 		this.hass.callWS({
 			type: "auth/sign_path",
 			path: imagePath,
