@@ -368,10 +368,6 @@ function updateConfig() {
 	if (config.card_interaction) {
 		config.stop_screensaver_on_mouse_move = false;
 	}
-	
-	if (params.get("edit") == "1") {
-		config.enabled = false;
-	}
 
 	if (config.image_url) {
 		if (config.image_url.startsWith("/")) {
@@ -419,6 +415,10 @@ function isActive() {
 		return false;
 	}
 	if (config.enabled_on_tabs && config.enabled_on_tabs.length > 0 && activePanelTab && !config.enabled_on_tabs.includes(activePanelTab)) {
+		return false;
+	}
+	const params = new URLSearchParams(window.location.search);
+	if (params.get("edit") == "1") {
 		return false;
 	}
 	return true;
@@ -580,7 +580,7 @@ function findImages(hass, mediaContentId) {
 				media_content_id: mediaContentId
 			}).then(
 				mediaEntry => {
-					//logger.debug(mediaEntry);
+					logger.debug("Found media entry", mediaEntry);
 					var promises = mediaEntry.children.map(child => {
 						let filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, '');
 						for (let exclude of excludeRegExp) {
