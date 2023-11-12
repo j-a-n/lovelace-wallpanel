@@ -230,6 +230,7 @@ const logger = {
 		}
 		let msg = {
 			"level": level,
+			"date": (new Date()).toISOString(),
 			"text": "",
 			"objs": [],
 			"stack": ""
