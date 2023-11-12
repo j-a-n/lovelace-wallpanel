@@ -969,7 +969,6 @@ class WallpanelView extends HuiView {
 	updateStyle() {
 		this.screensaverOverlay.style.background = '#00000000';
 		this.debugBox.style.visibility = config.debug ? 'visible' : 'hidden';
-		this.debugBox.style.pointerEvents = config.debug ? 'auto' : 'none';
 		//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
 		this.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
 		this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time*1000)}ms ease-in-out`;
@@ -1969,6 +1968,9 @@ class WallpanelView extends HuiView {
 
 		this.style.visibility = 'visible';
 		this.style.opacity = 1;
+		if (config.debug) {
+			this.debugBox.style.pointerEvents = 'auto';
+		}
 
 		this.setScreensaverEntityState();
 
@@ -1997,6 +1999,7 @@ class WallpanelView extends HuiView {
 		}
 		this.hideMessage();
 
+		this.debugBox.style.pointerEvents = 'none';
 		this.style.transition = '';
 		this.style.opacity = 0;
 		this.style.visibility = 'hidden';
@@ -2142,7 +2145,6 @@ class WallpanelView extends HuiView {
 			y = evt.touches[0].clientY;
 		}
 
-		console.error(x, y);
 		if (config.debug && x && x < 100 && y && y < 100) {
 			// Download link
 			return;
