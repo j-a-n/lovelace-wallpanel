@@ -8,7 +8,6 @@ class ScreenWakeLock {
 	constructor() {
 		this.enabled = false;
 		this.error = null;
-		this.debug = false;
 		// The Screen Wake Lock API is only available when served over HTTPS
 		this.nativeWakeLockSupported = "wakeLock" in navigator;
 		this._lock = null;
@@ -16,7 +15,7 @@ class ScreenWakeLock {
 		this._isPlaying = false;
 
 		const handleVisibilityChange = () => {
-			if (this.debug) console.debug("handleVisibilityChange");
+			logger.debug("handleVisibilityChange");
 			if (this.enabled && !document.hidden) {
 				this.enable();
 			}
@@ -32,17 +31,17 @@ class ScreenWakeLock {
 			this._player.setAttribute("playsinline", "");
 			this._player.setAttribute("muted", "");
 			this._player.addEventListener('ended', (event) => {
-				if (this.debug) console.debug("Video ended");
+				logger.debug("Video ended");
 				if (this.enabled) {
 					this.enable();
 				}
 			});
 			this._player.addEventListener('playing', (event) => {
-				if (this.debug) console.debug("Video playing");
+				logger.debug("Video playing");
 				this._isPlaying = true;
 			});
 			this._player.addEventListener('pause', (event) => {
-				if (this.debug) console.debug("Video pause");
+				logger.debug("Video pause");
 				this._isPlaying = false;
 			});
 		}
@@ -50,14 +49,14 @@ class ScreenWakeLock {
 
 	enable() {
 		if (this.nativeWakeLockSupported) {
-			if (this.debug) console.debug("Requesting native screen wakelock");
+			logger.debug("Requesting native screen wakelock");
 			//if (this._lock) {
 			//	this._lock.release();
 			//}
 			navigator.wakeLock
 				.request("screen")
 				.then((wakeLock) => {
-					if (this.debug) console.debug("Request screen wakelock successful");
+					logger.debug("Request screen wakelock successful");
 					this._lock = wakeLock;
 					this.enabled = true;
 					this.error = null;
@@ -65,11 +64,11 @@ class ScreenWakeLock {
 				.catch((e) => {
 					this.enabled = false;
 					this.error = e;
-					console.error(`Failed to request screen wakeLock: ${e}`);
+					logger.error(`Failed to request screen wakeLock: ${e}`);
 				});
 		}
 		else {
-			if (this.debug) console.debug("Starting video player");
+			logger.debug("Starting video player");
 			if (!this._player.paused && this._player._isPlaying) {
 				this._player.pause();
 			}
@@ -79,12 +78,12 @@ class ScreenWakeLock {
 					.then((r) => {
 						this.enabled = true;
 						this.error = null;
-						if (this.debug) console.debug("Video play successful");
+						logger.debug("Video play successful");
 					})
 					.catch((e) => {
 						this.enabled = false;
 						this.error = e;
-						console.error(`Failed to play video: ${e}`);
+						logger.error(`Failed to play video: ${e}`);
 					});
 			}
 		}
@@ -92,14 +91,14 @@ class ScreenWakeLock {
 
 	disable() {
 		if (this.nativeWakeLockSupported) {
-			if (this.debug) console.debug("Releasing native screen wakelock");
+			logger.debug("Releasing native screen wakelock");
 			if (this._lock) {
 				this._lock.release();
 			}
 			this._lock = null;
 		}
 		else {
-			if (this.debug) console.debug("Stopping video player");
+			logger.debug("Stopping video player");
 			if (!this._player.paused && this._player._isPlaying) {
 				this._player.pause();
 			}
@@ -108,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.20.1";
+const version = "4.21.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -223,6 +222,70 @@ function isObject(item) {
 	return (item && typeof item === 'object' && !Array.isArray(item));
 }
 
+const logger = {
+	messages: [],
+	addMessage: function(level, args) {
+		if (!config.debug) {
+			return;
+		}
+		let msg = {
+			"level": level,
+			"text": "",
+			"objs": [],
+			"stack": ""
+		}
+		const err = new Error();
+		if (err.stack) {
+			msg.stack = err.stack.toString().replace(/^Error\r?\n/, '');
+		}
+		for (let i = 0; i < args.length; i++) {
+			if (i == 0 && (typeof args[0] === 'string' || args[0] instanceof String)) {
+				msg.text = args[i];
+			}
+			else {
+				msg.objs.push(args[i]);
+			}
+		}
+		logger.messages.push(msg);
+		if (logger.messages.length > 1000) {
+			// Max 1000 messages
+			logger.messages.shift();
+		}
+	},
+	downloadMessages: function() {
+		const data = new Blob([JSON.stringify(logger.messages)], {type: 'text/plain'});
+		const url = window.URL.createObjectURL(data);
+		const el = document.createElement('a');
+		el.href = url;
+		el.target = '_blank';
+		el.download = 'log.txt';
+		el.click();
+	},
+	purgeMessages: function() {
+		logger.messages = [];
+	},
+	log: function(text){
+		console.log.apply(this, arguments);
+		logger.addMessage("info", arguments);
+	},
+	debug: function (text) {
+		//console.debug.apply(this, arguments);
+		logger.addMessage("debug", arguments);
+	},
+	info: function (text) {
+		console.info.apply(this, arguments);
+		logger.addMessage("info", arguments);
+	},
+	warn: function (text) {
+		console.warn.apply(this, arguments);
+		logger.addMessage("warn", arguments);
+	},
+	error: function (text) {
+		console.error.apply(this, arguments);
+		logger.addMessage("error", arguments);
+	}
+};
+
 function mergeConfig(target, ...sources) {
 	// https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
 	if (!sources.length) return target;
@@ -243,11 +306,11 @@ function mergeConfig(target, ...sources) {
 							configEntityStates[entityId] = entity.state;
 						}
 						else {
-							console.error(`Entity used in placeholder not found: ${entityId} (${match})`)
+							logger.error(`Entity used in placeholder not found: ${entityId} (${match})`)
 						}
 					}
 					const state = configEntityStates[entityId];
-					if (config.debug) console.debug(`Replace ${match} with ${state}`);
+					logger.debug(`Replace ${match} with ${state}`);
 					return state;
 				}
 				if (typeof val === 'string' || val instanceof String) {
@@ -287,19 +350,19 @@ function updateConfig() {
 	
 	if (config.profiles && profile && config.profiles[profile]) {
 		config = mergeConfig(config, config.profiles[profile]);
-		if (config.debug) console.debug(`Profile set from config: ${profile}`);
+		logger.debug(`Profile set from config: ${profile}`);
 	}
 	if (config.profiles && user && config.profiles[`user.${user}`]) {
 		let profile = `user.${user}`;
 		config = mergeConfig(config, config.profiles[profile]);
-		if (config.debug) console.debug(`Profile set from user: ${profile}`);
+		logger.debug(`Profile set from user: ${profile}`);
 	}
 	config = mergeConfig(config, paramConfig);
 	const profile_entity = insertBrowserID(config.profile_entity);
 	if (config.profiles && profile_entity && elHass.__hass.states[profile_entity] && config.profiles[elHass.__hass.states[profile_entity].state]) {
 		let profile = elHass.__hass.states[profile_entity].state;
 		config = mergeConfig(config, config.profiles[profile]);
-		if (config.debug) console.debug(`Profile set from entity state: ${profile}`);
+		logger.debug(`Profile set from entity state: ${profile}`);
 	}
 
 	if (config.card_interaction) {
@@ -335,7 +398,7 @@ function updateConfig() {
 		config.show_images = false;
 	}
 
-	if (config.debug) console.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
+	logger.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
 
 	if (wallpanel) {
 		if (!config.info_move_interval) {
@@ -378,7 +441,7 @@ function getHaPanelLovelace() {
 		return elHaMain.shadowRoot.querySelector('ha-panel-lovelace')
 	}
 	catch (e) {
-		console.error(e);
+		logger.error(e);
 	}
 }
 
@@ -405,7 +468,7 @@ function getCurrentView() {
 		.querySelector('hui-view')
 	}
 	catch (e) {
-		console.error(e);
+		logger.error(e);
 	}
 }
 
@@ -424,7 +487,7 @@ function setSidebarHidden(hidden) {
 		}
 	}
 	catch (e) {
-		if (config.debug) console.warn(e);
+		logger.warn(e);
 	}
 	
 	try {
@@ -441,7 +504,7 @@ function setSidebarHidden(hidden) {
 		window.dispatchEvent(new Event('resize'));
 	}
 	catch (e) {
-		if (config.debug) console.warn(e);
+		logger.warn(e);
 	}
 }
 
@@ -479,7 +542,7 @@ function setToolbarHidden(hidden) {
 		window.dispatchEvent(new Event('resize'));
 	}
 	catch (e) {
-		if (config.debug) console.warn(e);
+		logger.warn(e);
 	}
 }
 
@@ -502,7 +565,7 @@ function navigate(path, keepSearch=true) {
 
 
 function findImages(hass, mediaContentId) {
-	if (config.debug) console.debug(`findImages: ${mediaContentId}`);
+	logger.debug(`findImages: ${mediaContentId}`);
 	let excludeRegExp = [];
 	if (config.image_excludes) {
 		for (let imageExclude of config.image_excludes) {
@@ -517,7 +580,7 @@ function findImages(hass, mediaContentId) {
 				media_content_id: mediaContentId
 			}).then(
 				mediaEntry => {
-					//console.debug(mediaEntry);
+					//logger.debug(mediaEntry);
 					var promises = mediaEntry.children.map(child => {
 						let filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, '');
 						for (let exclude of excludeRegExp) {
@@ -526,7 +589,7 @@ function findImages(hass, mediaContentId) {
 							}
 						}
 						if (child.media_class == "image") {
-							//console.debug(child);
+							//logger.debug(child);
 							return child.media_content_id;
 						}
 						if (child.media_class == "directory") {
@@ -544,7 +607,7 @@ function findImages(hass, mediaContentId) {
 					})
 				},
 				error => {
-					//console.warn(error);
+					//logger.warn(error);
 					reject(error);
 				}
 			);
@@ -555,21 +618,21 @@ function findImages(hass, mediaContentId) {
 
 function insertBrowserID(string) {
 	if (!string) {
-		if (config.debug) console.debug(`insertBrowserID(${string}): no string`);
+		logger.debug(`insertBrowserID(${string}): no string`);
 		return string
 	}
 	if (!browserId) {
-		if (config.debug) console.debug(`insertBrowserID(${string}): no browser_mod`);
+		logger.debug(`insertBrowserID(${string}): no browser_mod`);
 		return string
 	}
 	let res = string.replace("${browser_id}", browserId);
-	if (config.debug) console.debug(`insertBrowserID(${string}): return ${res}`);
+	logger.debug(`insertBrowserID(${string}): return ${res}`);
 	return res;
 }
 
 
 document.addEventListener('fullscreenerror', (event) => {
-	console.error('Failed to enter fullscreen');
+	logger.error('Failed to enter fullscreen');
 });
 
 
@@ -579,16 +642,16 @@ document.addEventListener('fullscreenchange', (event) => {
 
 
 function enterFullscreen() {
-	if (config.debug) console.debug("Enter fullscreen");
+	logger.debug("Enter fullscreen");
 	// Will need user input event to work
 	let el = document.documentElement;
 	if (el.requestFullscreen) {
 		el.requestFullscreen().then(
 			result => {
-				if (config.debug) console.debug("Successfully requested fullscreen");
+				logger.debug("Successfully requested fullscreen");
 			},
 			error => {
-				console.error(error);
+				logger.error(error);
 			}
 		)
 	}
@@ -641,7 +704,7 @@ class WallpanelView extends HuiView {
 
 	// Whenever the state changes, a new `hass` object is set.
 	set hass(hass) {
-		if (config.debug) console.debug("Update hass");
+		logger.debug("Update hass");
 		this.__hass = hass;
 
 		let changed = false;
@@ -699,10 +762,10 @@ class WallpanelView extends HuiView {
 			entity_id: screensaver_entity
 		}).then(
 			result => {
-				if (config.debug) console.debug(result);
+				logger.debug(result);
 			},
 			error => {
-				console.error("Failed to set screensaver entity state:", error);
+				logger.error("Failed to set screensaver entity state:", error);
 			}
 		);
 	}
@@ -712,7 +775,7 @@ class WallpanelView extends HuiView {
 		if (profile_entity && this.__hass.states[profile_entity]) {
 			const profile = this.__hass.states[profile_entity].state;
 			if ((profile && profile != this.lastProfileSet) || (!profile && this.lastProfileSet)) {
-				if (config.debug) console.debug(`Set profile to ${profile}`);
+				logger.debug(`Set profile to ${profile}`);
 				this.lastProfileSet = profile;
 				updateConfig();
 				return true;
@@ -743,7 +806,7 @@ class WallpanelView extends HuiView {
 		this.messageBox.style.left = 0;
 		this.messageBox.style.width = '100%';
 		this.messageBox.style.height = '10%';
-		this.messageBox.style.zIndex = 1001;
+		this.messageBox.style.zIndex = 1002;
 		if (!this.screensaverStartedAt) {
 			this.messageBox.style.visibility = 'hidden';
 		}
@@ -755,7 +818,7 @@ class WallpanelView extends HuiView {
 		
 		this.debugBox.removeAttribute('style');
 		this.debugBox.style.position = 'fixed';
-		this.debugBox.style.pointerEvents = "none";
+		//this.debugBox.style.pointerEvents = "none";
 		this.debugBox.style.top = '0%';
 		this.debugBox.style.left = '0%';
 		this.debugBox.style.width = '100%';
@@ -932,9 +995,9 @@ class WallpanelView extends HuiView {
 				if (elId.startsWith('wallpanel-') && elId != 'wallpanel-shadow-host' && !classStyles[elId]) {
 					let el = this.shadowRoot.getElementById(elId);
 					if (el) {
-						if (config.debug) console.debug(`Setting style attributes for element #${elId}`);
+						logger.debug(`Setting style attributes for element #${elId}`);
 						for (const attr in config.style[elId]) {
-							if (config.debug) console.debug(`Setting style attribute ${attr} to ${config.style[elId][attr]}`);
+							logger.debug(`Setting style attribute ${attr} to ${config.style[elId][attr]}`);
 							el.style.setProperty(attr, config.style[elId][attr]);
 						}
 						if (el == this.infoBox) {
@@ -945,7 +1008,7 @@ class WallpanelView extends HuiView {
 						}
 					}
 					else {
-						console.error(`Element #${elId} not found`);
+						logger.error(`Element #${elId} not found`);
 					}
 				}
 			}
@@ -1049,7 +1112,7 @@ class WallpanelView extends HuiView {
 				);
 			}
 			else {
-				console.warn("This browser does not support the animate() method, please set info_move_fade_duration to 0");
+				logger.warn("This browser does not support the animate() method, please set info_move_fade_duration to 0");
 			}
 		}
 		let wp = this;
@@ -1067,7 +1130,7 @@ class WallpanelView extends HuiView {
 	}
 
 	createInfoBoxContent() {
-		if (config.debug) console.debug("Creating info box content");
+		logger.debug("Creating info box content");
 		this.infoBoxContentCreatedDate = new Date();
 		this.infoBoxContent.innerHTML = '';
 		this.__badges = [];
@@ -1084,7 +1147,7 @@ class WallpanelView extends HuiView {
 			div.style.margin = 'var(--wp-card-margin)';
 			div.style.textAlign = 'center';
 			config.badges.forEach(badgeConfig => {
-				if (config.debug) console.debug("Creating badge:", badgeConfig);
+				logger.debug("Creating badge:", badgeConfig);
 				const badgeElement = this.createBadgeElement(badgeConfig);
 				badgeElement.hass = this.hass;
 				this.__badges.push(badgeElement);
@@ -1096,7 +1159,7 @@ class WallpanelView extends HuiView {
 			config.cards.forEach(card => {
 				// Copy object
 				let cardConfig = JSON.parse(JSON.stringify(card));
-				if (config.debug) console.debug("Creating card:", cardConfig);
+				logger.debug("Creating card:", cardConfig);
 				let style = {};
 				if (cardConfig.wp_style) {
 					style = cardConfig.wp_style;
@@ -1357,11 +1420,11 @@ class WallpanelView extends HuiView {
 				});
 				img.addEventListener('error', function() {
 					img.setAttribute('data-loading', false);
-					console.error(`Failed to load image: ${img.src}`);
+					logger.error(`Failed to load image: ${img.src}`);
 					if (img.imagePath) {
 						const idx = wp.imageList.indexOf(img.imagePath);
 						if (idx > -1) {
-							if (config.debug) console.debug(`Removing image from list: ${img.imagePath}`);
+							logger.debug(`Removing image from list: ${img.imagePath}`);
 							wp.imageList.splice(idx, 1);
 						}
 						wp.updateImage(img);
@@ -1418,7 +1481,7 @@ class WallpanelView extends HuiView {
 		tmpImg.imagePath = img.imagePath;
 		tmpImg.imageDataKey = img.imageDataKey;
 		getImageData(tmpImg, function() {
-			if (config.debug) console.debug("EXIF data:", tmpImg.exifdata);
+			logger.debug("EXIF data:", tmpImg.exifdata);
 			imageInfoCacheKeys.push(tmpImg.imageDataKey);
 			imageInfoCache[tmpImg.imageDataKey] = tmpImg.exifdata;
 			wp.setImageDataInfo(tmpImg);
@@ -1435,23 +1498,23 @@ class WallpanelView extends HuiView {
 				xhr.onload = function(event) {
 					if (this.status == 200 || this.status === 0) {
 						let info = JSON.parse(xhr.responseText);
-						if (config.debug) console.debug("nominatim data:", info);
+						logger.debug("nominatim data:", info);
 						if (info && info.address) {
 							imageInfoCache[tmpImg.imageDataKey].address = info.address;
 							wp.setImageDataInfo(tmpImg);
 						}
 					}
 					else {
-						console.error("nominatim error:", this.status, xhr.status, xhr.responseText);
+						logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
 						delete imageInfoCache[tmpImg.imageDataKey];
 					}
 				}
 				xhr.onerror = function(event) {
-					console.error("nominatim error:", event);
+					logger.error("nominatim error:", event);
 					delete imageInfoCache[tmpImg.imageDataKey];
 				}
 				xhr.ontimeout = function(event) {
-					console.error("nominatim timeout:", event);
+					logger.error("nominatim timeout:", event);
 					delete imageInfoCache[tmpImg.imageDataKey];
 				}
 				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
@@ -1588,7 +1651,7 @@ class WallpanelView extends HuiView {
 		findImages(this.hass, mediaContentId).then(
 			result => {
 				this.imageList = result.sort();
-				if (config.debug) console.debug("Image list from media-source is now:", this.imageList);
+				logger.debug("Image list from media-source is now:", this.imageList);
 				this.updatingImageList = false;
 				if (preload) {
 					wp.preloadImages();
@@ -1597,7 +1660,7 @@ class WallpanelView extends HuiView {
 			error => {
 				this.updatingImageList = false;
 				error = `Failed to update image list from ${config.image_url}: ${JSON.stringify(error)}`;
-				console.error(error);
+				logger.error(error);
 				wp.displayMessage(error, 10000)
 			}
 		)
@@ -1615,26 +1678,26 @@ class WallpanelView extends HuiView {
 		http.open("GET", `${config.image_url}&count=30`, true);
 		http.onload = function() {
 			if (http.status == 200 || http.status === 0) {
-				if (config.debug) console.debug(`Got unsplash API response`);
+				logger.debug(`Got unsplash API response`);
 				http.response.forEach(entry => {
-					if (config.debug) console.debug(entry);
+					logger.debug(entry);
 					const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
 					urls.push(url);
 					data[url] = entry;
 				});
 			} else {
-				console.warn("Unsplash API error, get random images", http);
+				logger.warn("Unsplash API error, get random images", http);
 				urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
 			}
 			wp.updatingImageList = false;
 			wp.imageList = urls;
 			imageInfoCache = data;
-			if (config.debug) console.debug("Image list from unsplash is now:", wp.imageList);
+			logger.debug("Image list from unsplash is now:", wp.imageList);
 			if (preload) {
 				wp.preloadImages();
 			}
 		};
-		if (config.debug) console.debug(`Unsplash API request: ${config.image_url}`);
+		logger.debug(`Unsplash API request: ${config.image_url}`);
 		http.send();
 	}
 
@@ -1647,7 +1710,7 @@ class WallpanelView extends HuiView {
 		url = url.replace(/\${height}/g, height);
 		url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
 		url = url.replace(/\${timestamp}/g, timestamp);
-		if (config.debug) console.debug(`Updating image '${img.id}' from '${url}'`);
+		logger.debug(`Updating image '${img.id}' from '${url}'`);
 		if (imageSourceType() == "media-entity") {
 			this.updateImageUrlWithHttpFetch(img, url);
 		} else {
@@ -1708,11 +1771,11 @@ class WallpanelView extends HuiView {
 		}).then(
 			result => {
 				let src = `${document.location.origin}${result.path}`;
-				if (config.debug) console.debug(`Setting image src: ${src}`);
+				logger.debug(`Setting image src: ${src}`);
 				img.src = src;
 			},
 			error => {
-				console.error("auth/sign_path error:", error);
+				logger.error(`auth/sign_path error for ${imagePath}:`, error);
 			}
 		);
 	}
@@ -1771,7 +1834,7 @@ class WallpanelView extends HuiView {
 	}
 
 	preloadImages() {
-		if (config.debug) console.debug("Preloading images");
+		logger.debug("Preloading images");
 		this.preloadImage(this.imageOne);
 
 		if (imageSourceType() !== "media-entity") {
@@ -1823,7 +1886,7 @@ class WallpanelView extends HuiView {
 			curImg = this.imageTwo;
 			newImg = this.imageOne;
 		}
-		if (config.debug) console.debug(`Switching active image to '${newActive.id}'`);
+		logger.debug(`Switching active image to '${newActive.id}'`);
 
 		this.setImageDataInfo(newImg);
 
@@ -1868,7 +1931,7 @@ class WallpanelView extends HuiView {
 	}
 
 	setupScreensaver() {
-		if (config.debug) console.debug("Setup screensaver");
+		logger.debug("Setup screensaver");
 		if (config.fullscreen && !fullscreen) {
 			enterFullscreen();
 		}
@@ -1879,9 +1942,9 @@ class WallpanelView extends HuiView {
 
 	startScreensaver() {
 		updateConfig();
-		if (config.debug) console.debug("Start screensaver");
+		logger.debug("Start screensaver");
 		if (!isActive()) {
-			if (config.debug) console.debug("Wallpanel not active, not starting screensaver");
+			logger.debug("Wallpanel not active, not starting screensaver");
 			return;
 		}
 
@@ -1894,7 +1957,7 @@ class WallpanelView extends HuiView {
 			let wp = this;
 			setTimeout(function() {
 				if (wp.screensaverStartedAt && !screenWakeLock.enabled) {
-					console.error("Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD");
+					logger.error("Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD");
 					wp.displayMessage("Please interact with the screen for a moment to request wake lock.", 15000)
 				}
 			}, 2000);
@@ -1926,7 +1989,7 @@ class WallpanelView extends HuiView {
 	}
 
 	stopScreensaver() {
-		if (config.debug) console.debug("Stop screensaver");
+		logger.debug("Stop screensaver");
 
 		this.screensaverStartedAt = null;
 		this.screensaverStoppedAt = Date.now();
@@ -1976,12 +2039,12 @@ class WallpanelView extends HuiView {
 				this.moveAroundCorners();
 			}
 			else {
-				console.error(`Unknown info move type ${config.info_move_pattern}`);
+				logger.error(`Unknown info move type ${config.info_move_pattern}`);
 			}
 		}
 
 		if (config.black_screen_after_time > 0 && now - this.screensaverStartedAt >= config.black_screen_after_time*1000) {
-			if (config.debug) console.debug("Setting screen to black");
+			logger.debug("Setting screen to black");
 			this.screensaverOverlay.style.background = '#000000';
 		}
 		else if (config.show_images) {
@@ -2017,6 +2080,7 @@ class WallpanelView extends HuiView {
 				}
 			}
 			
+			html += '<a id="download_log" href="">Download log</a><br />';
 			html += `Version: ${version}<br/>`;
 			html += `Config: ${JSON.stringify(conf)}<br/>`;
 			html += `Fullscreen: ${fullscreen}<br/>`;
@@ -2030,12 +2094,18 @@ class WallpanelView extends HuiView {
 			if (imagePath) {
 				html += `Current image: ${imagePath}`;
 			}
-
 			this.debugBox.innerHTML = html;
+			this.debugBox.querySelector("#download_log").addEventListener(
+				'click',
+				function(event) {
+					logger.downloadMessages();
+					event.preventDefault();
+				}
+			);
 			this.debugBox.scrollTop = this.debugBox.scrollHeight;
 		}
 		if (screenWakeLock.enabled && now - this.screensaverStartedAt >= config.keep_screen_on_time*1000) {
-			console.info(`Disable wake lock after ${config.keep_screen_on_time} seconds`);
+			logger.info(`Disable wake lock after ${config.keep_screen_on_time} seconds`);
 			screenWakeLock.disable();
 		}
 	}
@@ -2076,6 +2146,12 @@ class WallpanelView extends HuiView {
 			y = evt.touches[0].clientY;
 		}
 
+		console.error(x, y);
+		if (config.debug && x && x < 100 && y && y < 100) {
+			// Download link
+			return;
+		}
+
 		if (config.card_interaction) {
 			if (this.getMoreInfoDialog()) {
 				return;
@@ -2084,9 +2160,9 @@ class WallpanelView extends HuiView {
 			for (let i=0; i<boxIds.length; i++) {
 				const contentBox = this.shadowRoot.getElementById(boxIds[i]);
 				const pos = contentBox.getBoundingClientRect();
-				if (config.debug) console.debug("Event position:", boxIds[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
+				logger.debug("Event position:", boxIds[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
 				if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
-					if (config.debug) console.debug(`Event on ${boxIds[i]}`);
+					logger.debug(`Event on ${boxIds[i]}`);
 					return;
 				}
 			}
@@ -2121,6 +2197,7 @@ class WallpanelView extends HuiView {
 				if (isClick && now - this.lastClickTime < 500) {
 					this.clickCount += 1;
 					if (this.clickCount == 3) {
+						logger.purgeMessages();
 						config.debug = ! config.debug;
 						this.debugBox.style.visibility = config.debug ? 'visible' : 'hidden';
 					}
@@ -2171,7 +2248,7 @@ function locationChanged() {
 	let pl = getHaPanelLovelace();
 	let changed = false;
 	if (!pl && activePanelUrl) {
-		if (config.debug) console.debug("No dashboard active");
+		logger.debug("No dashboard active");
 		activePanelUrl = null;
 		activePanelTab = null;
 		changed = true;
@@ -2179,14 +2256,14 @@ function locationChanged() {
 	else if (pl && pl.panel && pl.panel.url_path) {
 		let tab = window.location.pathname.split("/").slice(-1)[0];
 		if (activePanelUrl != pl.panel.url_path) {
-			if (config.debug) console.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
+			logger.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
 			dashboardConfig = {};
 			activePanelUrl = pl.panel.url_path;
 			activePanelTab = tab;
 			changed = true;
 		}
 		else if (activePanelTab != tab) {
-			if (config.debug) console.debug(`Active tab switched from '${activePanelTab}' to '${tab}'`);
+			logger.debug(`Active tab switched from '${activePanelTab}' to '${tab}'`);
 			activePanelTab = tab;
 			changed = true;
 		}
@@ -2197,19 +2274,19 @@ function locationChanged() {
 }
 
 setTimeout(function() {
-	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
+	logger.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 	updateConfig();
 	customElements.define("wallpanel-view", WallpanelView);
 	wallpanel = document.createElement("wallpanel-view");
 	elHaMain.shadowRoot.appendChild(wallpanel);
 	locationChanged();
 	window.addEventListener("location-changed", event => {
-		if (config.debug) console.debug("location-changed", event);
+		logger.debug("location-changed", event);
 		locationChanged();
 	});
 	elHass.__hass.connection.subscribeEvents(
 		function(event) {
-			if (config.debug) console.debug("lovelace_updated", event);
+			logger.debug("lovelace_updated", event);
 			if (event.data.url_path == activePanelUrl) {
 				elHass.__hass.connection.sendMessagePromise({
 					type: "lovelace/config",
@@ -2641,7 +2718,7 @@ function getImageData(img, callback) {
 	} else if (self.FileReader && (img instanceof self.Blob || img instanceof self.File)) {
 		var fileReader = new FileReader();
 		fileReader.onload = function(e) {
-			if (debug) console.log("Got file of length " + e.target.result.byteLength);
+			if (debug) logger.log("Got file of length " + e.target.result.byteLength);
 			handleBinaryFile(e.target.result);
 		};
 
@@ -2652,9 +2729,9 @@ function getImageData(img, callback) {
 function findEXIFinJPEG(file) {
 	var dataView = new DataView(file);
 
-	if (debug) console.log("Got file of length " + file.byteLength);
+	if (debug) logger.log("Got file of length " + file.byteLength);
 	if ((dataView.getUint8(0) != 0xFF) || (dataView.getUint8(1) != 0xD8)) {
-		if (debug) console.log("Not a valid JPEG");
+		if (debug) logger.log("Not a valid JPEG");
 		return false; // not a valid jpeg
 	}
 
@@ -2664,18 +2741,18 @@ function findEXIFinJPEG(file) {
 
 	while (offset < length) {
 		if (dataView.getUint8(offset) != 0xFF) {
-			if (debug) console.log("Not a valid marker at offset " + offset + ", found: " + dataView.getUint8(offset));
+			if (debug) logger.log("Not a valid marker at offset " + offset + ", found: " + dataView.getUint8(offset));
 			return false; // not a valid marker, something is wrong
 		}
 
 		marker = dataView.getUint8(offset + 1);
-		if (debug) console.log(marker);
+		if (debug) logger.log(marker);
 
 		// we could implement handling for other markers here,
 		// but we're only looking for 0xFFE1 for EXIF data
 
 		if (marker == 225) {
-			if (debug) console.log("Found 0xFFE1 marker");
+			if (debug) logger.log("Found 0xFFE1 marker");
 
 			return readEXIFData(dataView, offset + 4, dataView.getUint16(offset + 2) - 2);
 
@@ -2692,9 +2769,9 @@ function findEXIFinJPEG(file) {
 function findIPTCinJPEG(file) {
 	var dataView = new DataView(file);
 
-	if (debug) console.log("Got file of length " + file.byteLength);
+	if (debug) logger.log("Got file of length " + file.byteLength);
 	if ((dataView.getUint8(0) != 0xFF) || (dataView.getUint8(1) != 0xD8)) {
-		if (debug) console.log("Not a valid JPEG");
+		if (debug) logger.log("Not a valid JPEG");
 		return false; // not a valid jpeg
 	}
 
@@ -2821,7 +2898,7 @@ function readTags(file, tiffStart, dirStart, strings, bigEnd) {
 	for (i=0;i<entries;i++) {
 		entryOffset = dirStart + i*12 + 2;
 		tag = strings[file.getUint16(entryOffset, !bigEnd)];
-		if (!tag && debug) console.log("Unknown tag: " + file.getUint16(entryOffset, !bigEnd));
+		if (!tag && debug) logger.log("Unknown tag: " + file.getUint16(entryOffset, !bigEnd));
 		tags[tag] = readTagValue(file, entryOffset, tiffStart, dirStart, bigEnd);
 	}
 	return tags;
@@ -2941,14 +3018,14 @@ function readThumbnailImage(dataView, tiffStart, firstIFDOffset, bigEnd){
 	var IFD1OffsetPointer = getNextIFDOffset(dataView, tiffStart+firstIFDOffset, bigEnd);
 
 	if (!IFD1OffsetPointer) {
-		// console.log('******** IFD1Offset is empty, image thumb not found ********');
+		// logger.log('******** IFD1Offset is empty, image thumb not found ********');
 		return {};
 	}
 	else if (IFD1OffsetPointer > dataView.byteLength) { // this should not happen
-		// console.log('******** IFD1Offset is outside the bounds of the DataView ********');
+		// logger.log('******** IFD1Offset is outside the bounds of the DataView ********');
 		return {};
 	}
-	// console.log('*******  thumbnail IFD offset (IFD1) is: %s', IFD1OffsetPointer);
+	// logger.log('*******  thumbnail IFD offset (IFD1) is: %s', IFD1OffsetPointer);
 
 	var thumbTags = readTags(dataView, tiffStart, tiffStart + IFD1OffsetPointer, IFD1Tags, bigEnd)
 
@@ -2961,11 +3038,11 @@ function readThumbnailImage(dataView, tiffStart, firstIFDOffset, bigEnd){
 	// JPEG format and 160x120pixels of size are recommended thumbnail format for Exif2.1 or later.
 
 	if (thumbTags['Compression']) {
-		// console.log('Thumbnail image found!');
+		// logger.log('Thumbnail image found!');
 
 		switch (thumbTags['Compression']) {
 			case 6:
-				// console.log('Thumbnail image format is JPEG');
+				// logger.log('Thumbnail image format is JPEG');
 				if (thumbTags.JpegIFOffset && thumbTags.JpegIFByteCount) {
 				// extract the thumbnail
 					var tOffset = tiffStart + thumbTags.JpegIFOffset;
@@ -2977,14 +3054,14 @@ function readThumbnailImage(dataView, tiffStart, firstIFDOffset, bigEnd){
 			break;
 
 		case 1:
-			console.log("Thumbnail image format is TIFF, which is not implemented.");
+			logger.log("Thumbnail image format is TIFF, which is not implemented.");
 			break;
 		default:
-			console.log("Unknown thumbnail image format '%s'", thumbTags['Compression']);
+			logger.log("Unknown thumbnail image format '%s'", thumbTags['Compression']);
 		}
 	}
 	else if (thumbTags['PhotometricInterpretation'] == 2) {
-		console.log("Thumbnail image format is RGB, which is not implemented.");
+		logger.log("Thumbnail image format is RGB, which is not implemented.");
 	}
 	return thumbTags;
 }
@@ -3051,7 +3128,7 @@ function Utf8ArrayToStr(array) {
 
 function readEXIFData(file, start) {
 	if (getStringFromDB(file, start, 4) != "Exif") {
-		if (debug) console.log("Not valid EXIF data! " + getStringFromDB(file, start, 4));
+		if (debug) logger.log("Not valid EXIF data! " + getStringFromDB(file, start, 4));
 		return false;
 	}
 
@@ -3066,19 +3143,19 @@ function readEXIFData(file, start) {
 	} else if (file.getUint16(tiffOffset) == 0x4D4D) {
 		bigEnd = true;
 	} else {
-		if (debug) console.log("Not valid TIFF data! (no 0x4949 or 0x4D4D)");
+		if (debug) logger.log("Not valid TIFF data! (no 0x4949 or 0x4D4D)");
 		return false;
 	}
 
 	if (file.getUint16(tiffOffset+2, !bigEnd) != 0x002A) {
-		if (debug) console.log("Not valid TIFF data! (no 0x002A)");
+		if (debug) logger.log("Not valid TIFF data! (no 0x002A)");
 		return false;
 	}
 
 	var firstIFDOffset = file.getUint32(tiffOffset+4, !bigEnd);
 
 	if (firstIFDOffset < 0x00000008) {
-		if (debug) console.log("Not valid TIFF data! (First offset less than 8)", file.getUint32(tiffOffset+4, !bigEnd));
+		if (debug) logger.log("Not valid TIFF data! (First offset less than 8)", file.getUint32(tiffOffset+4, !bigEnd));
 		return false;
 	}
 
@@ -3147,14 +3224,14 @@ function readEXIFData(file, start) {
 function findXMPinJPEG(file) {
 
 	if (!('DOMParser' in self)) {
-		// console.warn('XML parsing not supported without DOMParser');
+		// logger.warn('XML parsing not supported without DOMParser');
 		return;
 	}
 	var dataView = new DataView(file);
 
-	if (debug) console.log("Got file of length " + file.byteLength);
+	if (debug) logger.log("Got file of length " + file.byteLength);
 	if ((dataView.getUint8(0) != 0xFF) || (dataView.getUint8(1) != 0xD8)) {
-		if (debug) console.log("Not a valid JPEG");
+		if (debug) logger.log("Not a valid JPEG");
 		return false; // not a valid jpeg
 	}
 
@@ -3266,7 +3343,7 @@ function xml2Object(xml) {
 		}
 		return obj;
 		} catch (e) {
-			console.log(e.message);
+			logger.log(e.message);
 		}
 }
 
