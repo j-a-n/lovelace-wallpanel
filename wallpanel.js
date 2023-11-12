@@ -818,7 +818,7 @@ class WallpanelView extends HuiView {
 		
 		this.debugBox.removeAttribute('style');
 		this.debugBox.style.position = 'fixed';
-		//this.debugBox.style.pointerEvents = "none";
+		this.debugBox.style.pointerEvents = "none";
 		this.debugBox.style.top = '0%';
 		this.debugBox.style.left = '0%';
 		this.debugBox.style.width = '100%';
@@ -969,6 +969,7 @@ class WallpanelView extends HuiView {
 	updateStyle() {
 		this.screensaverOverlay.style.background = '#00000000';
 		this.debugBox.style.visibility = config.debug ? 'visible' : 'hidden';
+		this.debugBox.style.pointerEvents = config.debug ? 'auto' : 'none';
 		//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
 		this.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
 		this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time*1000)}ms ease-in-out`;
@@ -2195,6 +2196,7 @@ class WallpanelView extends HuiView {
 						logger.purgeMessages();
 						config.debug = ! config.debug;
 						this.debugBox.style.visibility = config.debug ? 'visible' : 'hidden';
+						this.debugBox.style.pointerEvents = config.debug ? 'auto' : 'none';
 					}
 				}
 				else {
