@@ -258,7 +258,7 @@ const logger = {
 		const el = document.createElement('a');
 		el.href = url;
 		el.target = '_blank';
-		el.download = 'log.txt';
+		el.download = 'wallpanel_log.txt';
 		el.click();
 	},
 	purgeMessages: function() {
