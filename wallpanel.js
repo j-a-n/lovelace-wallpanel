@@ -1760,22 +1760,17 @@ class WallpanelView extends HuiView {
 		}
 		img.imageDataKey = imagePath;
 		img.imagePath = imagePath;
-		// media-source://media_source/path => /media/path
-		// media-source://synology_dsm/path /synology_dsm/path
-		imagePath = imagePath.replace(/^media-source:\//, "");
-		imagePath = imagePath.replace(/\/media_source/, "/media");
 		this.hass.callWS({
-			type: "auth/sign_path",
-			path: imagePath,
-			expires: 60
+			type: "media_source/resolve_media",
+			media_content_id: imagePath
 		}).then(
 			result => {
-				let src = `${document.location.origin}${result.path}`;
+				let src = `${document.location.origin}${result.url}`;
 				logger.debug(`Setting image src: ${src}`);
 				img.src = src;
 			},
 			error => {
-				logger.error(`auth/sign_path error for ${imagePath}:`, error);
+				logger.error(`media_source/resolve_media error for ${imagePath}:`, error);
 			}
 		);
 	}
