@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.22.0";
+const version = "4.22.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -327,7 +327,8 @@ function mergeConfig(target, ...sources) {
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
 	const user = elHass.__hass.user.name ? elHass.__hass.user.name.toLowerCase().replace(/\s/g, '_') : null;
-
+	
+	let oldConfig = config;
 	config = {};
 	mergeConfig(config, defaultConfig);
 
@@ -396,13 +397,9 @@ function updateConfig() {
 	}
 
 	logger.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
-
 	if (wallpanel) {
-		if (!config.info_move_interval) {
-			wallpanel.moveInfoBox(0, 0);
-		}
 		if (isActive()) {
-			wallpanel.reconfigure();
+			wallpanel.reconfigure(oldConfig);
 		}
 		else if (wallpanel.screensaverStartedAt > 0) {
 			wallpanel.stopScreensaver();
@@ -1205,17 +1202,18 @@ class WallpanelView extends HuiView {
 	}
 
 	restartProgressBarAnimation() {
-		if ((!config.show_progress_bar) || (!this.progressBarContainer)) {
+		if (!this.progressBarContainer) {
 			return;
 		}
-		// Restart CSS animation.
-		const progressBarContainer = this.progressBarContainer.cloneNode(true);
-		try {
-			this.screensaverContainer.replaceChild(progressBarContainer, this.progressBarContainer);
-			this.progressBarContainer = progressBarContainer;
-		} catch {
-			// NotFoundError: Failed to execute 'replaceChild' on 'Node': The node to be replaced is not a child of this node. 
+		this.progressBar.style.animation = 'none';
+		if (!config.show_progress_bar) {
+			return;
 		}
+		const wp = this;
+		setTimeout(function() {
+			// Restart CSS animation.
+			wp.progressBar.style.animation = `horizontalProgress ${config.display_time}s linear`
+		}, 25);
 	}
 
 	restartKenBurnsEffect() {
@@ -1312,7 +1310,6 @@ class WallpanelView extends HuiView {
 		this.progressBar = document.createElement('div');
 		this.progressBar.className = 'wallpanel-progress-inner';
 		this.progressBar.id = 'wallpanel-progress-inner';
-		this.progressBar.style.animation = `horizontalProgress ${config.display_time}s linear`;
 		this.progressBarContainer.appendChild(this.progressBar);
 
 		if (config.show_progress_bar) {
@@ -1369,19 +1366,7 @@ class WallpanelView extends HuiView {
 		shadow.appendChild(this.messageBox);
 		shadow.appendChild(this.debugBox);
 
-		this.setDefaultStyle();
-		this.updateStyle();
-
-		if (config.show_images) {
-			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
-				this.preloadImages();
-			}
-			else {
-				this.updateImageList(true);
-			}
-		}
-
-		let wp = this;
+		const wp = this;
 		let eventNames = ['click', 'touchstart', 'wheel', 'keydown'];
 		if (config.stop_screensaver_on_mouse_move) {
 			eventNames.push('mousemove');
@@ -1402,39 +1387,60 @@ class WallpanelView extends HuiView {
 				wp.moreInfoDialogToForeground();
 			}
 		});
-		
-		if (config.show_images) {
-			[this.imageOne, this.imageTwo].forEach(function(img) {
-				if (!img) return;
-				img.addEventListener('load', function() {
-					img.setAttribute('data-loading', false);
-					if (config.image_background == "image") {
-						let cont = wp.imageOneBackground;
-						if (img == wp.imageTwo) {
-							cont = wp.imageTwoBackground;
-						}
-						cont.style.backgroundImage = "url(" + img.src + ")";
+
+		[this.imageOne, this.imageTwo].forEach(function(img) {
+			img.addEventListener('load', function() {
+				img.setAttribute('data-loading', false);
+				if (config.image_background == "image") {
+					let cont = wp.imageOneBackground;
+					if (img == wp.imageTwo) {
+						cont = wp.imageTwoBackground;
 					}
-					if (config.show_image_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
-						wp.fetchEXIFInfo(img);
-					}
-				});
-				img.addEventListener('error', function() {
-					img.setAttribute('data-loading', false);
-					logger.error(`Failed to load image: ${img.src}`);
-					if (img.imagePath) {
-						const idx = wp.imageList.indexOf(img.imagePath);
-						if (idx > -1) {
-							logger.debug(`Removing image from list: ${img.imagePath}`);
-							wp.imageList.splice(idx, 1);
-						}
-						wp.updateImage(img);
-					}
-					else {
-						wp.displayMessage(`Failed to load image: ${img.src}`, 5000)
-					}
-				})
+					cont.style.backgroundImage = "url(" + img.src + ")";
+				}
+				if (config.show_image_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
+					wp.fetchEXIFInfo(img);
+				}
 			});
+			img.addEventListener('error', function() {
+				img.setAttribute('data-loading', false);
+				logger.error(`Failed to load image: ${img.src}`);
+				if (img.imagePath) {
+					const idx = wp.imageList.indexOf(img.imagePath);
+					if (idx > -1) {
+						logger.debug(`Removing image from list: ${img.imagePath}`);
+						wp.imageList.splice(idx, 1);
+					}
+					wp.updateImage(img);
+				}
+				else {
+					wp.displayMessage(`Failed to load image: ${img.src}`, 5000)
+				}
+			})
+		});
+		
+		this.reconfigure();
+	}
+
+	reconfigure(oldConfig) {
+		this.setDefaultStyle();
+		this.updateStyle();
+		if (this.screensaverStartedAt) {
+			this.createInfoBoxContent();
+		}
+
+		if (!config.info_move_interval && oldConfig && oldConfig.info_move_interval) {
+			wallpanel.moveInfoBox(0, 0);
+		}
+
+		if (config.show_images && (!oldConfig || !oldConfig.show_images || this.currentImageUrl != config.image_url)) {
+			const wp = this;
+			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
+				this.preloadImages();
+			}
+			else {
+				this.updateImageList(true);
+			}
 		}
 	}
 
@@ -1616,21 +1622,6 @@ class WallpanelView extends HuiView {
 			return prefix + val + suffix;
 		});
 		infoElement.innerHTML = html;
-	}
-
-	reconfigure() {
-		if (config.show_images && this.currentImageUrl != config.image_url) {
-			this.currentImageUrl = config.image_url;
-			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
-				this.preloadImages();
-			}
-			else {
-				this.updateImageList(true);
-			}
-		}
-		this.setDefaultStyle();
-		this.updateStyle();
-		this.createInfoBoxContent();
 	}
 
 	updateImageList(preload = false) {
@@ -2057,6 +2048,12 @@ class WallpanelView extends HuiView {
 			}
 			if (now - this.lastImageListUpdate >= config.image_list_update_interval*1000) {
 				this.updateImageList();
+			}
+			if (this.imageOneContainer.style.visibility != 'visible') {
+				this.imageOneContainer.style.visibility = 'visible';
+			}
+			if (this.imageTwoContainer.style.visibility != 'visible') {
+				this.imageTwoContainer.style.visibility = 'visible';
 			}
 		}
 		else {
