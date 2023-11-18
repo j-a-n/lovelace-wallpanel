@@ -202,9 +202,9 @@ const imageInfoCacheMaxSize = 1000;
 let configEntityStates = {};
 
 const elHass = document.querySelector("body > home-assistant");
-const elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 const LitElement = Object.getPrototypeOf(customElements.get("hui-masonry-view"));
 const HuiView = customElements.get("hui-view");
+let elHaMain = null;
 
 let browserId = null;
 if (window.browser_mod) {
@@ -2273,7 +2273,12 @@ function locationChanged() {
 	}
 }
 
-setTimeout(function() {
+function startup() {
+	elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
+	if (!elHaMain) {
+		setTimeout(startup, 1000);
+		return;
+	}
 	logger.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 	updateConfig();
 	customElements.define("wallpanel-view", WallpanelView);
@@ -2307,7 +2312,9 @@ setTimeout(function() {
 		},
 		"lovelace_updated"
 	);
-}, 25);
+}
+
+setTimeout(startup, 25);
 
 
 /**
