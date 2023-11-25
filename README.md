@@ -224,7 +224,7 @@ See [Home Assistant Media Source integration documentation](https://www.home-ass
 If you are not sure which is the correct media source URL, you can proceed as follows:
 
 1. navigate to the folder you want to use in the HA Media Browser
-2. copy the displayed browser URL and decode it with a URL decoder tool. For example, you can use [www.urldecoder.org](https://www.urldecoder.org/). 3.
+2. copy the displayed browser URL and decode it with a URL decoder tool. For example, you can use [www.urldecoder.org](https://www.urldecoder.org/).
 3. copy the part of the decoded URL after the last comma (`,`) that begins with `media-source://`.
 
 Instead of using `media-source://media_source/` as `image_url` you can just use `/` as a shortcut.
