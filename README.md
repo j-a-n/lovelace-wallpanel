@@ -549,6 +549,18 @@ style:
 ```
 ![Transparent style](./doc/transparent-style.png)
 
+## Alternative transparent style with text shadow
+```yaml
+style:
+  wallpanel-screensaver-info-box-content:
+    '--ha-card-background': none
+    '--ha-card-box-shadow': none
+    '--ha-card-border-width': 0px
+    '--primary-text-color': '#ffffff'
+    '--secondary-text-color': '#dddddd'
+    filter: 'drop-shadow(0px 0px 3px rgb(17, 17, 17)) drop-shadow(0px 0px 8px rgb(30, 30, 30))'
+```
+
 ## Positioning
 The cards and badges are positionend by a [Grid_Layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout).
 
