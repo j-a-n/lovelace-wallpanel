@@ -185,6 +185,8 @@ wallpanel:
 Screensaver images will be fetched from this URL.
 This can be any HTTP URL, a Home Assistant media-source URL or a Home Assistant entity that has the entity_picture attribute.
 
+Tip: If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
+
 ### HTTP URL
 
 The default value is: `http://picsum.photos/${width}/${height}?random=${timestamp}`
@@ -217,8 +219,13 @@ See [Unsplash API documentation (Get a random photo)](https://unsplash.com/docum
 ### Media-source URL
 
 It is also possible to use images from the Home Assistant Local Media source.
-Just set the `image_url` to a media-source URL as displayed in the URL of the Home Assistant Media Browser.
 See [Home Assistant Media Source integration documentation](https://www.home-assistant.io/integrations/media_source) for details.
+
+If you are not sure which is the correct media source URL, you can proceed as follows:
+
+1. navigate to the folder you want to use in the HA Media Browser
+2. copy the displayed browser URL and decode it with a URL decoder tool. For example, you can use [www.urldecoder.org](https://www.urldecoder.org/). 3.
+3. copy the part of the decoded URL after the last comma (`,`) that begins with `media-source://`.
 
 Instead of using `media-source://media_source/` as `image_url` you can just use `/` as a shortcut.
 
@@ -226,7 +233,16 @@ Instead of using `media-source://media_source/` as `image_url` you can just use 
 - `/media1` = Images in the Local Media directory named `media1`
 - `/media1/folder1` = Images in `folder1` of the Local Media directory named `media1`
 
-Tip: If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
+If you are using the [Synology DSM](https://www.home-assistant.io/integrations/synology_dsm/) integration, and want to use an Photo album from there you can use:
+
+`source://synology_dsm/<unique_id>/<album_id>`
+
+`<unique_id>` is the Home Assistant ID for the NAS (usually the serial number of the NAS).
+
+For example:
+
+`media-source://synology_dsm/18C0PEN253705/19`
+
 
 ### Entity with entity_picture attribute
 
