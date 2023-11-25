@@ -705,8 +705,8 @@ Example: `http://192.168.1.1:8123/lovelace/default_view?wp_enabled=false`
 
 
 # Debug mode
-If debug mode is enabled, log messages are written to the browser console.
-In addition, an overlay is displayed in which status information is shown.
+If debug mode is enabled, an overlay is displayed in which status information is shown.
+There is a button to download a log file that contains information to help analyze problems.
 The debug mode can be activated and deactivated via the configuration.
 You can also turn debug mode on and off by triple-clicking in the lower middle part of the screen while the screen saver is active.
 
