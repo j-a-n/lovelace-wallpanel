@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.22.1";
+const version = "4.23.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -135,6 +135,7 @@ const defaultConfig = {
 	image_excludes: [],
 	image_background: 'color', // color / image
 	touch_zone_size_next_image: 15,
+	touch_zone_size_previous_image: 15,
 	show_progress_bar: false,
 	show_image_info: false,
 	fetch_address_data: false,
@@ -671,6 +672,7 @@ class WallpanelView extends HuiView {
 
 		this.imageList = [];
 		this.imageIndex = -1;
+		this.imageListDirection = "forwards"; // forwards, backwards
 		this.lastImageListUpdate;
 		this.updatingImageList = false;
 		this.lastImageUpdate = 0;
@@ -1237,6 +1239,13 @@ class WallpanelView extends HuiView {
 		}
 		return this.imageTwo;
 	}
+
+	getInactiveImageElement() {
+		if (this.imageOneContainer.style.opacity == 1) {
+			return this.imageTwo;
+		}
+		return this.imageOne;
+	}
 	
 	connectedCallback() {
 		this.style.zIndex = 1000;
@@ -1642,7 +1651,12 @@ class WallpanelView extends HuiView {
 		let wp = this;
 		findImages(this.hass, mediaContentId).then(
 			result => {
-				this.imageList = result.sort();
+				if (config.image_order == "random") {
+					this.imageList = result.sort((a, b) => 0.5 - Math.random());
+				}
+				else {
+					this.imageList = result.sort();
+				}
 				logger.debug("Image list from media-source is now:", this.imageList);
 				this.updatingImageList = false;
 				if (preload) {
@@ -1724,20 +1738,17 @@ class WallpanelView extends HuiView {
 	}
 
 	updateImageIndex() {
-		if (config.image_order == "random") {
-			if (this.imageList.length > 1) {
-				let imageIndex = this.imageIndex;
-				while (imageIndex == this.imageIndex) {
-					imageIndex = Math.floor(Math.random() * this.imageList.length);
-				}
-				this.imageIndex = imageIndex;
-			}
+		if (this.imageListDirection == "forwards") {
+			this.imageIndex++;
 		}
 		else {
-			this.imageIndex++;
+			this.imageIndex--;
 		}
 		if (this.imageIndex >= this.imageList.length) {
 			this.imageIndex = 0;
+		}
+		else if (this.imageIndex < 0) {
+			this.imageIndex = this.imageList.length - 1;
 		}
 	}
 
@@ -1850,8 +1861,11 @@ class WallpanelView extends HuiView {
 		next.addEventListener('load', onLoad);
 		this.updateImage(next);
 	}
-
+	
 	switchActiveImage(crossfadeMillis = null) {
+		if (this.afterFadeoutTimer) {
+			clearTimeout(this.afterFadeoutTimer);
+		}
 		this.lastImageUpdate = Date.now();
 
 		if (crossfadeMillis === null) {
@@ -1891,7 +1905,7 @@ class WallpanelView extends HuiView {
 		// only if not media-entity, which will not yet have changed already
 		if (imageSourceType() !== "media-entity") {
 			let wp = this;
-			setTimeout(function() {
+			this.afterFadeoutTimer = setTimeout(function() {
 				wp.updateImage(curImg);
 			}, crossfadeMillis);
 		}
@@ -2107,6 +2121,28 @@ class WallpanelView extends HuiView {
 		}
 	}
 
+	switchImageDirection(direction) {
+		this.imageListDirection = direction;
+		if (this.afterFadeoutTimer) {
+			clearTimeout(this.afterFadeoutTimer);
+		}
+		this.updateImageIndex();
+		const inactiveImage = this.getInactiveImageElement();
+		this.updateImage(inactiveImage);
+		
+		const wp = this;
+		const start = Date.now();
+		function switchActiveImageAfterLoad() {
+			if (inactiveImage.getAttribute('data-loading') == "false" || Date.now() - start >= 2000) {
+				wp.switchActiveImage(500);
+			}
+			else {
+				setTimeout(switchActiveImageAfterLoad, 50);
+			}
+		}
+		setTimeout(switchActiveImageAfterLoad, 50);
+	}
+	
 	handleInteractionEvent(evt, isClick) {
 		let now = Date.now();
 		this.idleSince = now;
@@ -2179,12 +2215,32 @@ class WallpanelView extends HuiView {
 				bottom = (this.screensaverContainer.clientHeight - y) / this.screensaverContainer.clientHeight;
 			}
 			if ((config.touch_zone_size_next_image > 0) && (right <= config.touch_zone_size_next_image / 100)) {
-				if (
-					isClick && (now - this.lastImageUpdate > 500) &&
-					(this.imageOne.getAttribute('data-loading') == "false") &&
-					(this.imageTwo.getAttribute('data-loading') == "false")
-				) {
-					this.switchActiveImage(500);
+				if (isClick) {
+					if (this.imageListDirection != "forwards") {
+						this.switchImageDirection("forwards");
+					}
+					else if (
+						(now - this.lastImageUpdate > 500) &&
+						(this.imageOne.getAttribute('data-loading') == "false") &&
+						(this.imageTwo.getAttribute('data-loading') == "false")
+					) {
+						this.switchActiveImage(500);
+					}
+				}
+				return;
+			}
+			else if ((config.touch_zone_size_previous_image > 0) && (right >= (100 - config.touch_zone_size_previous_image) / 100)) {
+				if (isClick) {
+					if (this.imageListDirection != "backwards") {
+						this.switchImageDirection("backwards");
+					}
+					else if (
+						isClick && (now - this.lastImageUpdate > 500) &&
+						(this.imageOne.getAttribute('data-loading') == "false") &&
+						(this.imageTwo.getAttribute('data-loading') == "false")
+					) {
+						this.switchActiveImage(500);
+					}
 				}
 				return;
 			}

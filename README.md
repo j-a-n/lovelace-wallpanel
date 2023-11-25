@@ -90,6 +90,7 @@ You can set the following configuration parameters for every individual Home Ass
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
 | image_info_template              | Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The config name was `exif_info_template` before version 4.7. | ${DateTimeOriginal} |
 | touch_zone_size_next_image       | Size of the area on the right side of the screen at which a click will show the next image (as a percentage of the total screen width, 0 = disabled).   | 15         |
+| touch_zone_size_previous_image   | Size of the area on the left side of the screen at which a click will show the previous image (as a percentage of the total screen width, 0 = disabled).   | 15         |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).      | 0          |
 | info_animation_duration_y        | Animation duration in seconds for the movement of the info box in y-direction (0 = no animation).      | 0          |
 | info_animation_timing_function_x | The CSS timing-function to use for the animation of the info box movement in x-direction.              | ease       |
@@ -186,6 +187,7 @@ Screensaver images will be fetched from this URL.
 This can be any HTTP URL, a Home Assistant media-source URL or a Home Assistant entity that has the entity_picture attribute.
 
 Tip: If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
+A click on the left side shows the previous picture and reverses the playback order.
 
 ### HTTP URL
 
