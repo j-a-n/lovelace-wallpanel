@@ -1569,6 +1569,7 @@ class WallpanelView extends HuiView {
 					url: img.imagePath,
 					path: img.imagePath.replace(/^media-source:\/\/[^/]+/, ""),
 					relativePath: img.imagePath.replace(config.image_url, "").replace(/^\/+/, ""),
+					filename: img.imagePath.replace(/^.*[\\/]/, ""),
 					folderName: ""
 				};
 				const parts = img.imagePath.split("/");
