@@ -490,10 +490,8 @@ function setSidebarHidden(hidden) {
 	}
 	
 	try {
-		const sidebar = elHaMain.shadowRoot.querySelector("ha-sidebar");
-		if (sidebar) {
-			sidebar.style.display = (hidden ? "none" : "");
-		}
+		const aside = elHaMain.shadowRoot.querySelector("ha-drawer").shadowRoot.querySelector("aside");
+		aside.style.display = (hidden ? "none" : "");
 		if (hidden) {
 			elHaMain.style.setProperty("--mdc-drawer-width", "env(safe-area-inset-left)");
 		}
