@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.23.2";
+const version = "4.24.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -116,6 +116,7 @@ const defaultConfig = {
 	hide_toolbar_action_icons: false,
 	hide_sidebar: false,
 	fullscreen: false,
+	z_index: 1000,
 	idle_time: 15,
 	fade_in_time: 3.0,
 	crossfade_time: 3.0,
@@ -804,7 +805,7 @@ class WallpanelView extends HuiView {
 		this.messageBox.style.left = 0;
 		this.messageBox.style.width = '100%';
 		this.messageBox.style.height = '10%';
-		this.messageBox.style.zIndex = 1002;
+		this.messageBox.style.zIndex = this.style.zIndex + 1;
 		if (!this.screensaverStartedAt) {
 			this.messageBox.style.visibility = 'hidden';
 		}
@@ -823,7 +824,7 @@ class WallpanelView extends HuiView {
 		this.debugBox.style.height = '100%';
 		this.debugBox.style.background = '#00000099';
 		this.debugBox.style.color = '#ffffff';
-		this.debugBox.style.zIndex = 1001;
+		this.debugBox.style.zIndex = this.style.zIndex + 2;
 		if (!this.screensaverStartedAt) {
 			this.debugBox.style.visibility = 'hidden';
 		}
@@ -1246,7 +1247,7 @@ class WallpanelView extends HuiView {
 	}
 
 	connectedCallback() {
-		this.style.zIndex = 1000;
+		this.style.zIndex = config.z_index;
 		this.style.visibility = 'hidden';
 		this.style.opacity = 0;
 		this.style.position = 'fixed';
