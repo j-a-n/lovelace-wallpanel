@@ -224,6 +224,21 @@ function isObject(item) {
 	return (item && typeof item === 'object' && !Array.isArray(item));
 }
 
+function stringify(obj) {
+	let processedObjects = [];
+	let json = JSON.stringify(obj, function(key, value) {
+		if (typeof value === "object" && value !== null) {
+			if (processedObjects.indexOf(value) !== -1) {
+				// Circular reference found, discard key
+				return;
+			}
+			processedObjects.push(value);
+		}
+		return value;
+	});
+	return json;
+}
+
 const logger = {
 	messages: [],
 	addMessage: function(level, args) {
@@ -256,7 +271,7 @@ const logger = {
 		}
 	},
 	downloadMessages: function() {
-		const data = new Blob([JSON.stringify(logger.messages)], {type: 'text/plain'});
+		const data = new Blob([stringify(logger.messages)], {type: 'text/plain'});
 		const url = window.URL.createObjectURL(data);
 		const el = document.createElement('a');
 		el.href = url;
