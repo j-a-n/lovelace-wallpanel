@@ -164,8 +164,8 @@ const defaultConfig = {
 
 let dashboardConfig = {};
 let config = {};
-let activePanelUrl = null;
-let activePanelTab = null;
+let activePanel = null;
+let activeTab = null;
 let fullscreen = false;
 let screenWakeLock = new ScreenWakeLock();
 let wallpanel = null;
@@ -426,14 +426,14 @@ function updateConfig() {
 
 
 function isActive() {
+	const params = new URLSearchParams(window.location.search);
+	if (params.get("edit") == "1") {
+		return false;
+	}
 	if (!config.enabled) {
 		return false;
 	}
-	if (config.enabled_on_tabs && config.enabled_on_tabs.length > 0 && activePanelTab && !config.enabled_on_tabs.includes(activePanelTab)) {
-		return false;
-	}
-	const params = new URLSearchParams(window.location.search);
-	if (params.get("edit") == "1") {
+	if (config.enabled_on_tabs && config.enabled_on_tabs.length > 0 && activeTab && !config.enabled_on_tabs.includes(activeTab)) {
 		return false;
 	}
 	return true;
@@ -490,8 +490,11 @@ function getCurrentView() {
 
 function setSidebarHidden(hidden) {
 	try {
-		const menuButton = elHaMain.shadowRoot
-			.querySelector("ha-panel-lovelace").shadowRoot
+		const panelLovelace = elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
+		if (!panelLovelace) {
+			return;
+		}
+		const menuButton = panelLovelace.shadowRoot
 			.querySelector("hui-root").shadowRoot
 			.querySelector("ha-menu-button");
 		if (hidden) {
@@ -524,9 +527,11 @@ function setSidebarHidden(hidden) {
 
 function setToolbarHidden(hidden) {
 	try {
-		const huiRoot = elHaMain.shadowRoot
-			.querySelector("ha-panel-lovelace").shadowRoot
-			.querySelector("hui-root").shadowRoot;
+		const panelLovelace = elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
+		if (!panelLovelace) {
+			return;
+		}
+		const huiRoot = panelLovelace.shadowRoot.querySelector("hui-root").shadowRoot;
 		const view = huiRoot.querySelector("#view");
 		let appToolbar = huiRoot.querySelector("app-toolbar");
 		if (!appToolbar) {
@@ -799,7 +804,7 @@ class WallpanelView extends HuiView {
 	}
 
 	timer() {
-		if (!config.enabled || !activePanelUrl) {
+		if (!config.enabled || !activePanel) {
 			return;
 		}
 		if (this.screensaverStartedAt) {
@@ -2300,6 +2305,11 @@ function deactivateWallpanel() {
 
 
 function reconfigure() {
+	if (!activePanel || !activeTab) {
+		deactivateWallpanel();
+		return;
+	}
+
 	updateConfig();
 	if (isActive()) {
 		activateWallpanel();
@@ -2314,30 +2324,22 @@ function locationChanged() {
 	if (config.stop_screensaver_on_location_change && !skipDisableScreensaverOnLocationChanged) {
 		wallpanel.stopScreensaver();
 	}
-	let pl = getHaPanelLovelace();
-	let changed = false;
-	if (!pl && activePanelUrl) {
-		logger.debug("No dashboard active");
-		activePanelUrl = null;
-		activePanelTab = null;
-		changed = true;
+	let panel = null;
+	let tab = null;
+	let path = window.location.pathname.split("/");
+	if (path.length > 1) {
+		panel = path[1];
+		if (path.length > 2) {
+			tab = path[2];
+		}
 	}
-	else if (pl && pl.panel && pl.panel.url_path) {
-		let tab = window.location.pathname.split("/").slice(-1)[0];
-		if (activePanelUrl != pl.panel.url_path) {
-			logger.debug(`Active panel switched from '${activePanelUrl}' to '${pl.panel.url_path}'`);
+	if (panel != activePanel || tab != activeTab) {
+		logger.info(`Location changed from panel '${activePanel}/${activeTab}' to '${panel}/${tab}'`);
+		if (panel != activePanel) {
 			dashboardConfig = {};
-			activePanelUrl = pl.panel.url_path;
-			activePanelTab = tab;
-			changed = true;
 		}
-		else if (activePanelTab != tab) {
-			logger.debug(`Active tab switched from '${activePanelTab}' to '${tab}'`);
-			activePanelTab = tab;
-			changed = true;
-		}
-	}
-	if (changed) {
+		activePanel = panel;
+		activeTab = tab;
 		reconfigure();
 	}
 }
@@ -2361,10 +2363,10 @@ function startup() {
 	elHass.__hass.connection.subscribeEvents(
 		function(event) {
 			logger.debug("lovelace_updated", event);
-			if (event.data.url_path == activePanelUrl) {
+			if ((!event.data.url_path) || (event.data.url_path == activePanel)) {
 				elHass.__hass.connection.sendMessagePromise({
 					type: "lovelace/config",
-					url_path: activePanelUrl
+					url_path: event.data.url_path
 				})
 				.then((data) => {
 					dashboardConfig = {};
