@@ -74,6 +74,7 @@ You can set the following configuration parameters for every individual Home Ass
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
 | stop_screensaver_on_mouse_move   | Stop screensaver on mouse movement?                                                                    | true      |
 | stop_screensaver_on_location_change | Stop screensaver on navigation (location-changed events)?                                           | true      |
+| stop_screensaver_on_key_down     | Stop screensaver on key press?                                                                         | true      |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
