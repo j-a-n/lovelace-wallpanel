@@ -1795,7 +1795,10 @@ class WallpanelView extends HuiView {
 			media_content_id: imagePath
 		}).then(
 			result => {
-				let src = `${document.location.origin}${result.url}`;
+				let src = result.url;
+				if ((!src.startsWith("http://")) && (!src.startsWith("https://"))) {
+					src = `${document.location.origin}${src}`;
+				}
 				logger.debug(`Setting image src: ${src}`);
 				img.src = src;
 			},
