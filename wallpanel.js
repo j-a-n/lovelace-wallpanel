@@ -2379,7 +2379,8 @@ function startup() {
 	elHass.__hass.connection.subscribeEvents(
 		function(event) {
 			logger.debug("lovelace_updated", event);
-			if ((!event.data.url_path) || (event.data.url_path == activePanel)) {
+			const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
+			if (dashboard == activePanel) {
 				elHass.__hass.connection.sendMessagePromise({
 					type: "lovelace/config",
 					url_path: event.data.url_path
