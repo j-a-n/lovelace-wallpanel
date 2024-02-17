@@ -73,6 +73,7 @@ You can set the following configuration parameters for every individual Home Ass
 | black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled).              | 0         |
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
 | stop_screensaver_on_mouse_move   | Stop screensaver on mouse movement?                                                                    | true      |
+| stop_screensaver_on_mouse_click  | Stop screensaver on mouse click / display touch?                                                       | true      |
 | stop_screensaver_on_location_change | Stop screensaver on navigation (location-changed events)?                                           | true      |
 | stop_screensaver_on_key_down     | Stop screensaver on key press?                                                                         | true      |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |

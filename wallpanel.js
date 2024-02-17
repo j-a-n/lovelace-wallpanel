@@ -127,6 +127,7 @@ const defaultConfig = {
 	screensaver_stop_navigation_path: '',
 	screensaver_entity: '',
 	stop_screensaver_on_mouse_move: true,
+	stop_screensaver_on_mouse_click: true,
 	stop_screensaver_on_key_down: true,
 	stop_screensaver_on_location_change: true,
 	show_images: true,
@@ -2292,9 +2293,11 @@ class WallpanelView extends HuiView {
 				return;
 			}
 		}
-		// Prevent interaction with the dashboards after screensaver was stopped
-		this.blockEventsUntil = now + config.control_reactivation_time * 1000;
-		this.stopScreensaver();
+		if (!isClick || config.stop_screensaver_on_mouse_click) {
+			// Prevent interaction with the dashboards after screensaver was stopped
+			this.blockEventsUntil = now + config.control_reactivation_time * 1000;
+			this.stopScreensaver();
+		}
 	}
 }
 
