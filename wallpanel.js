@@ -127,6 +127,7 @@ const defaultConfig = {
 	screensaver_stop_navigation_path: '',
 	screensaver_entity: '',
 	stop_screensaver_on_mouse_move: true,
+	stop_screensaver_on_key_down: true,
 	stop_screensaver_on_location_change: true,
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
@@ -1395,7 +1396,10 @@ class WallpanelView extends HuiView {
 		shadow.appendChild(this.debugBox);
 
 		const wp = this;
-		let eventNames = ['click', 'touchstart', 'wheel', 'keydown'];
+		let eventNames = ['click', 'touchstart', 'wheel'];		
+		if (config.stop_screensaver_on_key_down) {
+			eventNames.push('keydown');
+		}
 		if (config.stop_screensaver_on_mouse_move) {
 			eventNames.push('mousemove');
 		}
