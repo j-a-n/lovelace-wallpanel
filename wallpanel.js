@@ -1575,8 +1575,10 @@ class WallpanelView extends HuiView {
 
 		if ((!config.show_image_info) || (!imageInfo)) {
 			infoElement.innerHTML = "";
+			infoElement.style.display = "none";
 			return;
 		}
+		infoElement.style.display = "block";
 
 		let html = config.image_info_template;
 		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
