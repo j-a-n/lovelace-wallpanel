@@ -584,58 +584,6 @@ function navigate(path, keepSearch=true) {
 }
 
 
-function findImages(hass, mediaContentId) {
-	logger.debug(`findImages: ${mediaContentId}`);
-	let excludeRegExp = [];
-	if (config.image_excludes) {
-		for (let imageExclude of config.image_excludes) {
-			excludeRegExp.push(new RegExp(imageExclude));
-		}
-	}
-
-	return new Promise(
-		function(resolve, reject) {
-			hass.callWS({
-				type: "media_source/browse_media",
-				media_content_id: mediaContentId
-			}).then(
-				mediaEntry => {
-					logger.debug("Found media entry", mediaEntry);
-					var promises = mediaEntry.children.map(child => {
-						let filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, '');
-						for (let exclude of excludeRegExp) {
-							if (exclude.test(filename)) {
-								return;
-							}
-						}
-						if (child.media_class == "image") {
-							//logger.debug(child);
-							return child.media_content_id;
-						}
-						if (child.media_class == "directory") {
-							return findImages(hass, child.media_content_id);
-						}
-					});
-					Promise.all(promises).then(results => {
-						let result = [];
-						for (let res of results) {
-							if (res) {
-								result = result.concat(res);
-							}
-						}
-						resolve(result);
-					})
-				},
-				error => {
-					//logger.warn(error);
-					reject(error);
-				}
-			);
-		}
-	);
-}
-
-
 function insertBrowserID(string) {
 	if (!string) {
 		logger.debug(`insertBrowserID(${string}): no string`);
@@ -696,6 +644,7 @@ class WallpanelView extends HuiView {
 		this.imageListDirection = "forwards"; // forwards, backwards
 		this.lastImageListUpdate;
 		this.updatingImageList = false;
+		this.cancelUpdatingImageList = false;
 		this.lastImageUpdate = 0;
 		this.messageBoxTimeout = null;
 		this.blockEventsUntil = 0;
@@ -713,7 +662,6 @@ class WallpanelView extends HuiView {
 		this.energyCollectionUpdateInterval = 60;
 		this.lastEnergyCollectionUpdate = 0;
 		this.screensaverStopNavigationPathTimeout = null;
-		this.currentImageUrl = config.image_url;
 
 		this.__hass = elHass.__hass;
 		this.__cards = [];
@@ -1466,13 +1414,23 @@ class WallpanelView extends HuiView {
 			wallpanel.moveInfoBox(0, 0);
 		}
 
-		if (config.show_images && (!oldConfig || !oldConfig.show_images || this.currentImageUrl != config.image_url)) {
-			const wp = this;
-			if (imageSourceType() == "url" || imageSourceType() == "media-entity") {
-				this.preloadImages();
+		if (config.show_images && (!oldConfig || !oldConfig.show_images || oldConfig.image_url != config.image_url)) {
+			let switchImages = false;
+			if (oldConfig) {
+				switchImages = true;
+			}
+
+			function preloadCallback(wp) {
+				if (switchImages) {
+					wp.switchActiveImage();
+				}
+			}
+
+			if (imageSourceType() == "unsplash-api" || imageSourceType() == "media-source") {
+				this.updateImageList(true, preloadCallback);
 			}
 			else {
-				this.updateImageList(true);
+				this.preloadImages(preloadCallback);
 			}
 		}
 	}
@@ -1660,38 +1618,119 @@ class WallpanelView extends HuiView {
 		infoElement.innerHTML = html;
 	}
 
-	updateImageList(preload = false) {
-		if (!config.image_url || this.updatingImageList) return;
+	updateImageList(preload = false, preloadCallback = null) {
+		if (!config.image_url) return;
 
+		let updateFunction = null;
 		if (imageSourceType() == "unsplash-api") {
-			this.updateImageListFromUnsplashAPI(preload);
+			updateFunction = this.updateImageListFromUnsplashAPI;
 		}
 		else if (imageSourceType() == "media-source") {
-			this.updateImageListFromMediaSource(preload);
+			updateFunction = this.updateImageListFromMediaSource;
+		}
+		else {
+			return;
+		}
+
+		const wp = this;
+		if (this.updatingImageList) {
+			this.cancelUpdatingImageList = true;
+			const start = Date.now();
+			function _checkUpdating() {
+				if ((!this.updatingImageList) || Date.now() - start >= 5000) {
+					this.cancelUpdatingImageList = false;
+					updateFunction.bind(wp)(preload, preloadCallback);
+				}
+				else {
+					setTimeout(_checkUpdating, 50);
+				}
+			}
+			setTimeout(_checkUpdating, 1);
+		}
+		else {
+			this.cancelUpdatingImageList = false;
+			updateFunction.bind(wp)(preload, preloadCallback);
 		}
 	}
 
-	updateImageListFromMediaSource(preload) {
+	findImages(mediaContentId) {
+		const wp = this;
+		logger.debug(`findImages: ${mediaContentId}`);
+		let excludeRegExp = [];
+		if (config.image_excludes) {
+			for (let imageExclude of config.image_excludes) {
+				excludeRegExp.push(new RegExp(imageExclude));
+			}
+		}
+
+		return new Promise(
+			function(resolve, reject) {
+				wp.hass.callWS({
+					type: "media_source/browse_media",
+					media_content_id: mediaContentId
+				}).then(
+					mediaEntry => {
+						logger.debug("Found media entry", mediaEntry);
+						var promises = mediaEntry.children.map(child => {
+							let filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, '');
+							for (let exclude of excludeRegExp) {
+								if (exclude.test(filename)) {
+									return;
+								}
+							}
+							if (child.media_class == "image") {
+								//logger.debug(child);
+								return child.media_content_id;
+							}
+							if (child.media_class == "directory") {
+								if (wp.cancelUpdatingImageList) {
+									return;
+								}
+								return wp.findImages(child.media_content_id);
+							}
+						});
+						Promise.all(promises).then(results => {
+							let result = [];
+							for (let res of results) {
+								if (res) {
+									result = result.concat(res);
+								}
+							}
+							resolve(result);
+						})
+					},
+					error => {
+						//logger.warn(error);
+						reject(error);
+					}
+				);
+			}
+		);
+	}
+
+	updateImageListFromMediaSource(preload, preloadCallback = null) {
 		this.updatingImageList = true;
 		this.lastImageListUpdate = Date.now();
-		let mediaContentId = config.image_url;
-		let wp = this;
-		findImages(this.hass, mediaContentId).then(
+		const mediaContentId = config.image_url;
+		const wp = this;
+		wp.findImages(mediaContentId).then(
 			result => {
-				if (config.image_order == "random") {
-					this.imageList = result.sort((a, b) => 0.5 - Math.random());
-				}
-				else {
-					this.imageList = result.sort();
-				}
-				logger.debug("Image list from media-source is now:", this.imageList);
-				this.updatingImageList = false;
-				if (preload) {
-					wp.preloadImages();
+				wp.updatingImageList = false;
+				if (!wp.cancelUpdatingImageList) {
+					if (config.image_order == "random") {
+						wp.imageList = result.sort((a, b) => 0.5 - Math.random());
+					}
+					else {
+						wp.imageList = result.sort();
+					}
+					logger.debug("Image list from media-source is now:", wp.imageList);
+					if (preload) {
+						wp.preloadImages(preloadCallback);
+					}
 				}
 			},
 			error => {
-				this.updatingImageList = false;
+				wp.updatingImageList = false;
 				error = `Failed to update image list from ${config.image_url}: ${JSON.stringify(error)}`;
 				logger.error(error);
 				wp.displayMessage(error, 10000)
@@ -1699,7 +1738,7 @@ class WallpanelView extends HuiView {
 		)
 	}
 
-	updateImageListFromUnsplashAPI(preload) {
+	updateImageListFromUnsplashAPI(preload, preloadCallback = null) {
 		this.updatingImageList = true;
 		this.lastImageListUpdate = Date.now();
 		let wp = this;
@@ -1723,11 +1762,13 @@ class WallpanelView extends HuiView {
 				urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
 			}
 			wp.updatingImageList = false;
-			wp.imageList = urls;
-			imageInfoCache = data;
-			logger.debug("Image list from unsplash is now:", wp.imageList);
-			if (preload) {
-				wp.preloadImages();
+			if (!wp.cancelUpdatingImageList) {
+				wp.imageList = urls;
+				imageInfoCache = data;
+				logger.debug("Image list from unsplash is now:", wp.imageList);
+				if (preload) {
+					wp.preloadImages(preloadCallback);
+				}
 			}
 		};
 		logger.debug(`Unsplash API request: ${config.image_url}`);
@@ -1829,7 +1870,7 @@ class WallpanelView extends HuiView {
 		this.updateImageFromUrl(img, entityPicture + querySuffix);
 	}
 
-	updateImage(img) {
+	updateImage(img, callback = null) {
 		if (!config.show_images) {
 			return;
 		}
@@ -1848,28 +1889,64 @@ class WallpanelView extends HuiView {
 		else {
 			this.updateImageFromUrl(img, config.image_url);
 		}
+
+		if (callback) {
+			const wp = this;
+			const start = Date.now();
+
+			function _checkLoading() {
+				if (img.getAttribute('data-loading') == "false" || Date.now() - start >= 2000) {
+					callback(wp, img);
+				}
+				else {
+					setTimeout(_checkLoading, 50);
+				}
+			}
+			setTimeout(_checkLoading, 1);
+		}
 	}
 
-	preloadImage(img) {
+	preloadImage(img, callback = null) {
+		const wp = this;
 		if ((this.updatingImageList) || (img.getAttribute('data-loading') == "true") || (this.screensaverRunning() && img.parentNode.style.opacity == 1)) {
+			if (callback) {
+				callback(wp, img);
+			}
 			return;
 		}
-		this.updateImage(img);
-		const wp = this;
-		setTimeout(function() {
-			wp.setImageDataInfo(img);
-		}, 1000);
+		this.updateImage(img,
+			function(wp, updatedImg) {
+				wp.setImageDataInfo(updatedImg);
+				if (callback) {
+					callback(wp, updatedImg);
+				}
+			}
+		);
 	}
 
-	preloadImages() {
+	preloadImages(callback = null) {
 		logger.debug("Preloading images");
-		this.preloadImage(this.imageOne);
-
-		if (imageSourceType() !== "media-entity") {
-			const wp = this;
-			setTimeout(function() {
-				wp.preloadImage(wp.imageTwo);
-			}, 1000);
+		if (imageSourceType() === "media-entity") {
+			this.preloadImage(this.imageOne,
+				function(wp, updatedImg) {
+					if (callback) {
+						callback(wp);
+					}
+				}
+			);
+		}
+		else {
+			this.preloadImage(this.imageOne,
+				function(wp, updatedImg) {
+					wp.preloadImage(wp.imageTwo,
+						function(wp, updatedImg) {
+							if (callback) {
+								callback(wp);
+							}
+						}
+					);
+				}
+			);
 		}
 	}
 
@@ -2161,19 +2238,11 @@ class WallpanelView extends HuiView {
 		}
 		this.updateImageIndex();
 		const inactiveImage = this.getInactiveImageElement();
-		this.updateImage(inactiveImage);
-
-		const wp = this;
-		const start = Date.now();
-		function switchActiveImageAfterLoad() {
-			if (inactiveImage.getAttribute('data-loading') == "false" || Date.now() - start >= 2000) {
+		this.updateImage(inactiveImage,
+			function(wp, img) {
 				wp.switchActiveImage(500);
 			}
-			else {
-				setTimeout(switchActiveImageAfterLoad, 50);
-			}
-		}
-		setTimeout(switchActiveImageAfterLoad, 50);
+		);
 	}
 
 	handleInteractionEvent(evt, isClick) {
