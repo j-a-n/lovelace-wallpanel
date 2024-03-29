@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.24.1";
+const version = "4.25.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -533,7 +533,11 @@ function setToolbarHidden(hidden) {
 		if (!panelLovelace) {
 			return;
 		}
-		const huiRoot = panelLovelace.shadowRoot.querySelector("hui-root").shadowRoot;
+		let huiRoot = panelLovelace.shadowRoot.querySelector("hui-root");
+		if (!huiRoot) {
+			return;
+		}
+		huiRoot = huiRoot.shadowRoot;
 		const view = huiRoot.querySelector("#view");
 		let appToolbar = huiRoot.querySelector("app-toolbar");
 		if (!appToolbar) {
@@ -1379,17 +1383,17 @@ class WallpanelView extends HuiView {
 					}
 					cont.style.backgroundImage = "url(" + img.src + ")";
 				}
-				if (config.show_image_info && img.imagePath && /.*\.jpe?g$/i.test(img.imagePath)) {
+				if (config.show_image_info && /.*\.jpe?g$/i.test(img.imageUrl)) {
 					wp.fetchEXIFInfo(img);
 				}
 			});
 			img.addEventListener('error', function() {
 				img.setAttribute('data-loading', false);
 				logger.error(`Failed to load image: ${img.src}`);
-				if (img.imagePath) {
-					const idx = wp.imageList.indexOf(img.imagePath);
+				if (img.imageUrl) {
+					const idx = wp.imageList.indexOf(img.imageUrl);
 					if (idx > -1) {
-						logger.debug(`Removing image from list: ${img.imagePath}`);
+						logger.debug(`Removing image from list: ${img.imageUrl}`);
 						wp.imageList.splice(idx, 1);
 					}
 					wp.updateImage(img);
@@ -1430,6 +1434,7 @@ class WallpanelView extends HuiView {
 				this.updateImageList(true, preloadCallback);
 			}
 			else {
+				this.imageList = [];
 				this.preloadImages(preloadCallback);
 			}
 		}
@@ -1464,7 +1469,7 @@ class WallpanelView extends HuiView {
 
 	fetchEXIFInfo(img) {
 		let wp = this;
-		if (imageInfoCache[img.imageDataKey]) {
+		if (imageInfoCache[img.imageUrl]) {
 			return;
 		}
 		if (imageInfoCacheKeys.length >= imageInfoCacheMaxSize) {
@@ -1476,12 +1481,11 @@ class WallpanelView extends HuiView {
 
 		const tmpImg = document.createElement("img");
 		tmpImg.src = img.src;
-		tmpImg.imagePath = img.imagePath;
-		tmpImg.imageDataKey = img.imageDataKey;
+		tmpImg.imageUrl = img.imageUrl;
 		getImageData(tmpImg, function() {
 			logger.debug("EXIF data:", tmpImg.exifdata);
-			imageInfoCacheKeys.push(tmpImg.imageDataKey);
-			imageInfoCache[tmpImg.imageDataKey] = tmpImg.exifdata;
+			imageInfoCacheKeys.push(tmpImg.imageUrl);
+			imageInfoCache[tmpImg.imageUrl] = tmpImg.exifdata;
 			wp.setImageDataInfo(tmpImg);
 
 			let exifLong = tmpImg.exifdata["GPSLongitude"];
@@ -1498,22 +1502,22 @@ class WallpanelView extends HuiView {
 						let info = JSON.parse(xhr.responseText);
 						logger.debug("nominatim data:", info);
 						if (info && info.address) {
-							imageInfoCache[tmpImg.imageDataKey].address = info.address;
+							imageInfoCache[tmpImg.imageUrl].address = info.address;
 							wp.setImageDataInfo(tmpImg);
 						}
 					}
 					else {
 						logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
-						delete imageInfoCache[tmpImg.imageDataKey];
+						delete imageInfoCache[tmpImg.imageUrl];
 					}
 				}
 				xhr.onerror = function(event) {
 					logger.error("nominatim error:", event);
-					delete imageInfoCache[tmpImg.imageDataKey];
+					delete imageInfoCache[tmpImg.imageUrl];
 				}
 				xhr.ontimeout = function(event) {
 					logger.error("nominatim timeout:", event);
-					delete imageInfoCache[tmpImg.imageDataKey];
+					delete imageInfoCache[tmpImg.imageUrl];
 				}
 				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
 				//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
@@ -1524,42 +1528,41 @@ class WallpanelView extends HuiView {
 	}
 
 	setImageDataInfo(img) {
-		let imageInfo = imageInfoCache[img.imageDataKey];
 		let infoElement = null;
-		if (this.imageOne.imageDataKey == img.imageDataKey) {
+		if (this.imageOne.imageUrl == img.imageUrl) {
 			infoElement = this.imageOneInfo;
 		}
-		else if (this.imageTwo.imageDataKey == img.imageDataKey) {
+		else if (this.imageTwo.imageUrl == img.imageUrl) {
 			infoElement = this.imageTwoInfo;
 		}
 		if (!infoElement) {
 			return;
 		}
 
-		if ((!config.show_image_info) || (!imageInfo)) {
+		if (!config.show_image_info) {
 			infoElement.innerHTML = "";
 			infoElement.style.display = "none";
 			return;
 		}
+
 		infoElement.style.display = "block";
 
+		let imageInfo = imageInfoCache[img.imageUrl];
+		if (!imageInfo) {
+			imageInfo = {};
+		}
 		let html = config.image_info_template;
 		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
-			if (!imageInfo) {
-				return "";
-			}
-			if (img.imagePath) {
-				imageInfo.image = {
-					url: img.imagePath,
-					path: img.imagePath.replace(/^media-source:\/\/[^/]+/, ""),
-					relativePath: img.imagePath.replace(config.image_url, "").replace(/^\/+/, ""),
-					filename: img.imagePath.replace(/^.*[\\/]/, ""),
-					folderName: ""
-				};
-				const parts = img.imagePath.split("/");
-				if (parts.length >= 2) {
-					imageInfo.image.folderName = parts[parts.length - 2];
-				}
+			imageInfo.image = {
+				url: img.imageUrl,
+				path: img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, ""),
+				relativePath: img.imageUrl.replace(config.image_url, "").replace(/^\/+/, ""),
+				filename: img.imageUrl.replace(/^.*[\\/]/, ""),
+				folderName: ""
+			};
+			const parts = img.imageUrl.split("/");
+			if (parts.length >= 2) {
+				imageInfo.image.folderName = parts[parts.length - 2];
 			}
 			let prefix = "";
 			let suffix = "";
@@ -1784,6 +1787,7 @@ class WallpanelView extends HuiView {
 		url = url.replace(/\${height}/g, height);
 		url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
 		url = url.replace(/\${timestamp}/g, timestamp);
+		img.imageUrl = url;
 		logger.debug(`Updating image '${img.id}' from '${url}'`);
 		if (imageSourceType() == "media-entity") {
 			this.updateImageUrlWithHttpFetch(img, url);
@@ -1825,15 +1829,10 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		this.updateImageIndex();
-		let imagePath = this.imageList[this.imageIndex];
-		if (!imagePath) {
-			return;
-		}
-		img.imageDataKey = imagePath;
-		img.imagePath = imagePath;
+		img.imageUrl = this.imageList[this.imageIndex];
 		this.hass.callWS({
 			type: "media_source/resolve_media",
-			media_content_id: imagePath
+			media_content_id: img.imageUrl
 		}).then(
 			result => {
 				let src = result.url;
@@ -1844,7 +1843,7 @@ class WallpanelView extends HuiView {
 				img.src = src;
 			},
 			error => {
-				logger.error(`media_source/resolve_media error for ${imagePath}:`, error);
+				logger.error(`media_source/resolve_media error for ${imageUrl}:`, error);
 			}
 		);
 	}
@@ -1854,7 +1853,6 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		this.updateImageIndex();
-		img.imageDataKey = this.imageList[this.imageIndex];
 		this.updateImageFromUrl(img, this.imageList[this.imageIndex]);
 	}
 
@@ -1875,7 +1873,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		img.setAttribute('data-loading', true);
-		img.imagePath = null;
+		img.imageUrl = null;
 
 		if (imageSourceType() == "media-source") {
 			this.updateImageFromMediaSource(img);
@@ -2211,9 +2209,9 @@ class WallpanelView extends HuiView {
 				let p = screenWakeLock._player;
 				html += `Screen wake lock video: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
 			}
-			let imagePath = wallpanel.imageList[wallpanel.imageIndex];
-			if (imagePath) {
-				html += `Current image: ${imagePath}`;
+			const activeImage = this.getActiveImageElement();
+			if (activeImage) {
+				html += `Current image: ${activeImage.imageUrl}`;
 			}
 			this.debugBox.innerHTML = html;
 			this.debugBox.querySelector("#download_log").addEventListener(
