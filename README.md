@@ -344,6 +344,7 @@ wallpanel:
     - type: weather-forecast
       entity: weather.home
       show_forecast: true
+      forecast_type: daily
 ```
 
 If you want to interact with the cards, as in the dashboard, you can set `card_interaction` to `true`.
