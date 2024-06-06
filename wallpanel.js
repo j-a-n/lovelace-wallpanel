@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.25.1";
+const version = "4.25.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1142,7 +1142,8 @@ class WallpanelView extends HuiView {
 					cardConfig.collection_key = "energy_wallpanel";
 					this.energyCollectionUpdateEnabled = true;
 				}
-				const cardElement = this.createCardElement(cardConfig);
+				const createCardElement = this._createCardElement ? this._createCardElement : this.createCardElement;
+				const cardElement = createCardElement.bind(this)(cardConfig);
 				cardElement.hass = this.hass;
 
 				this.__cards.push(cardElement);
@@ -3621,3 +3622,4 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
+
