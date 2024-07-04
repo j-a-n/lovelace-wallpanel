@@ -667,6 +667,7 @@ class WallpanelView extends HuiView {
 		this.lastEnergyCollectionUpdate = 0;
 		this.screensaverStopNavigationPathTimeout = null;
 
+		this.lovelace = getHaPanelLovelace().lovelace;
 		this.__hass = elHass.__hass;
 		this.__cards = [];
 		this.__badges = [];
