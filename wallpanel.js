@@ -1614,6 +1614,10 @@ class WallpanelView extends HuiView {
 			}
 			if (/DateTime/.test(tag)) {
 				let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
+				if (isNaN(date)) {
+					// Invalid date
+					return "";
+				}
 				if (!options) {
 					options = {year: "numeric", month: "2-digit", day: "2-digit"};
 				}
