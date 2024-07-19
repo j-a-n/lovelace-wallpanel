@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.25.4";
+const version = "4.25.5";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -496,15 +496,16 @@ function setSidebarHidden(hidden) {
 		if (!panelLovelace) {
 			return;
 		}
-		const menuButton = panelLovelace.shadowRoot
-			.querySelector("hui-root").shadowRoot
-			.querySelector("ha-menu-button");
-		if (menuButton) {
-			if (hidden) {
-				menuButton.style.display = "none";
-			}
-			else {
-				menuButton.style.removeProperty("display");
+		const huiRoot = panelLovelace.shadowRoot.querySelector("hui-root");
+		if (huiRoot) {
+			const menuButton = huiRoot.shadowRoot.querySelector("ha-menu-button");
+			if (menuButton) {
+				if (hidden) {
+					menuButton.style.display = "none";
+				}
+				else {
+					menuButton.style.removeProperty("display");
+				}
 			}
 		}
 	}
