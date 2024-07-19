@@ -2461,7 +2461,6 @@ function startup() {
 	customElements.define("wallpanel-view", WallpanelView);
 	wallpanel = document.createElement("wallpanel-view");
 	elHaMain.shadowRoot.appendChild(wallpanel);
-	locationChanged();
 	window.addEventListener("location-changed", event => {
 		logger.debug("location-changed", event);
 		locationChanged();
@@ -2490,6 +2489,11 @@ function startup() {
 		},
 		"lovelace_updated"
 	);
+	try {
+		locationChanged();
+	} catch {
+		setTimeout(locationChanged, 1000);
+	}
 }
 
 setTimeout(startup, 25);
