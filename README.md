@@ -3,10 +3,10 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/j-a-n/lovelace-wallpanel?style=for-the-badge)](https://github.com/j-a-n/lovelace-wallpanel/releases)
 [![GitHub stars](https://img.shields.io/github/stars/j-a-n/lovelace-wallpanel?color=yellow&style=for-the-badge)](https://github.com/j-a-n/lovelace-wallpanel/stargazers)
-![Github All Releases](https://img.shields.io/github/downloads/j-a-n/lovelace-wallpanel/total.svg?color=green&style=for-the-badge)
+![GitHub All Releases](https://img.shields.io/github/downloads/j-a-n/lovelace-wallpanel/total.svg?color=green&style=for-the-badge)
 
 🖼️ Wall panel mode for your Home Assistant Dashboards.
-Configurable extension which features a fullscreen mode, photo slideshow screensaver, screen wake lock and the ability to hide side and top bar.
+A configurable extension that features a full-screen mode, a photo slideshow screensaver, screen wake lock and the ability to hide the side and top bar(s).
 Show dashboard cards and badges of your choice on top of the images.
 
 ![Screenshot of screensaver](./doc/screensaver-screenshot.png)
@@ -756,7 +756,14 @@ This project is inspired by:
 - https://github.com/richtr/NoSleep.js
 - https://github.com/madeInLagny/mil-no-sleep
 
-# Reviews / Tutorials
+# Additional Resources
+If you need more assistance on the topic, please have a look at the following external resources:
+
+## Reviews / Tutorials
 - [SmartHomeScene - WallPanel: Home Assistant Screensaver for your wall-mounted control panel](https://smarthomescene.com/guides/wallpanel-home-assistant-screensaver-for-your-wall-mounted-control-panel)
 - [Smart Home Pursuites - Install Fully-Kiosk + Wallpanel in Home Assistant for Fire Tablets](https://smarthomepursuits.com/fire-tablet-fully-kiosk-screensaver-home-assistant/)
+
+## Videos
+### YouTube-Video on "Next Level Tablet Dashboard 🌅 mit lovelace-wallpanel 🤩" (🇩🇪)
+[![lovelace-wallpanel Home Assistant](https://img.youtube.com/vi/_KTyYIznzMY/mqdefault.jpg)](https://www.youtube.com/watch?v=_KTyYIznzMY)
 
