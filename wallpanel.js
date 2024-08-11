@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.25.5";
+const version = "4.25.6";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -670,7 +670,7 @@ class WallpanelView extends HuiView {
 		this.lastEnergyCollectionUpdate = 0;
 		this.screensaverStopNavigationPathTimeout = null;
 
-		this.lovelace = getHaPanelLovelace().lovelace;
+		this.lovelace = getHaPanelLovelace().__lovelace;
 		this.__hass = elHass.__hass;
 		this.__cards = [];
 		this.__badges = [];
@@ -1120,12 +1120,21 @@ class WallpanelView extends HuiView {
 
 		if (config.badges) {
 			const div = document.createElement('div');
+			div.classList.add("badges");
 			div.style.padding = 'var(--wp-card-padding)';
 			div.style.margin = 'var(--wp-card-margin)';
 			div.style.textAlign = 'center';
-			config.badges.forEach(badgeConfig => {
+			div.style.display = 'flex';
+			div.style.alignItems = 'flex-start';
+			div.style.flexWrap = 'wrap';
+			div.style.justifyContent = 'center';
+			div.style.gap = '8px';
+			div.style.margin = '0px';
+			config.badges.forEach(badge => {
+				let badgeConfig = structuredClone(badge);
 				logger.debug("Creating badge:", badgeConfig);
-				const badgeElement = this.createBadgeElement(badgeConfig);
+				const createBadgeElement = this._createBadgeElement ? this._createBadgeElement : this.createBadgeElement;
+				const badgeElement = createBadgeElement.bind(this)(badgeConfig);
 				badgeElement.hass = this.hass;
 				this.__badges.push(badgeElement);
 				div.append(badgeElement);
@@ -1135,7 +1144,7 @@ class WallpanelView extends HuiView {
 		if (config.cards) {
 			config.cards.forEach(card => {
 				// Copy object
-				let cardConfig = JSON.parse(JSON.stringify(card));
+				let cardConfig = structuredClone(card);
 				logger.debug("Creating card:", cardConfig);
 				let style = {};
 				if (cardConfig.wp_style) {
@@ -2424,7 +2433,7 @@ function reconfigure() {
 
 
 function locationChanged() {
-	if (wallpanel.screensaverRunning()) {
+	if (wallpanel && wallpanel.screensaverRunning()) {
 		if (!config.stop_screensaver_on_location_change || skipDisableScreensaverOnLocationChanged) {
 			return;
 		}
@@ -3635,4 +3644,3 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
-
