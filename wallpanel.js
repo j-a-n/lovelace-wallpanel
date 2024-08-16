@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.25.6";
+const version = "4.25.7";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -670,7 +670,7 @@ class WallpanelView extends HuiView {
 		this.lastEnergyCollectionUpdate = 0;
 		this.screensaverStopNavigationPathTimeout = null;
 
-		this.lovelace = getHaPanelLovelace().__lovelace;
+		this.lovelace = null;
 		this.__hass = elHass.__hass;
 		this.__cards = [];
 		this.__badges = [];
@@ -1108,6 +1108,7 @@ class WallpanelView extends HuiView {
 
 	createInfoBoxContent() {
 		logger.debug("Creating info box content");
+		this.lovelace = getHaPanelLovelace().__lovelace;
 		this.infoBoxContentCreatedDate = new Date();
 		this.infoBoxContent.innerHTML = '';
 		this.__badges = [];
@@ -3644,3 +3645,4 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
+
