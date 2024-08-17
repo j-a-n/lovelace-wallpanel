@@ -1131,6 +1131,7 @@ class WallpanelView extends HuiView {
 			div.style.justifyContent = 'center';
 			div.style.gap = '8px';
 			div.style.margin = '0px';
+			div.style.minWidth = '200px'
 			config.badges.forEach(badge => {
 				let badgeConfig = JSON.parse(JSON.stringify(badge));
 				logger.debug("Creating badge:", badgeConfig);
