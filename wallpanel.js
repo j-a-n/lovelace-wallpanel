@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.25.8";
+const version = "4.26.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1134,9 +1134,17 @@ class WallpanelView extends HuiView {
 			config.badges.forEach(badge => {
 				let badgeConfig = JSON.parse(JSON.stringify(badge));
 				logger.debug("Creating badge:", badgeConfig);
+				let style = {};
+				if (badgeConfig.wp_style) {
+					style = badgeConfig.wp_style;
+					delete badgeConfig.wp_style;
+				}
 				const createBadgeElement = this._createBadgeElement ? this._createBadgeElement : this.createBadgeElement;
 				const badgeElement = createBadgeElement.bind(this)(badgeConfig);
 				badgeElement.hass = this.hass;
+				for (const attr in style) {
+					badgeElement.style.setProperty(attr, style[attr]);
+				}
 				this.__badges.push(badgeElement);
 				div.append(badgeElement);
 			});
