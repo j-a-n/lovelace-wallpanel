@@ -457,7 +457,7 @@ style:
     '--wp-card-padding': 0px
     '--wp-card-backdrop-filter': none
 ```
-You can add the `wp_style` attribute for individual cards to set CSS styles as needed.
+You can add the `wp_style` attribute for individual cards and badges to set CSS styles as needed.
 
 **Example**
 
