@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.26.0";
+const version = "4.27.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -132,6 +132,8 @@ const defaultConfig = {
 	stop_screensaver_on_location_change: true,
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
+	immich_api_key: "",
+	immich_album_names: [],
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
@@ -449,6 +451,7 @@ function imageSourceType() {
 	if (config.image_url.startsWith("media-entity://")) return "media-entity";
 	if (config.image_url.startsWith("media-source://")) return "media-source";
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
+	if (config.image_url.startsWith("immich+")) return "immich-api";
 	return "url";
 }
 
@@ -1453,8 +1456,7 @@ class WallpanelView extends HuiView {
 					wp.switchActiveImage();
 				}
 			}
-
-			if (imageSourceType() == "unsplash-api" || imageSourceType() == "media-source") {
+			if (["immich-api", "unsplash-api", "media-source"].includes(imageSourceType())) {
 				this.updateImageList(true, preloadCallback);
 			}
 			else {
@@ -1577,16 +1579,27 @@ class WallpanelView extends HuiView {
 		}
 		let html = config.image_info_template;
 		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
-			imageInfo.image = {
-				url: img.imageUrl,
-				path: img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, ""),
-				relativePath: img.imageUrl.replace(config.image_url, "").replace(/^\/+/, ""),
-				filename: img.imageUrl.replace(/^.*[\\/]/, ""),
-				folderName: ""
-			};
-			const parts = img.imageUrl.split("/");
-			if (parts.length >= 2) {
-				imageInfo.image.folderName = parts[parts.length - 2];
+			if (!imageInfo.image) {
+				imageInfo.image = {};
+			}
+			if (!imageInfo.image.url) {
+				imageInfo.image.url = img.imageUrl;
+			}
+			if (!imageInfo.image.path) {
+				imageInfo.image.path = img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, "");
+			}
+			if (!imageInfo.image.relativePath) {
+				imageInfo.image.relativePath = img.imageUrl.replace(config.image_url, "").replace(/^\/+/, "");
+			}
+			if (!imageInfo.image.filename) {
+				imageInfo.image.filename =  img.imageUrl.replace(/^.*[\\/]/, "");
+			}
+			if (!imageInfo.image.folderName) {
+				imageInfo.image.folderName = "";
+				const parts = img.imageUrl.split("/");
+				if (parts.length >= 2) {
+					imageInfo.image.folderName = parts[parts.length - 2];
+				}
 			}
 			let prefix = "";
 			let suffix = "";
@@ -1659,6 +1672,9 @@ class WallpanelView extends HuiView {
 		let updateFunction = null;
 		if (imageSourceType() == "unsplash-api") {
 			updateFunction = this.updateImageListFromUnsplashAPI;
+		}
+		else if (imageSourceType() == "immich-api") {
+			updateFunction = this.updateImageListFromImmichAPI;
 		}
 		else if (imageSourceType() == "media-source") {
 			updateFunction = this.updateImageListFromMediaSource;
@@ -1791,22 +1807,106 @@ class WallpanelView extends HuiView {
 					const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
 					urls.push(url);
 					data[url] = entry;
+					data[url]["unsplash"] = entry;
 				});
 			} else {
 				logger.warn("Unsplash API error, get random images", http);
 				urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
 			}
-			wp.updatingImageList = false;
 			if (!wp.cancelUpdatingImageList) {
 				wp.imageList = urls;
 				imageInfoCache = data;
 				logger.debug("Image list from unsplash is now:", wp.imageList);
 				if (preload) {
+					wp.updatingImageList = false;
 					wp.preloadImages(preloadCallback);
 				}
 			}
+			wp.updatingImageList = false;
 		};
 		logger.debug(`Unsplash API request: ${config.image_url}`);
+		http.send();
+	}
+
+	updateImageListFromImmichAPI(preload, preloadCallback = null) {
+		let wp = this;
+		wp.updatingImageList = true;
+		wp.imageList = [];
+		wp.lastImageListUpdate = Date.now();
+		let urls = [];
+		let data = {};
+		const api_url = config.image_url.replace(/^immich\+/, "");
+		const http = new XMLHttpRequest();
+		http.responseType = "json";
+		http.open("GET", `${api_url}/albums`, true);
+		http.setRequestHeader("x-api-key", config.immich_api_key);
+		http.onload = function() {
+			let album_ids = [];
+			if (http.status == 200 || http.status === 0) {
+				logger.debug(`Got immich API response`, http.response);
+				http.response.forEach(album => {
+					logger.debug(album);
+					if (config.immich_album_names && ! config.immich_album_names.includes(album.albumName)) {
+						logger.debug("Skipping album: ", album.albumName);
+					}
+					else {
+						logger.debug("Adding album: ", album.albumName);
+						album_ids.push(album.id);
+					}
+				});
+				if (album_ids) {
+					album_ids.forEach(album_id => {
+						logger.debug("Fetching album metdata: ", album_id);
+						const http2 = new XMLHttpRequest();
+						http2.responseType = "json";
+						http2.open("GET", `${api_url}/albums/${album_id}`, true);
+						http2.setRequestHeader("x-api-key", config.immich_api_key);
+						http2.onload = function() {
+							if (http2.status == 200 || http2.status === 0) {
+								logger.debug(`Got immich API response`, http2.response);
+								http2.response.assets.forEach(asset => {
+									logger.debug(asset);
+									if (asset.type == "IMAGE") {
+										const url = `${api_url}/assets/${asset.id}/original`;
+										data[url] = asset.exifInfo;
+										data[url]["immich"] = asset;
+										data[url]["image"] = {
+											"filename": asset.originalFileName,
+											"folderName": http2.response.albumName
+										}
+										urls.push(url);
+									}
+								});
+							} else {
+								logger.error("Immich API error", http2);
+							}
+							album_ids.pop(album_id);
+							if (album_ids.length == 0) {
+								// All processed
+								if (!wp.cancelUpdatingImageList) {
+									wp.imageList = urls;
+									imageInfoCache = data;
+									logger.debug("Image list from immich is now:", wp.imageList);
+									if (preload) {
+										wp.updatingImageList = false;
+										wp.preloadImages(preloadCallback);
+									}
+								}
+								wp.updatingImageList = false;
+							}
+						};
+						http2.send();
+					});
+				}
+				else {
+					logger.error("No immich albums selected");
+					wp.updatingImageList = false;
+				}
+			} else {
+				logger.error("Immich API error", http);
+				wp.updatingImageList = false;
+			}
+		};
 		http.send();
 	}
 
@@ -1822,7 +1922,7 @@ class WallpanelView extends HuiView {
 		return url;
 	}
 
-	updateImageFromUrl(img, url) {
+	updateImageFromUrl(img, url, headers = null) {
 		const realUrl = this.fillPlaceholders(url);
 		if (realUrl != url && imageInfoCache[url]) {
 			imageInfoCache[realUrl] = imageInfoCache[url];
@@ -1830,14 +1930,19 @@ class WallpanelView extends HuiView {
 		img.imageUrl = realUrl;
 		logger.debug(`Updating image '${img.id}' from '${realUrl}'`);
 		if (imageSourceType() == "media-entity") {
-			this.updateImageUrlWithHttpFetch(img, realUrl);
+			this.updateImageUrlWithHttpFetch(img, realUrl, headers);
 		} else {
 			img.src = realUrl;
 		}
 	}
 
-	updateImageUrlWithHttpFetch(img, url) {
+	updateImageUrlWithHttpFetch(img, url, headers) {
 		var http = new XMLHttpRequest();
+		if (headers) {
+			for (const header in headers) {
+				http.setRequestHeader(header, headers[header]);
+			}
+		}
 		http.onload = function() {
 			if (this.status == 200 || this.status === 0) {
 				img.src = "data:image/jpeg;base64," + arrayBufferToBase64(http.response);
@@ -1896,6 +2001,14 @@ class WallpanelView extends HuiView {
 		this.updateImageFromUrl(img, this.imageList[this.imageIndex]);
 	}
 
+	updateImageFromImmichAPI(img) {
+		if (this.imageList.length == 0) {
+			return;
+		}
+		this.updateImageIndex();
+		this.updateImageFromUrl(img, this.imageList[this.imageIndex], {"x-api-key": config.immich_api_key});
+	}
+
 	updateImageFromMediaEntity(img) {
 		const imageEntity = config.image_url.replace(/^media-entity:\/\//, '')
 		const entity = this.hass.states[imageEntity];
@@ -1920,6 +2033,9 @@ class WallpanelView extends HuiView {
 		}
 		else if (imageSourceType() == "unsplash-api") {
 			this.updateImageFromUnsplashAPI(img);
+		}
+		else if (imageSourceType() == "immich-api") {
+			this.updateImageFromImmichAPI(img);
 		}
 		else if (imageSourceType() == "media-entity") {
 			this.updateImageFromMediaEntity(img);
@@ -3654,4 +3770,3 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
-
