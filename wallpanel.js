@@ -2443,7 +2443,7 @@ function reconfigure() {
 
 
 function locationChanged() {
-	if (wallpanel && wallpanel.screensaverRunning()) {
+	if (wallpanel && wallpanel.screensaverRunning && wallpanel.screensaverRunning()) {
 		if (!config.stop_screensaver_on_location_change || skipDisableScreensaverOnLocationChanged) {
 			return;
 		}
