@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.27.0";
+const version = "4.27.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1554,6 +1554,9 @@ class WallpanelView extends HuiView {
 	}
 
 	setImageDataInfo(img) {
+		if (!img || !img.imageUrl) {
+			return;
+		}
 		let infoElement = null;
 		if (this.imageOne.imageUrl == img.imageUrl) {
 			infoElement = this.imageOneInfo;
@@ -1565,7 +1568,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		if (!config.show_image_info) {
+		if (!config.show_image_info || !config.image_info_template) {
 			infoElement.innerHTML = "";
 			infoElement.style.display = "none";
 			return;
@@ -3770,3 +3773,4 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
+
