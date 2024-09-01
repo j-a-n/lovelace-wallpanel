@@ -71,6 +71,8 @@ You can set the following configuration parameters for every individual Home Ass
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
+| immich_api_key                   | API key that is used for authentication at the immich API.                                             |           |
+| immich_album_names               | Only show images from these immich albums.                                                             | []        |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See below for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
 | image_background                 | If set to `image`, the current image is also displayed as the background over the entire screen. Use the `wallpanel-screensaver-image-background` class to style the background. | color |
@@ -238,6 +240,55 @@ If you are using the [Synology DSM](https://www.home-assistant.io/integrations/s
 For example:
 
 `media-source://synology_dsm/18C0PEN253705/19`
+
+### immich API (experimental)
+There is experimental support for retrieving images from an immich server.
+
+#### immich server CORS
+You must configure the immich server so that it accepts API calls from external domains (CORS).
+Depending on your web server, the configuration will be different.
+
+Here is a configuration example for nginx:
+```
+if ($request_method = 'OPTIONS') {
+  add_header 'Access-Control-Allow-Origin' '*' always;
+  add_header 'Access-Control-Allow-Methods' 'GET, PUT, POST, DELETE, OPTIONS' always;
+  add_header 'Access-Control-Allow-Headers' 'X-Api-Key, User-Agent, Content-Type' always;
+  add_header 'Access-Control-Max-Age' 1728000;
+  add_header 'Content-Type' 'text/plain charset=UTF-8';
+  add_header 'Content-Length' 0;
+  return 204;
+}
+```
+
+For Traefik, you can use:
+
+```
+traefik.http.middlewares.immich-cors.headers.accessControlAllowOriginList=*
+traefik.http.middlewares.immich-cors.headers.accessControlAllowMethods=GET, PUT, POST, DELETE, OPTIONS
+traefik.http.middlewares.immich-cors.headers.accessControlAllowHeaders=X-Api-Key, User-Agent, Content-Type
+traefik.http.middlewares.immich-cors.headers.accessControlMaxAge=1728000
+traefik.http.routers.immich.middlewares=immich-cors
+```
+
+Note: You should prefer to use a list of URLs in `Access-Control-Allow-Origin` instead of using `*`.
+
+
+#### Wallpanel configuration
+To access the immich API, first generate an [API key](https://immich.app/docs/features/command-line-interface/#obtain-the-api-key).
+
+Then you can configure wallpanel to use the immich API.
+You need to set the `image_url` to `immich+<your api url>` and enter the API key in `immich_api_key`.
+To restrict the images to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
+
+Example:
+```yaml
+image_url: immich+https://immich.your.domain/api
+immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_album_names:
+  - Tokio
+  - New York
+```
 
 
 ### Entity with entity_picture attribute
