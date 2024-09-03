@@ -107,11 +107,12 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.27.1";
+const version = "4.28.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
 	debug: false,
+	log_level_console: "info",
 	hide_toolbar: false,
 	hide_toolbar_action_icons: false,
 	hide_sidebar: false,
@@ -291,19 +292,27 @@ const logger = {
 		logger.addMessage("info", arguments);
 	},
 	debug: function (text) {
-		//console.debug.apply(this, arguments);
+		if (["debug"].includes(config.log_level_console)) {
+			console.debug.apply(this, arguments);
+		}
 		logger.addMessage("debug", arguments);
 	},
 	info: function (text) {
-		console.info.apply(this, arguments);
+		if (["debug", "info"].includes(config.log_level_console)) {
+			console.info.apply(this, arguments);
+		}
 		logger.addMessage("info", arguments);
 	},
 	warn: function (text) {
-		console.warn.apply(this, arguments);
+		if (["debug", "info", "warn"].includes(config.log_level_console)) {
+			console.warn.apply(this, arguments);
+		}
 		logger.addMessage("warn", arguments);
 	},
 	error: function (text) {
-		console.error.apply(this, arguments);
+		if (["debug", "info", "warn", "error"].includes(config.log_level_console)) {
+			console.error.apply(this, arguments);
+		}
 		logger.addMessage("error", arguments);
 	}
 };
@@ -1580,30 +1589,32 @@ class WallpanelView extends HuiView {
 		if (!imageInfo) {
 			imageInfo = {};
 		}
+		if (!imageInfo.image) {
+			imageInfo.image = {};
+		}
+		if (!imageInfo.image.url) {
+			imageInfo.image.url = img.imageUrl;
+		}
+		if (!imageInfo.image.path) {
+			imageInfo.image.path = img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, "");
+		}
+		if (!imageInfo.image.relativePath) {
+			imageInfo.image.relativePath = img.imageUrl.replace(config.image_url, "").replace(/^\/+/, "");
+		}
+		if (!imageInfo.image.filename) {
+			imageInfo.image.filename =  img.imageUrl.replace(/^.*[\\/]/, "");
+		}
+		if (!imageInfo.image.folderName) {
+			imageInfo.image.folderName = "";
+			const parts = img.imageUrl.split("/");
+			if (parts.length >= 2) {
+				imageInfo.image.folderName = parts[parts.length - 2];
+			}
+		}
+		logger.debug("Image info:", imageInfo)
+
 		let html = config.image_info_template;
 		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
-			if (!imageInfo.image) {
-				imageInfo.image = {};
-			}
-			if (!imageInfo.image.url) {
-				imageInfo.image.url = img.imageUrl;
-			}
-			if (!imageInfo.image.path) {
-				imageInfo.image.path = img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, "");
-			}
-			if (!imageInfo.image.relativePath) {
-				imageInfo.image.relativePath = img.imageUrl.replace(config.image_url, "").replace(/^\/+/, "");
-			}
-			if (!imageInfo.image.filename) {
-				imageInfo.image.filename =  img.imageUrl.replace(/^.*[\\/]/, "");
-			}
-			if (!imageInfo.image.folderName) {
-				imageInfo.image.folderName = "";
-				const parts = img.imageUrl.split("/");
-				if (parts.length >= 2) {
-					imageInfo.image.folderName = parts[parts.length - 2];
-				}
-			}
 			let prefix = "";
 			let suffix = "";
 			let options = null;
@@ -1650,7 +1661,7 @@ class WallpanelView extends HuiView {
 			if (!val) {
 				return "";
 			}
-			if (/DateTime/.test(tag)) {
+			if (/DateTime/i.test(tag)) {
 				let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
 				if (isNaN(date)) {
 					// Invalid date
@@ -1810,7 +1821,7 @@ class WallpanelView extends HuiView {
 					const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
 					urls.push(url);
 					data[url] = entry;
-					data[url]["unsplash"] = entry;
+					data[url]["unsplash"] = JSON.parse(JSON.stringify(entry));
 				});
 			} else {
 				logger.warn("Unsplash API error, get random images", http);
@@ -1872,7 +1883,7 @@ class WallpanelView extends HuiView {
 									if (asset.type == "IMAGE") {
 										const url = `${api_url}/assets/${asset.id}/original`;
 										data[url] = asset.exifInfo;
-										data[url]["immich"] = asset;
+										data[url]["immich"] = JSON.parse(JSON.stringify(asset));
 										data[url]["image"] = {
 											"filename": asset.originalFileName,
 											"folderName": http2.response.albumName
@@ -2359,18 +2370,22 @@ class WallpanelView extends HuiView {
 			}
 
 			html += '<a id="download_log" href="">Download log</a><br />';
-			html += `Version: ${version}<br/>`;
-			html += `Config: ${JSON.stringify(conf)}<br/>`;
-			html += `Fullscreen: ${fullscreen}<br/>`;
-			html += `Screensaver started at: ${wallpanel.screensaverStartedAt}<br/>`;
-			html += `Screen wake lock: enabled=${screenWakeLock.enabled} native=${screenWakeLock.nativeWakeLockSupported} lock=${screenWakeLock._lock} player=${screenWakeLock._player} error=${screenWakeLock.error}<br/>`;
+			html += `<b>Version:</b> ${version}<br/>`;
+			html += `<b>Config:</b> ${JSON.stringify(conf)}<br/>`;
+			html += `<b>Fullscreen:</b> ${fullscreen}<br/>`;
+			html += `<b>Screensaver started at:</b> ${wallpanel.screensaverStartedAt}<br/>`;
+			html += `<b>Screen wake lock:</b> enabled=${screenWakeLock.enabled} native=${screenWakeLock.nativeWakeLockSupported} lock=${screenWakeLock._lock} player=${screenWakeLock._player} error=${screenWakeLock.error}<br/>`;
 			if (screenWakeLock._player) {
 				let p = screenWakeLock._player;
-				html += `Screen wake lock video: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
+				html += `<b>Screen wake lock video</b>: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
 			}
 			const activeImage = this.getActiveImageElement();
 			if (activeImage) {
-				html += `Current image: ${activeImage.imageUrl}`;
+				html += `<b>Current image:</b> ${activeImage.imageUrl}<br/>`;
+				const imgInfo = imageInfoCache[activeImage.imageUrl];
+				if (imgInfo) {
+					html += `<b>Image info:</b> ${JSON.stringify(imgInfo)}<br/>`;
+				}
 			}
 			this.debugBox.innerHTML = html;
 			this.debugBox.querySelector("#download_log").addEventListener(
