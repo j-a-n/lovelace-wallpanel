@@ -2610,7 +2610,7 @@ function startup() {
 		setTimeout(startup, 1000);
 		return;
 	}
-	logger.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
+	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 	updateConfig();
 	customElements.define("wallpanel-view", WallpanelView);
 	wallpanel = document.createElement("wallpanel-view");
