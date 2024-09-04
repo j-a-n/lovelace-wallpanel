@@ -51,6 +51,7 @@ You can set the following configuration parameters for every individual Home Ass
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
 | enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, wallpanel is enabled on all tabs. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
+| log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
 | hide_toolbar                     | Hide the upper panel toolbar? Please see [FAQ](#dashboard-cannot-be-edited) how to edit your dashboard when toolbar is hidden. | false     |
 | hide_toolbar_action_icons        | Hide action items in the toolbar?                                                                      | false     |
 | hide_sidebar                     | Hide the navigation sidebar?                                                                           | false     |
