@@ -1909,7 +1909,11 @@ class WallpanelView extends HuiView {
 							if (album_ids.length == 0) {
 								// All processed
 								if (!wp.cancelUpdatingImageList) {
-									wp.imageList = urls;
+									if (config.image_order == "random") {
+										wp.imageList = urls.sort((a, b) => 0.5 - Math.random());
+									} else {
+										wp.imageList = urls;
+									}
 									imageInfoCache = data;
 									logger.debug("Image list from immich is now:", wp.imageList);
 									if (preload) {
