@@ -947,6 +947,7 @@ class WallpanelView extends HuiView {
 		this.infoBox.style.setProperty('--wp-card-padding', '0');
 		this.infoBox.style.setProperty('--wp-card-margin', '5px');
 		this.infoBox.style.setProperty('--wp-card-backdrop-filter', 'none');
+		this.infoBox.style.setProperty('--wp-badges-minwidth', '200px');
 
 		this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
 		this.fixedInfoBox.style.pointerEvents = 'none';
@@ -1151,7 +1152,7 @@ class WallpanelView extends HuiView {
 			div.style.justifyContent = 'center';
 			div.style.gap = '8px';
 			div.style.margin = '0px';
-			div.style.minWidth = '200px'
+			div.style.minWidth = 'var(--wp-badges-minwidth)';
 			config.badges.forEach(badge => {
 				let badgeConfig = JSON.parse(JSON.stringify(badge));
 				logger.debug("Creating badge:", badgeConfig);
