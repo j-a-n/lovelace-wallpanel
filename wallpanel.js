@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.28.0";
+const version = "4.29.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -131,6 +131,7 @@ const defaultConfig = {
 	stop_screensaver_on_mouse_click: true,
 	stop_screensaver_on_key_down: true,
 	stop_screensaver_on_location_change: true,
+	disable_screensaver_on_browser_mod_popup: false,
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	immich_api_key: "",
@@ -223,6 +224,17 @@ if (window.browser_mod) {
 		// V2
 		browserId = window.browser_mod.browserID.replace('-', '_');
 	}
+}
+
+function getActiveBrowserModPopup() {
+	if (!browserId) {
+		return null;
+	}
+	const bmp = document.getElementsByTagName("browser-mod-popup");
+	if (!bmp || !bmp[0] || !bmp[0].shadowRoot || bmp[0].shadowRoot.children.length == 0) {
+		return null;	
+	}
+	return bmp[0];
 }
 
 function isObject(item) {
@@ -447,6 +459,9 @@ function isActive() {
 		return false;
 	}
 	if (config.enabled_on_tabs && config.enabled_on_tabs.length > 0 && activeTab && !config.enabled_on_tabs.includes(activeTab)) {
+		return false;
+	}
+	if (config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup()) {
 		return false;
 	}
 	return true;
@@ -778,9 +793,14 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		if (this.screensaverRunning()) {
-			this.updateScreensaver();
+			if (config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup()) {
+				this.stopScreensaver();
+			}
+			else {
+				this.updateScreensaver();
+			}
 		}
-		else {
+		else if (isActive()) {
 			if (config.idle_time > 0 && Date.now() - this.idleSince >= config.idle_time*1000) {
 				this.startScreensaver();
 			}
@@ -2474,13 +2494,13 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		const bmp = document.getElementsByTagName("browser-mod-popup");
-		if (bmp && bmp[0] && bmp[0].shadowRoot) {
-			const bm_elements = [ bmp[0].shadowRoot.querySelector(".content"), bmp[0].shadowRoot.querySelector("ha-dialog-header") ]; 
+		const bmp = getActiveBrowserModPopup();
+		if (bmp) {
+			const bm_elements = [ bmp.shadowRoot.querySelector(".content"), bmp.shadowRoot.querySelector("ha-dialog-header") ]; 
 			for (let i=0; i<bm_elements.length; i++) {
 				if (bm_elements[i]) {
 					const pos = bm_elements[i].getBoundingClientRect();
-					logger.debug("Event position:", elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
+					logger.debug("Event position:", bm_elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
 					if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
 						logger.debug("Event on browser mod popup:", bm_elements[i]);
 						return;
