@@ -2474,6 +2474,21 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
+		const bmp = document.getElementsByTagName("browser-mod-popup");
+		if (bmp && bmp[0] && bmp[0].shadowRoot) {
+			const bm_elements = [ bmp[0].shadowRoot.querySelector(".content"), bmp[0].shadowRoot.querySelector("ha-dialog-header") ]; 
+			for (let i=0; i<bm_elements.length; i++) {
+				if (bm_elements[i]) {
+					const pos = bm_elements[i].getBoundingClientRect();
+					logger.debug("Event position:", elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
+					if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
+						logger.debug("Event on browser mod popup:", bm_elements[i]);
+						return;
+					}
+				}
+			};
+		}
+
 		if (config.card_interaction) {
 			if (this.getMoreInfoDialog()) {
 				return;
