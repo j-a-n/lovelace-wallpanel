@@ -431,7 +431,7 @@ function updateConfig() {
 		if (isActive()) {
 			wallpanel.reconfigure(oldConfig);
 		}
-		else if (wallpanel.screensaverRunning()) {
+		else if (wallpanel.screensaverRunning && wallpanel.screensaverRunning()) {
 			wallpanel.stopScreensaver();
 		}
 	}
