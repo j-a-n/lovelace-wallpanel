@@ -811,3 +811,5 @@ If you need more assistance on the topic, please have a look at the following ex
 ### YouTube-Video on "Next Level Tablet Dashboard 🌅 mit lovelace-wallpanel 🤩" (🇩🇪)
 [![lovelace-wallpanel Home Assistant](https://img.youtube.com/vi/_KTyYIznzMY/mqdefault.jpg)](https://www.youtube.com/watch?v=_KTyYIznzMY)
 
+### YouTube-Video on "So wird dein Home Assistant Wallpanel zum Kunstobjekt!" (🇩🇪)
+[https://www.youtube.com/watch?v=ohBRmoOTKW0](https://youtu.be/ohBRmoOTKW0?si=S1Yl_Mmj7jXKLPpC)
