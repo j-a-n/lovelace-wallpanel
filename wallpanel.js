@@ -136,6 +136,7 @@ const defaultConfig = {
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	immich_api_key: "",
 	immich_album_names: [],
+	immich_resolution: "preview",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
@@ -1886,6 +1887,7 @@ class WallpanelView extends HuiView {
 		let data = {};
 		const api_url = config.image_url.replace(/^immich\+/, "");
 		const http = new XMLHttpRequest();
+		const resolution = config.immich_resolution == "original" ? "original" : "thumbnail?size=preview"
 		http.responseType = "json";
 		http.open("GET", `${api_url}/albums`, true);
 		http.setRequestHeader("x-api-key", config.immich_api_key);
@@ -1918,7 +1920,7 @@ class WallpanelView extends HuiView {
 								albumDetails.assets.forEach(asset => {
 									logger.debug(asset);
 									if (asset.type == "IMAGE") {
-										const url = `${api_url}/assets/${asset.id}/original`;
+										const url = `${api_url}/assets/${asset.id}/${resolution}`;
 										data[url] = asset.exifInfo;
 										data[url]["image"] = {
 											"filename": asset.originalFileName,
