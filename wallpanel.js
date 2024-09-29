@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.29.0";
+const version = "4.29.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -359,6 +359,9 @@ function mergeConfig(target, ...sources) {
 				if (typeof val === 'string' || val instanceof String) {
 					val = val.replace(/\$\{entity:\s*([^}]+\.[^}]+)\}/g, replacer);
 				}
+				if (typeof target[key] === 'boolean') {
+					val = ["true", "on", "yes", "1"].includes(val.toString());
+				}
 				Object.assign(target, { [key]: val });
 			}
 		}
@@ -408,7 +411,7 @@ function updateConfig() {
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from entity state: ${profile}`);
 	}
-
+	
 	if (config.card_interaction) {
 		config.stop_screensaver_on_mouse_move = false;
 	}
