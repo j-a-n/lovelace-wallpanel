@@ -1892,8 +1892,9 @@ class WallpanelView extends HuiView {
 		http.onload = function() {
 			let album_ids = [];
 			if (http.status == 200 || http.status === 0) {
-				logger.debug(`Got immich API response`, http.response);
-				http.response.forEach(album => {
+				const allAlbums = http.response;
+				logger.debug(`Got immich API response`, allAlbums);
+				allAlbums.forEach(album => {
 					logger.debug(album);
 					if (config.immich_album_names && ! config.immich_album_names.includes(album.albumName)) {
 						logger.debug("Skipping album: ", album.albumName);
@@ -1912,16 +1913,16 @@ class WallpanelView extends HuiView {
 						http2.setRequestHeader("x-api-key", config.immich_api_key);
 						http2.onload = function() {
 							if (http2.status == 200 || http2.status === 0) {
-								logger.debug(`Got immich API response`, http2.response);
-								http2.response.assets.forEach(asset => {
+								const albumDetails = http2.response;
+								logger.debug(`Got immich API response`, albumDetails);
+								albumDetails.assets.forEach(asset => {
 									logger.debug(asset);
 									if (asset.type == "IMAGE") {
 										const url = `${api_url}/assets/${asset.id}/original`;
 										data[url] = asset.exifInfo;
-										data[url]["immich"] = JSON.parse(JSON.stringify(asset));
 										data[url]["image"] = {
 											"filename": asset.originalFileName,
-											"folderName": http2.response.albumName
+											"folderName": albumDetails.albumName
 										}
 										urls.push(url);
 									}
