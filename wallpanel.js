@@ -107,7 +107,7 @@ class ScreenWakeLock {
 	}
 }
 
-const version = "4.29.1";
+const version = "4.30.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1013,7 +1013,7 @@ class WallpanelView extends HuiView {
 
 		if (config.style) {
 			for (const elId in config.style) {
-				if (elId.startsWith('wallpanel-') && elId != 'wallpanel-shadow-host' && !classStyles[elId]) {
+				if (elId.startsWith('wallpanel-') && elId != 'wallpanel-shadow-host' && elId != 'wallpanel-screensaver-info-box-badges' && !classStyles[elId]) {
 					let el = this.shadowRoot.getElementById(elId);
 					if (el) {
 						logger.debug(`Setting style attributes for element #${elId}`);
@@ -1165,7 +1165,8 @@ class WallpanelView extends HuiView {
 
 		if (config.badges) {
 			const div = document.createElement('div');
-			div.classList.add("badges");
+			div.id = "wallpanel-screensaver-info-box-badges";
+			div.classList.add("wp-badges");
 			div.style.padding = 'var(--wp-card-padding)';
 			div.style.margin = 'var(--wp-card-margin)';
 			div.style.textAlign = 'center';
@@ -1176,6 +1177,12 @@ class WallpanelView extends HuiView {
 			div.style.gap = '8px';
 			div.style.margin = '0px';
 			div.style.minWidth = 'var(--wp-badges-minwidth)';
+			if (config.style[div.id]) {
+				for (const attr in config.style[div.id]) {
+					logger.debug(`Setting style attribute ${attr} to ${config.style[div.id][attr]}`);
+					div.style.setProperty(attr, config.style[div.id][attr]);
+				}
+			}
 			config.badges.forEach(badge => {
 				let badgeConfig = JSON.parse(JSON.stringify(badge));
 				logger.debug("Creating badge:", badgeConfig);
@@ -2285,7 +2292,7 @@ class WallpanelView extends HuiView {
 		document.documentElement.style.overflow = 'hidden';
 
 		this.createInfoBoxContent();
-
+		
 		this.style.visibility = 'visible';
 		this.style.opacity = 1;
 		if (config.debug) {
