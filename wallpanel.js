@@ -2448,7 +2448,7 @@ class WallpanelView extends HuiView {
 		const inactiveImage = this.getInactiveImageElement();
 		this.updateImage(inactiveImage,
 			function(wp, img) {
-				wp.switchActiveImage(500);
+				wp.switchActiveImage(250);
 			}
 		);
 	}
@@ -2545,12 +2545,8 @@ class WallpanelView extends HuiView {
 					if (this.imageListDirection != "forwards") {
 						this.switchImageDirection("forwards");
 					}
-					else if (
-						(now - this.lastImageUpdate > 500) &&
-						(this.imageOne.getAttribute('data-loading') == "false") &&
-						(this.imageTwo.getAttribute('data-loading') == "false")
-					) {
-						this.switchActiveImage(500);
+					else if (this.imageOne.getAttribute('data-loading') == "false" && this.imageTwo.getAttribute('data-loading') == "false") {
+						this.switchActiveImage(250);
 					}
 				}
 				return;
@@ -2560,12 +2556,8 @@ class WallpanelView extends HuiView {
 					if (this.imageListDirection != "backwards") {
 						this.switchImageDirection("backwards");
 					}
-					else if (
-						isClick && (now - this.lastImageUpdate > 500) &&
-						(this.imageOne.getAttribute('data-loading') == "false") &&
-						(this.imageTwo.getAttribute('data-loading') == "false")
-					) {
-						this.switchActiveImage(500);
+					else if (this.imageOne.getAttribute('data-loading') == "false" && this.imageTwo.getAttribute('data-loading') == "false") {
+						this.switchActiveImage(250);
 					}
 				}
 				return;
