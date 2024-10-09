@@ -1852,7 +1852,6 @@ class WallpanelView extends HuiView {
 					const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
 					urls.push(url);
 					data[url] = entry;
-					data[url]["unsplash"] = JSON.parse(JSON.stringify(entry));
 				});
 			} else {
 				logger.warn("Unsplash API error, get random images", http);
