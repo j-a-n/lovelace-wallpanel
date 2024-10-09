@@ -2077,7 +2077,6 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		img.setAttribute('data-loading', true);
-		img.imageUrl = null;
 
 		if (imageSourceType() == "media-source") {
 			this.updateImageFromMediaSource(img);
