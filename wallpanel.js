@@ -232,7 +232,7 @@ function getActiveBrowserModPopup() {
 	}
 	const bmp = document.getElementsByTagName("browser-mod-popup");
 	if (!bmp || !bmp[0] || !bmp[0].shadowRoot || bmp[0].shadowRoot.children.length == 0) {
-		return null;	
+		return null;
 	}
 	return bmp[0];
 }
@@ -399,6 +399,11 @@ function updateConfig() {
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from config: ${profile}`);
 	}
+	if (config.profiles && browserId && config.profiles[`device.${browserId}`]) {
+		let profile = `device.${browserId}`;
+		config = mergeConfig(config, config.profiles[profile]);
+		logger.debug(`Profile set from device: ${profile}`);
+	}
 	if (config.profiles && user && config.profiles[`user.${user}`]) {
 		let profile = `user.${user}`;
 		config = mergeConfig(config, config.profiles[profile]);
@@ -411,7 +416,7 @@ function updateConfig() {
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from entity state: ${profile}`);
 	}
-	
+
 	if (config.card_interaction) {
 		config.stop_screensaver_on_mouse_move = false;
 	}
@@ -2292,7 +2297,7 @@ class WallpanelView extends HuiView {
 		document.documentElement.style.overflow = 'hidden';
 
 		this.createInfoBoxContent();
-		
+
 		this.style.visibility = 'visible';
 		this.style.opacity = 1;
 		if (config.debug) {
@@ -2506,7 +2511,7 @@ class WallpanelView extends HuiView {
 
 		const bmp = getActiveBrowserModPopup();
 		if (bmp) {
-			const bm_elements = [ bmp.shadowRoot.querySelector(".content"), bmp.shadowRoot.querySelector("ha-dialog-header") ]; 
+			const bm_elements = [ bmp.shadowRoot.querySelector(".content"), bmp.shadowRoot.querySelector("ha-dialog-header") ];
 			for (let i=0; i<bm_elements.length; i++) {
 				if (bm_elements[i]) {
 					const pos = bm_elements[i].getBoundingClientRect();
@@ -3849,4 +3854,3 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
-
