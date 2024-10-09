@@ -136,6 +136,7 @@ const defaultConfig = {
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	immich_api_key: "",
 	immich_album_names: [],
+	immich_resolution: "preview",
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
@@ -1884,14 +1885,16 @@ class WallpanelView extends HuiView {
 		let data = {};
 		const api_url = config.image_url.replace(/^immich\+/, "");
 		const http = new XMLHttpRequest();
+		const resolution = config.immich_resolution == "original" ? "original" : "thumbnail?size=preview"
 		http.responseType = "json";
 		http.open("GET", `${api_url}/albums`, true);
 		http.setRequestHeader("x-api-key", config.immich_api_key);
 		http.onload = function() {
 			let album_ids = [];
 			if (http.status == 200 || http.status === 0) {
-				logger.debug(`Got immich API response`, http.response);
-				http.response.forEach(album => {
+				const allAlbums = http.response;
+				logger.debug(`Got immich API response`, allAlbums);
+				allAlbums.forEach(album => {
 					logger.debug(album);
 					if (config.immich_album_names && ! config.immich_album_names.includes(album.albumName)) {
 						logger.debug("Skipping album: ", album.albumName);
@@ -1910,16 +1913,16 @@ class WallpanelView extends HuiView {
 						http2.setRequestHeader("x-api-key", config.immich_api_key);
 						http2.onload = function() {
 							if (http2.status == 200 || http2.status === 0) {
-								logger.debug(`Got immich API response`, http2.response);
-								http2.response.assets.forEach(asset => {
+								const albumDetails = http2.response;
+								logger.debug(`Got immich API response`, albumDetails);
+								albumDetails.assets.forEach(asset => {
 									logger.debug(asset);
 									if (asset.type == "IMAGE") {
-										const url = `${api_url}/assets/${asset.id}/original`;
+										const url = `${api_url}/assets/${asset.id}/${resolution}`;
 										data[url] = asset.exifInfo;
-										data[url]["immich"] = JSON.parse(JSON.stringify(asset));
 										data[url]["image"] = {
 											"filename": asset.originalFileName,
-											"folderName": http2.response.albumName
+											"folderName": albumDetails.albumName
 										}
 										urls.push(url);
 									}
