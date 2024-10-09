@@ -357,6 +357,7 @@ function mergeConfig(target, ...sources) {
 					return state;
 				}
 				if (typeof val === 'string' || val instanceof String) {
+					val = val.replace("${browser_id}", browserId ? browserId : "browser-id-unset");
 					val = val.replace(/\$\{entity:\s*([^}]+\.[^}]+)\}/g, replacer);
 				}
 				if (typeof target[key] === 'boolean') {
@@ -393,7 +394,7 @@ function updateConfig() {
 		}
 	}
 	config = mergeConfig(config, paramConfig);
-	const profile = insertBrowserID(config.profile);
+	const profile = config.profile;
 
 	if (config.profiles && profile && config.profiles[profile]) {
 		config = mergeConfig(config, config.profiles[profile]);
@@ -410,7 +411,7 @@ function updateConfig() {
 		logger.debug(`Profile set from user: ${profile}`);
 	}
 	config = mergeConfig(config, paramConfig);
-	const profile_entity = insertBrowserID(config.profile_entity);
+	const profile_entity = config.profile_entity;
 	if (config.profiles && profile_entity && elHass.__hass.states[profile_entity] && config.profiles[elHass.__hass.states[profile_entity].state]) {
 		let profile = elHass.__hass.states[profile_entity].state;
 		config = mergeConfig(config, config.profiles[profile]);
@@ -446,7 +447,7 @@ function updateConfig() {
 		config.show_images = false;
 	}
 
-	logger.debug(`Wallpanel config is now: ${JSON.stringify(config)}`);
+	logger.debug("Wallpanel config is now:", config);
 	if (wallpanel) {
 		if (isActive()) {
 			wallpanel.reconfigure(oldConfig);
@@ -626,21 +627,6 @@ function navigate(path, keepSearch=true) {
 }
 
 
-function insertBrowserID(string) {
-	if (!string) {
-		logger.debug(`insertBrowserID(${string}): no string`);
-		return string
-	}
-	if (!browserId) {
-		logger.debug(`insertBrowserID(${string}): no browser_mod`);
-		return string
-	}
-	let res = string.replace("${browser_id}", browserId);
-	logger.debug(`insertBrowserID(${string}): return ${res}`);
-	return res;
-}
-
-
 document.addEventListener('fullscreenerror', (event) => {
 	logger.error('Failed to enter fullscreen');
 });
@@ -694,7 +680,7 @@ class WallpanelView extends HuiView {
 		this.screensaverStoppedAt = new Date();
 		this.infoBoxContentCreatedDate;
 		this.idleSince = Date.now();
-		this.lastProfileSet = insertBrowserID(config.profile);
+		this.lastProfileSet = config.profile;
 		this.lastMove = null;
 		this.lastCorner = 0; // 0 - top left, 1 - bottom left, 2 - bottom right, 3 - top right
 		this.translateInterval = null;
@@ -736,7 +722,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 
-		const screensaver_entity = insertBrowserID(config.screensaver_entity);
+		const screensaver_entity = config.screensaver_entity;
 
 		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
 			let lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
@@ -765,7 +751,7 @@ class WallpanelView extends HuiView {
 	}
 
 	setScreensaverEntityState() {
-		const screensaver_entity = insertBrowserID(config.screensaver_entity);
+		const screensaver_entity = config.screensaver_entity;
 		if (!screensaver_entity || !this.__hass.states[screensaver_entity]) return;
 		if (this.screensaverRunning() && this.__hass.states[screensaver_entity].state == 'on') return;
 		if (!this.screensaverRunning() && this.__hass.states[screensaver_entity].state == 'off') return;
@@ -783,7 +769,7 @@ class WallpanelView extends HuiView {
 	}
 
 	updateProfile() {
-		const profile_entity = insertBrowserID(config.profile_entity);
+		const profile_entity = config.profile_entity;
 		if (profile_entity && this.__hass.states[profile_entity]) {
 			const profile = this.__hass.states[profile_entity].state;
 			if ((profile && profile != this.lastProfileSet) || (!profile && this.lastProfileSet)) {
