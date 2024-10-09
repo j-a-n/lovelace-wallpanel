@@ -165,11 +165,12 @@ wallpanel:
 ## URL query parameters
 It is also possible to pass configuration parameters in the query string.
 These parameters (**wp_\<parameter\>**) will override the corresponding properties in the yaml configuration.
-This will allow you to use device specific settings.
 Use JSON syntax for the values.
 
 **Example**:
-`http://hass:8123/lovelace/default_view?wp_hide_sidebar=false&wp_idle_time=60&wp_style={"wallpanel-screensaver-info-box":{"font-size":"4vh"}}`
+`http://hass:8123/lovelace/default_view?wp_hide_sidebar=false`
+
+Note: Please note that the URL parameters may be lost when navigating in the Home Assistant interface. Therefore, this option should not normally be used.
 
 ## Activate on individual devices only
 * Install [Browser Mod](https://github.com/thomasloven/hass-browser_mod).
