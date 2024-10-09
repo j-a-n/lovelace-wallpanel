@@ -171,14 +171,24 @@ Use JSON syntax for the values.
 `http://hass:8123/lovelace/default_view?wp_hide_sidebar=false&wp_idle_time=60&wp_style={"wallpanel-screensaver-info-box":{"font-size":"4vh"}}`
 
 ## Activate on individual devices only
-1. Set enabled to **false** in your dashboard configuration.
+* Install [Browser Mod](https://github.com/thomasloven/hass-browser_mod).
+* Set `enabled` to **false** and add a device-specific profile to enable the wallpanel only on the device in your dashboard configuration:
 ```yaml
 wallpanel:
   enabled: false
+  device.<browser-id>:
+    enabled: true
 ```
-2. Add a query string to the URL to activate on a device:
-`http://hass:8123/lovelace/default_view?wp_enabled=true`
 
+**Example for Browser-ID e9a2c86e-5526f1ee**:
+```yaml
+wallpanel:
+  enabled: false
+  device.e9a2c86e_5526f1ee:
+    enabled: true
+```
+
+For more details see section [Integration with browser_mod](#integration-with-browser_mod).
 
 ## image_url
 Screensaver images will be fetched from this URL.
@@ -475,6 +485,7 @@ The most important element IDs are:
 - `wallpanel-screensaver-container`
 - `wallpanel-screensaver-info-box`
 - `wallpanel-screensaver-info-box-content`
+- `wallpanel-screensaver-info-box-badges`
 - `wallpanel-screensaver-image-background`
 - `wallpanel-screensaver-image-info`
 - `wallpanel-screensaver-image-overlay`
@@ -724,8 +735,30 @@ Therefore, the username `Jane Doe` will activate the user profile `user.jane_doe
 Normally, it is not possible to set different configuration for different devices. That gap can be closed by integrating WallPanel with [Browser Mod](https://github.com/thomasloven/hass-browser_mod).
 
 Once Browser Mod is correctly installed and configured, Browser ID can be used to define per-device settings.
+The placeholders `${browser_id}` kann be used everywhere in the configuration and will be replaced by the Browser ID.
+Minus signs in the browser ID are replaced by underscores.
 
-A separate screensaver entity can exist for each device:
+A separate profile can be defined for each device:
+
+```yaml
+wallpanel:
+  enabled: true
+  image_order: random
+  profiles:
+    device.e9a2c86e_5526f1ee:
+      image_url: media-source://media_source/local/kitchen
+      screensaver_entity: input_boolean.screensaver_kitchen
+    device.89ae788b_cd883eb1:
+      image_url: media-source://media_source/local/livingroom
+      screensaver_entity: input_boolean.screensaver_livingroom
+```
+
+Note: It is not required to define profiles for all devices.
+
+If only individual configuration attributes are to be device-specific,
+this can be achieved by using the placeholder without having to create an entire profile for the device.
+
+For example, a separate screensaver entity for each device:
 
 ```yaml
 wallpanel:
@@ -735,25 +768,8 @@ wallpanel:
 
 `${browser_id}` will be replaced with the value of Browser ID (eg. `input_boolean.screensaver_e9a2c86e_5526f1ee`).
 
-A separate profile can be defined for each device:
 
-```yaml
-wallpanel:
-  enabled: true
-  image_order: random
-  profiles:
-    device_e9a2c86e_5526f1ee:
-      image_url: media-source://media_source/local/kitchen
-      screensaver_entity: input_boolean.screensaver_kitchen
-    device_89ae788b_cd883eb1:
-      image_url: media-source://media_source/local/livingroom
-      screensaver_entity: input_boolean.screensaver_livingroom
-  profile: device_${browser_id}
-```
-
-Note: It is not required to define profiles for all devices.
-
-Finally, a separate profile entity can be used for each device:
+A device-specific profile entity for each device:
 
 ```yaml
 wallpanel:
