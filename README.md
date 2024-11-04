@@ -178,16 +178,18 @@ Note: Please note that the URL parameters may be lost when navigating in the Hom
 ```yaml
 wallpanel:
   enabled: false
-  device.<browser-id>:
-    enabled: true
+  profiles:
+    device.<browser-id>:
+      enabled: true
 ```
 
 **Example for Browser-ID e9a2c86e-5526f1ee**:
 ```yaml
 wallpanel:
   enabled: false
-  device.e9a2c86e_5526f1ee:
-    enabled: true
+  profiles:
+    device.e9a2c86e_5526f1ee:
+      enabled: true
 ```
 
 For more details see section [Integration with browser_mod](#integration-with-browser_mod).
