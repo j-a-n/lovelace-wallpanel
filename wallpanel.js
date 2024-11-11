@@ -132,6 +132,7 @@ const defaultConfig = {
 	stop_screensaver_on_key_down: true,
 	stop_screensaver_on_location_change: true,
 	disable_screensaver_on_browser_mod_popup: false,
+	disable_screensaver_on_browser_mod_popup_func: '',
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	immich_api_key: "",
@@ -471,6 +472,12 @@ function isActive() {
 	if (config.enabled_on_tabs && config.enabled_on_tabs.length > 0 && activeTab && !config.enabled_on_tabs.includes(activeTab)) {
 		return false;
 	}
+	if (wallpanel &&
+		wallpanel.disable_screensaver_on_browser_mod_popup_function &&
+		getActiveBrowserModPopup() &&
+		wallpanel.disable_screensaver_on_browser_mod_popup_function(getActiveBrowserModPopup())) {
+		return false;
+	}
 	if (config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup()) {
 		return false;
 	}
@@ -691,6 +698,7 @@ class WallpanelView extends HuiView {
 		this.energyCollectionUpdateInterval = 60;
 		this.lastEnergyCollectionUpdate = 0;
 		this.screensaverStopNavigationPathTimeout = null;
+		this.disable_screensaver_on_browser_mod_popup_function = null;
 
 		this.lovelace = null;
 		this.__hass = elHass.__hass;
@@ -1503,6 +1511,10 @@ class WallpanelView extends HuiView {
 				this.imageList = [];
 				this.preloadImages(preloadCallback);
 			}
+		}
+
+		if (config.disable_screensaver_on_browser_mod_popup_func) {
+			this.disable_screensaver_on_browser_mod_popup_function = new Function('bmp', config.disable_screensaver_on_browser_mod_popup_func);
 		}
 	}
 
