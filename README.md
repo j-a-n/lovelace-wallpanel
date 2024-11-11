@@ -69,6 +69,7 @@ You can set the following configuration parameters for every individual Home Ass
 | stop_screensaver_on_location_change | Stop screensaver on navigation (location-changed events)?                                           | true      |
 | stop_screensaver_on_key_down     | Stop screensaver on key press?                                                                         | true      |
 | disable_screensaver_on_browser_mod_popup     | Disable screensaver if a browser mod popup is active?                                      | false     |
+| disable_screensaver_on_browser_mod_popup_func| Javascript function to determine whether to disable screensaver based on active browser mod popup ([see below](#disable-screensaver-on-browser-mod-popup-func)) |    |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
@@ -788,6 +789,18 @@ You can stop the screensaver with the javascript code below from a browser mod s
 
 ```javascript
 document.querySelector("home-assistant").shadowRoot.querySelector("home-assistant-main").shadowRoot.querySelector("wallpanel-view").stopScreensaver();
+```
+
+### disable_screensaver_on_browser_mod_popup_func
+
+You can use this option to conditionally disable the screensaver based on the active browser mod popup. Use the variable `bmp` to select the popup element.
+
+As an example, this javascript will only disable the screensaver if the active browser mod popup contains a `webrtc-camera` card:
+
+```javascript
+disable_screensaver_on_browser_mod_popup_func: |
+  let elements = bmp.shadowRoot.querySelector(".container").children;
+  return Array.from(elements).some(n => n.nodeName.toLowerCase() === "webrtc-camera");
 ```
 
 # FAQ - Frequently Asked Questions
