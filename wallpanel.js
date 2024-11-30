@@ -126,6 +126,7 @@ const defaultConfig = {
 	black_screen_after_time: 0,
 	control_reactivation_time: 1.0,
 	screensaver_stop_navigation_path: '',
+	screensaver_stop_close_browser_mod_popup: false,
 	screensaver_entity: '',
 	stop_screensaver_on_mouse_move: true,
 	stop_screensaver_on_mouse_click: true,
@@ -2305,13 +2306,21 @@ class WallpanelView extends HuiView {
 
 		this.setScreensaverEntityState();
 
-		if (config.screensaver_stop_navigation_path) {
+		if (config.screensaver_stop_navigation_path || config.screensaver_stop_close_browser_mod_popup) {
 			this.screensaverStopNavigationPathTimeout = setTimeout(() => {
-				skipDisableScreensaverOnLocationChanged = true;
-				navigate(config.screensaver_stop_navigation_path);
-				setTimeout(() => {
-					skipDisableScreensaverOnLocationChanged = false;
-				}, 250);
+				if (config.screensaver_stop_navigation_path) {
+					skipDisableScreensaverOnLocationChanged = true;
+					navigate(config.screensaver_stop_navigation_path);
+					setTimeout(() => {
+						skipDisableScreensaverOnLocationChanged = false;
+					}, 250);
+				}
+				if (config.screensaver_stop_close_browser_mod_popup) {
+					let bmp = getActiveBrowserModPopup();
+					if (bmp) {
+						bmp.closeDialog();
+					}
+				}
 			}, (config.fade_in_time + 1) * 1000);
 		}
 	}

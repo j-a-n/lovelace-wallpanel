@@ -71,6 +71,7 @@ You can set the following configuration parameters for every individual Home Ass
 | disable_screensaver_on_browser_mod_popup     | Disable screensaver if a browser mod popup is active?                                      | false     |
 | disable_screensaver_on_browser_mod_popup_func| Javascript function to determine whether to disable screensaver based on active browser mod popup ([see below](#disable_screensaver_on_browser_mod_popup_func)) |    |
 | screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped.                        |           |
+| screensaver_stop_close_browser_mod_popup | Close the active browser mod popup when screensaver is stopped?                                | false     |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
