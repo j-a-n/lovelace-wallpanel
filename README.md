@@ -59,6 +59,10 @@ You can set the following configuration parameters for every individual Home Ass
 | z_index                          | Wallpanels base CSS z-index.                          | 1000        |
 | idle_time                        | Time in seconds after which the screensaver will start (0 = screensaver disabled).                     | 15        |
 | fade_in_time                     | Screensaver fade-in time in seconds.                                                                   | 3.0       |
+| fade_out_time_motion_detected    | Screensaver fade-out time in seconds when the screensaver is stopped because motion is detected.       | 1.0       |
+| fade_out_time_screensaver_entity | Screensaver fade-out time in seconds when the screensaver is turned of by the screensaver entity.      | 3.0       |
+| fade_out_time_browser_mod_popup  | Screensaver fade-out time in seconds when the screensaver is stopped because of an browser mod popup.  | 1.0       |
+| fade_out_time_interaction        | Screensaver fade-out time in seconds when the screensaver is stopped because of user input.            | 0.3       |
 | crossfade_time                   | Crossfade duration in seconds for screensaver images.                                                  | 3.0       |
 | display_time                     | Duration in seconds after which the next screensaver image will be shown.                              | 15.0      |
 | keep_screen_on_time              | Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).                         | 0         |
@@ -106,6 +110,13 @@ You can set the following configuration parameters for every individual Home Ass
 | profiles                         | Configuration profiles. See below for details.                                                         | {}         |
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
 | profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
+| camera_motion_detection_enabled          | Activate camera based motion detection? Screensaver is stopped when movement is detected.      | false      |
+| camera_motion_detection_threshold        | If this many percent of the pixels change between two images, this is counted as movement.     | 5          |
+| camera_motion_detection_capture_width    | Width of the images captured by the camera in pixels.                                          | 64         |
+| camera_motion_detection_capture_height   | Height of the images captured by the camera in pixels.                                         | 48         |
+| camera_motion_detection_capture_interval | Interval in seconds at which images are captured by the camera.                                | 0.3        |
+| camera_motion_detection_capture_visible  | Should the captured images be displayed on the user interface for debugging?                   | false      |
+
 
 ## Home Assistant Dashboard configuration
 You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).
