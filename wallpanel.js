@@ -109,10 +109,6 @@ class ScreenWakeLock {
 
 class CameraMotionDetection {
 	constructor() {
-		navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-		if (!navigator.getUserMedia) {
-			logger.error("getUserMedia not supported");
-		}
 		this.enabled = false;
 		this.width = 64;
 		this.height = 48;
@@ -158,6 +154,11 @@ class CameraMotionDetection {
 		if (this.enabled) {
 			return;
 		}
+		if (!navigator.mediaDevices) {
+			logger.error("No media devices found");
+			return;
+		}
+		
 		this.enabled = true;
 		this.width = config.camera_motion_detection_capture_width;
 		this.height = config.camera_motion_detection_capture_height;
@@ -178,20 +179,18 @@ class CameraMotionDetection {
 		else {
 			this.canvasElement.style.visibility = 'hidden';
 		}
-		
-		navigator.getUserMedia(
-			{ audio: false, video: { facingMode: { acceptable: "user" }, width: this.width, height: this.height } },
-		(stream) => {
+
+		navigator.mediaDevices.getUserMedia(
+			{ audio: false, video: { facingMode: { acceptable: "user" }, width: this.width, height: this.height } }
+		).then((stream) => {
 			this.videoElement.srcObject = stream
 			this.videoElement.play();
 			if (this.enabled) {
 				setInterval(this.capture.bind(this), this.captureInterval);
 			}
-		},
-		(err) => {
+		}).catch((err) => {
 			logger.error("Camera motion detection error:", err);
-		},
-		);
+		});
 	}
 
 	stop() {
@@ -206,7 +205,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.31.0";
+const version = "4.31.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -3997,3 +3996,4 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
+
