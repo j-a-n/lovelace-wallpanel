@@ -117,11 +117,12 @@ class CameraMotionDetection {
 		
 		this.videoElement = document.createElement("video");
 		this.videoElement.setAttribute("id", "wallpanelMotionDetectionVideo");
-		this.videoElement.style.visibility = 'hidden';
+		this.videoElement.style.display = 'none';
 		document.body.appendChild(this.videoElement);
 		
 		this.canvasElement = document.createElement("canvas");
 		this.canvasElement.setAttribute("id", "wallpanelMotionDetectionCanvas");
+		this.canvasElement.style.display = 'none';
 		document.body.appendChild(this.canvasElement);
 
 		this.context = this.canvasElement.getContext('2d', { willReadFrequently: true });
@@ -175,9 +176,10 @@ class CameraMotionDetection {
 			this.canvasElement.style.left = 0;
 			this.canvasElement.style.zIndex = 10000;
 			this.canvasElement.style.border = "1px solid black";
+			this.canvasElement.style.display = 'block';
 		}
 		else {
-			this.canvasElement.style.visibility = 'hidden';
+			this.canvasElement.style.display = 'none';
 		}
 
 		navigator.mediaDevices.getUserMedia(
@@ -205,7 +207,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.31.1";
+const version = "4.31.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
