@@ -60,7 +60,7 @@ You can set the following configuration parameters for every individual Home Ass
 | idle_time                        | Time in seconds after which the screensaver will start (0 = screensaver disabled).                     | 15        |
 | fade_in_time                     | Screensaver fade-in time in seconds.                                                                   | 3.0       |
 | fade_out_time_motion_detected    | Screensaver fade-out time in seconds when the screensaver is stopped because motion is detected.       | 1.0       |
-| fade_out_time_screensaver_entity | Screensaver fade-out time in seconds when the screensaver is turned of by the screensaver entity.      | 3.0       |
+| fade_out_time_screensaver_entity | Screensaver fade-out time in seconds when the screensaver is turned off by the screensaver entity.      | 3.0       |
 | fade_out_time_browser_mod_popup  | Screensaver fade-out time in seconds when the screensaver is stopped because of an browser mod popup.  | 1.0       |
 | fade_out_time_interaction        | Screensaver fade-out time in seconds when the screensaver is stopped because of user input.            | 0.3       |
 | crossfade_time                   | Crossfade duration in seconds for screensaver images.                                                  | 3.0       |
