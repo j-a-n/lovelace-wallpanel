@@ -214,6 +214,7 @@ const defaultConfig = {
 	debug: false,
 	log_level_console: "info",
 	hide_toolbar: false,
+	keep_toolbar_space: false,
 	hide_toolbar_action_icons: false,
 	hide_sidebar: false,
 	fullscreen: false,
@@ -705,9 +706,11 @@ function setToolbarHidden(hidden) {
 		}
 		if (hidden) {
 			appToolbar.style.setProperty("display", "none");
-			view.style.minHeight = "100vh";
-			view.style.marginTop = "0";
-			view.style.paddingTop = "0";
+			if (!config.keep_toolbar_space) {
+				view.style.minHeight = "100vh";
+				view.style.marginTop = "0";
+				view.style.paddingTop = "0";
+			}
 		}
 		else {
 			appToolbar.style.removeProperty("display");

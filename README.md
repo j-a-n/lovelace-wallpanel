@@ -53,6 +53,7 @@ You can set the following configuration parameters for every individual Home Ass
 | debug                            | Enable debug mode?                                                                                     | false     |
 | log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
 | hide_toolbar                     | Hide the upper panel toolbar? Please see [FAQ](#dashboard-cannot-be-edited) how to edit your dashboard when toolbar is hidden. | false     |
+| keep_toolbar_space               | If the toolbar is hidden, should the space where the toolbar is normally located remain empty?         | false     |
 | hide_toolbar_action_icons        | Hide action items in the toolbar?                                                                      | false     |
 | hide_sidebar                     | Hide the navigation sidebar?                                                                           | false     |
 | fullscreen                       | Set browser window to fullscreen? <br>*Due to browser restrictions you will need to interact with the screen once to activate fullscreen mode after loading the dashboard page.* | false   |
