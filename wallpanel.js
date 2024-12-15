@@ -2415,7 +2415,7 @@ class WallpanelView extends HuiView {
 				this.loadMediaFromUrl(img, src, "IMG");
 			},
 			error => {
-				logger.error(`media_source/resolve_media error for ${imageUrl}:`, error);
+				logger.error(`media_source/resolve_media error for ${img.imageUrl}:`, error);
 			}
 		);
 	}
