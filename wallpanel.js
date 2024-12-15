@@ -1537,6 +1537,55 @@ class WallpanelView extends HuiView {
 		return this.imageOne;
 	}
 
+	handleMediaError(medialElem, error) {
+		medialElem.setAttribute('data-loading', false);
+		logger.error('Error while loding image:', error);
+
+		if (medialElem.imageUrl) {
+			const idx = this.imageList.indexOf(medialElem.imageUrl);
+			if (idx > -1) {
+				logger.debug(`Removing media from list: ${medialElem.imageUrl}`);
+				this.imageList.splice(idx, 1);
+			}
+			this.updateImage(medialElem);
+		} else {
+			this.displayMessage(`Failed to load media: ${medialElem.src}`, 5000);
+		}
+	}
+
+	handleMediaLoaded(medialElem) {
+		medialElem.setAttribute('data-loading', false);
+		const isVideo = medialElem.tagName === 'VIDEO';
+
+		if (config.image_background === "image") {
+			let srcImageUrl = medialElem.src;
+			if (isVideo) {
+				// Capture the current frame of the video as a background image
+				const canvas = document.createElement('canvas');
+				canvas.width = medialElem.videoWidth;
+				canvas.height = medialElem.videoHeight;
+
+				const ctx = canvas.getContext('2d');
+				ctx.drawImage(medialElem, 0, 0, canvas.width, canvas.height);
+				try {
+					srcImageUrl = canvas.toDataURL('image/png');
+				} catch (err) {
+					srcImageUrl = null;
+					logger.error("Error extracting canvas image:", err);
+				}
+			}
+			let cont = this.imageOneBackground;
+			if (medialElem == this.imageTwo) {
+				cont = this.imageTwoBackground;
+			}
+			cont.style.backgroundImage = srcImageUrl ? `url(${srcImageUrl})` : '';
+		}
+		if (!isVideo && config.show_image_info && /.*\.jpe?g$/i.test(medialElem.imageUrl)) {
+			this.fetchEXIFInfo(medialElem);
+		}
+	}
+
+
 	connectedCallback() {
 		this.style.zIndex = config.z_index;
 		this.style.visibility = 'hidden';
@@ -1690,37 +1739,6 @@ class WallpanelView extends HuiView {
 			}
 		});
 
-		[this.imageOne, this.imageTwo].forEach(function(img) {
-			img.addEventListener('load', function() {
-				img.setAttribute('data-loading', false);
-				if (config.image_background == "image") {
-					let cont = wp.imageOneBackground;
-					if (img == wp.imageTwo) {
-						cont = wp.imageTwoBackground;
-					}
-					cont.style.backgroundImage = "url(" + img.src + ")";
-				}
-				if (config.show_image_info && /.*\.jpe?g$/i.test(img.imageUrl)) {
-					wp.fetchEXIFInfo(img);
-				}
-			});
-			img.addEventListener('error', function() {
-				img.setAttribute('data-loading', false);
-				logger.error(`Failed to load image: ${img.src}`);
-				if (img.imageUrl) {
-					const idx = wp.imageList.indexOf(img.imageUrl);
-					if (idx > -1) {
-						logger.debug(`Removing image from list: ${img.imageUrl}`);
-						wp.imageList.splice(idx, 1);
-					}
-					wp.updateImage(img);
-				}
-				else {
-					wp.displayMessage(`Failed to load image: ${img.src}`, 5000)
-				}
-			})
-		});
-
 		this.reconfigure();
 		// Correct possibly incorrect entity state
 		this.setScreensaverEntityState();
@@ -1746,6 +1764,8 @@ class WallpanelView extends HuiView {
 			function preloadCallback(wp) {
 				if (switchImages) {
 					wp.switchActiveImage();
+				} else {
+					wp.startPlayingActiveMedia();
 				}
 			}
 			if (["immich-api", "unsplash-api", "media-source"].includes(imageSourceType())) {
@@ -2237,7 +2257,97 @@ class WallpanelView extends HuiView {
 		return url;
 	}
 
-	updateImageFromUrl(img, url, headers = null) {
+	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null) {
+		const loadMediaWithElement = async (elem, url) => {
+			const loadEventName = { IMG: "load", VIDEO: "loadeddata" }[elem.tagName];
+			if (!loadEventName) {
+				throw new Error(`Unsupported element tag "${elem.tagName}"`);
+			}
+			return new Promise((resolve, reject) => {
+				const cleanup = () => {
+					elem.onerror = null;
+					elem.removeEventListener(loadEventName, onLoad);
+				};
+
+				const onLoad = () => {
+					cleanup();
+					resolve();
+				};
+
+				const onError = () => {
+					cleanup();
+					reject(new Error(`Failed to load ${elem.tagName} "${url}", ${elem.error?.message | "unknown"}`));
+				};
+
+				elem.addEventListener(loadEventName, onLoad);
+				elem.onerror = onError;
+				elem.src = url;
+			});
+		};
+
+		const createFallbackElement = (currentElem) => {
+			const fallbackTag = currentElem.tagName === "IMG" ? "VIDEO" : "IMG";
+			const fallbackElem = document.createElement(fallbackTag);
+
+			// Clone all attributes except 'src', it will be set later.
+			[...currentElem.attributes]
+				.filter((attr) => attr.name !== "src")
+				.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
+
+			if (fallbackTag === "VIDEO") {
+				Object.assign(fallbackElem, { preload: "auto", muted: true });
+			}
+			return fallbackElem;
+		};
+
+		const replaceElementWith = (currentElem, newElem) => {
+			if (currentElem === this.imageOne) this.imageOne = newElem;
+			if (currentElem === this.imageTwo) this.imageTwo = newElem;
+			currentElem.replaceWith(newElem);
+		};
+
+		const handleFallback = async (currentElem, url, originalError = null) => {
+			let fallbackSuccessful = false;
+			const fallbackElem = createFallbackElement(currentElem);
+			try {
+				await loadMediaWithElement(fallbackElem, url);
+				replaceElementWith(currentElem, fallbackElem);
+				fallbackSuccessful = true;
+			} catch (e) {
+				this.handleMediaError(currentElem, originalError || e);
+			}
+			if (fallbackSuccessful) {
+				this.handleMediaLoaded(fallbackElem);
+			}
+		};
+
+		const loadOrFallback = async (currentElem, url, withFallback) => {
+			let loadSuccessful = false;
+			try {
+				await loadMediaWithElement(currentElem, url);
+				loadSuccessful = true;
+			} catch (e) {
+				if (withFallback) {
+					await handleFallback(currentElem, url, e);
+				} else {
+					this.handleMediaError(currentElem, e);
+				}
+			}
+			if (loadSuccessful) {
+				this.handleMediaLoaded(currentElem);
+			}
+		};
+
+		if (!mediaType) {
+			await loadOrFallback(curElem, sourceUrl, true);
+		} else if (mediaType === curElem.tagName) {
+			await loadOrFallback(curElem, sourceUrl, false);
+		} else {
+			await handleFallback(curElem, sourceUrl);
+		}
+	}
+
+	updateImageFromUrl(img, url, mediaType = null, headers = null) {
 		const realUrl = this.fillPlaceholders(url);
 		if (realUrl != url && imageInfoCache[url]) {
 			imageInfoCache[realUrl] = imageInfoCache[url];
@@ -2247,15 +2357,17 @@ class WallpanelView extends HuiView {
 		if (["media-entity", "immich-api"].includes(imageSourceType())) {
 			this.updateImageUrlWithHttpFetch(img, realUrl, headers);
 		} else {
-			img.src = realUrl;
+			this.loadMediaFromUrl(img, realUrl, mediaType);
 		}
 	}
 
 	updateImageUrlWithHttpFetch(img, url, headers) {
 		let http = new XMLHttpRequest();
+		const wp = this;
 		http.onload = function() {
 			if (this.status == 200 || this.status === 0) {
-				img.src = "data:image/jpeg;base64," + arrayBufferToBase64(http.response);
+				wp.loadMediaFromUrl(
+					img, "data:image/jpeg;base64," + arrayBufferToBase64(http.response), "IMG");
 			}
 			http = null;
 		};
@@ -2300,7 +2412,7 @@ class WallpanelView extends HuiView {
 					src = `${document.location.origin}${src}`;
 				}
 				logger.debug(`Setting image src: ${src}`);
-				img.src = src;
+				this.loadMediaFromUrl(img, src, "IMG");
 			},
 			error => {
 				logger.error(`media_source/resolve_media error for ${imageUrl}:`, error);
@@ -2313,7 +2425,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		this.updateImageIndex();
-		this.updateImageFromUrl(img, this.imageList[this.imageIndex]);
+		this.updateImageFromUrl(img, this.imageList[this.imageIndex], "IMG");
 	}
 
 	updateImageFromImmichAPI(img) {
@@ -2321,7 +2433,7 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		this.updateImageIndex();
-		this.updateImageFromUrl(img, this.imageList[this.imageIndex], {"x-api-key": config.immich_api_key});
+		this.updateImageFromUrl(img, this.imageList[this.imageIndex], "IMG", {"x-api-key": config.immich_api_key});
 	}
 
 	updateImageFromMediaEntity(img) {
@@ -2333,7 +2445,7 @@ class WallpanelView extends HuiView {
 		let entityPicture = entity.attributes.entity_picture;
 		let querySuffix = entityPicture.indexOf('?') > 0 ? '&' : '?';
 		querySuffix += "width=${width}&height=${height}";
-		this.updateImageFromUrl(img, entityPicture + querySuffix);
+		this.updateImageFromUrl(img, entityPicture + querySuffix, "IMG");
 	}
 
 	updateImage(img, callback = null) {
@@ -2437,6 +2549,16 @@ class WallpanelView extends HuiView {
 		this.updateImage(next);
 	}
 
+	startPlayingActiveMedia() {
+		const activeElem = this.getActiveImageElement();
+		if (typeof activeElem.play !== "function") {
+			return; // Not playable element.
+		}
+		activeElem.play().catch((e) => {
+			logger.error(`Failed to play media "${activeElem.src}":`, e);
+		});
+	}
+
 	switchActiveImage(crossfadeMillis = null) {
 		if (this.afterFadeoutTimer) {
 			clearTimeout(this.afterFadeoutTimer);
@@ -2474,6 +2596,7 @@ class WallpanelView extends HuiView {
 			curActive.style.opacity = 0;
 		}
 
+		this.startPlayingActiveMedia();
 		this.restartProgressBarAnimation();
 		this.restartKenBurnsEffect();
 
@@ -2482,6 +2605,9 @@ class WallpanelView extends HuiView {
 		if (imageSourceType() !== "media-entity") {
 			let wp = this;
 			this.afterFadeoutTimer = setTimeout(function() {
+				if (typeof curImg.pause === "function") {
+					curImg.pause();
+				}
 				wp.updateImage(curImg);
 			}, crossfadeMillis);
 		}
