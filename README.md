@@ -107,7 +107,8 @@ You can set the following configuration parameters for every individual Home Ass
 | style                            | Additional CSS styles for wallpanel elements.                                                          | {}         |
 | badges                           | Badges to display in info box. Set to [] to show no badges at all. See below for details.              | []         |
 | cards                            | Cards to display in info box. Set to [] to show no cards at all. See below for details.                | See below  |
-| card_interaction                 | Allow interaction with the cards displayed in the info box?                                            | false      |
+| views                            | Dashboard views to display in info box. Set to [] to show no views at all. See below for details.      | []         |
+| card_interaction                 | Allow interaction with the elements displayed in the info box?                                         | false      |
 | profiles                         | Configuration profiles. See below for details.                                                         | {}         |
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
 | profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
@@ -403,13 +404,33 @@ image_info_template: >-
 The CSS class `wallpanel-screensaver-image-info` can be used to style the image info.
 See section "Styles".
 
-## Badges and cards
+## Info box content
 A so-called info box can be displayed above the images.
-You can add badges and cards to this box.
+You can add badges, cards and whole dashboard views to this box.
 
-You can use the same yaml config, as used in the Home Assistant Dashboard configuration (raw config).
+If you want to interact with the elements of the info box, as in the dashboard, you can set `card_interaction` to `true`.
 
-Example (and default) for cards:
+```yaml
+wallpanel:
+  card_interaction: true
+```
+
+### Badges
+For [Badges](https://www.home-assistant.io/dashboards/badges/) you can use the same yaml config,
+as used in the Home Assistant Dashboard configuration (raw config).
+
+Example for Badges:
+```yaml
+wallpanel:
+  badges:
+    - entity: person.somebody
+    - entity: sun.sun
+```
+
+### Cards
+For [Cards](https://www.home-assistant.io/dashboards/cards/) you can also use the same yaml config.
+
+Example (and default) for Cards:
 ```yaml
 wallpanel:
   cards:
@@ -419,19 +440,32 @@ wallpanel:
       forecast_type: daily
 ```
 
-If you want to interact with the cards, as in the dashboard, you can set `card_interaction` to `true`.
+### Views
+You can also display entire Dashboard Views in the info box.
+The [Views or Subviews](https://www.home-assistant.io/dashboards/views/) you want to use can be referenced by their `path` or `title`.
+
+For example, you can create a subview in your dashboard with the title `Wallpanel`.
+You can then reference the view in the wallpanel configuration:
+
+
 ```yaml
 wallpanel:
-  card_interaction: true
+  views:
+    - title: Wallpanel
 ```
 
-Example for badges:
+The width of the view can be adjusted using CSS.
+The following example uses 80% of the available width of the viewport:
+
 ```yaml
 wallpanel:
-  badges:
-    - entity: person.somebody
-    - entity: sun.sun
+  views:
+    - title: Wallpanel
+  style:
+    wallpanel-screensaver-info-box-views:
+      width: 80vw
 ```
+
 
 ## Info box animation
 The info box, which contains the cards and badges, can be animated and moved around the screen using CSS animations.
@@ -504,6 +538,7 @@ The most important element IDs are:
 - `wallpanel-screensaver-info-box`
 - `wallpanel-screensaver-info-box-content`
 - `wallpanel-screensaver-info-box-badges`
+- `wallpanel-screensaver-info-box-views`
 - `wallpanel-screensaver-image-background`
 - `wallpanel-screensaver-image-info`
 - `wallpanel-screensaver-image-overlay`
