@@ -2031,9 +2031,9 @@ class WallpanelView extends HuiView {
 		}
 	}
 
-	findImages(mediaContentId) {
+	findMedias(mediaContentId) {
 		const wp = this;
-		logger.debug(`findImages: ${mediaContentId}`);
+		logger.debug(`findMedias: ${mediaContentId}`);
 		let excludeRegExp = [];
 		if (config.image_excludes) {
 			for (let imageExclude of config.image_excludes) {
@@ -2056,7 +2056,7 @@ class WallpanelView extends HuiView {
 									return;
 								}
 							}
-							if (child.media_class == "image") {
+							if (["image", "video"].includes(child.media_class)) {
 								//logger.debug(child);
 								return child.media_content_id;
 							}
@@ -2064,7 +2064,7 @@ class WallpanelView extends HuiView {
 								if (wp.cancelUpdatingImageList) {
 									return;
 								}
-								return wp.findImages(child.media_content_id);
+								return wp.findMedias(child.media_content_id);
 							}
 						});
 						Promise.all(promises).then(results => {
@@ -2091,7 +2091,7 @@ class WallpanelView extends HuiView {
 		this.lastImageListUpdate = Date.now();
 		const mediaContentId = config.image_url;
 		const wp = this;
-		wp.findImages(mediaContentId).then(
+		wp.findMedias(mediaContentId).then(
 			result => {
 				wp.updatingImageList = false;
 				if (!wp.cancelUpdatingImageList) {
@@ -2412,7 +2412,10 @@ class WallpanelView extends HuiView {
 					src = `${document.location.origin}${src}`;
 				}
 				logger.debug(`Setting image src: ${src}`);
-				this.loadMediaFromUrl(img, src, "IMG");
+
+				const matchedType = result.mime_type?.match(/^(image|video)\//);
+				const mediaType = {"image": "IMG", "video": "VIDEO"}[matchedType?.[1]] || null;
+				this.loadMediaFromUrl(img, src, mediaType);
 			},
 			error => {
 				logger.error(`media_source/resolve_media error for ${img.imageUrl}:`, error);
