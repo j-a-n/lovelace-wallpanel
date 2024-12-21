@@ -466,6 +466,17 @@ wallpanel:
       width: 80vw
 ```
 
+You can also make the content bigger if required.
+For example, enlarge it by 20 %:
+```
+wallpanel:
+  views:
+    - title: Wallpanel
+  style:
+    wallpanel-screensaver-info-box-views:
+      transform: scale(1.2)
+      transform-origin: top center
+```
 
 ## Info box animation
 The info box, which contains the cards and badges, can be animated and moved around the screen using CSS animations.
