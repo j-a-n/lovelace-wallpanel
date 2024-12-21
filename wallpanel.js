@@ -207,7 +207,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.32.0";
+const version = "4.32.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -2769,7 +2769,10 @@ class WallpanelView extends HuiView {
 			if (this.getMoreInfoDialog()) {
 				return;
 			}
-			let elements = this.__cards;
+			let elements = [];
+			elements = elements.concat(this.__cards);
+			elements = elements.concat(this.__badges);
+			elements = elements.concat(this.__views);
 			elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-info-box-content"));
 			elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-fixed-info-box-content"));
 			for (let i=0; i<elements.length; i++) {
@@ -4087,3 +4090,4 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
+
