@@ -6,8 +6,8 @@
 ![GitHub All Releases](https://img.shields.io/github/downloads/j-a-n/lovelace-wallpanel/total.svg?color=green&style=for-the-badge)
 
 🖼️ Wall panel mode for your Home Assistant Dashboards.
-A configurable extension that features a full-screen mode, a photo slideshow screensaver, screen wake lock and the ability to hide the side and top bar(s).
-Show dashboard cards and badges of your choice on top of the images.
+A configurable extension that features a full-screen mode, a photo slideshow screensaver, screen wake lock, motion detection and the ability to hide the side and top bar(s).
+Show dashboard views, cards and badges of your choice on top of the images.
 
 ![Screenshot of screensaver](./doc/screensaver-screenshot.png)
 
