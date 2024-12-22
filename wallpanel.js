@@ -2879,11 +2879,14 @@ function reconfigure() {
 
 
 function locationChanged() {
-	if (wallpanel && wallpanel.screensaverRunning && wallpanel.screensaverRunning()) {
-		if (!config.stop_screensaver_on_location_change || skipDisableScreensaverOnLocationChanged) {
-			return;
-		}
-		wallpanel.stopScreensaver();
+	if (
+		wallpanel &&
+		wallpanel.screensaverRunning &&
+		wallpanel.screensaverRunning() &&
+		config.stop_screensaver_on_location_change &&
+		!skipDisableScreensaverOnLocationChanged
+	) {
+		wallpanel.stopScreensaver();	
 	}
 
 	let panel = null;
@@ -4090,4 +4093,5 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
+
 
