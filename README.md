@@ -546,6 +546,7 @@ It is also possible to start and stop the screensaver by changing this input_boo
 
 ## image_url_entity
 You can create an input_text helper in HA and set `image_url_entity` to this entity id.
+Make sure that the maximum length is not too short so that the image URL fits in.
 When the screensaver changes the active image, the URL of the new image is stored in this entity.
 
 
