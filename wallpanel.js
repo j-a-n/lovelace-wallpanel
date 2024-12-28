@@ -207,7 +207,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.32.1";
+const version = "4.32.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1699,6 +1699,8 @@ class WallpanelView extends HuiView {
 		});
 
 		this.reconfigure();
+		// Correct possibly incorrect entity state
+		this.setScreensaverEntityState();
 	}
 
 	reconfigure(oldConfig) {
