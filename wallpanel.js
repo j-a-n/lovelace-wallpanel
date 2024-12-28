@@ -207,7 +207,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.32.2";
+const version = "4.33.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -241,7 +241,8 @@ const defaultConfig = {
 	disable_screensaver_on_browser_mod_popup_func: '',
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
-	immich_api_key: "",
+	image_url_entity: '',
+	immich_api_key: '',
 	immich_album_names: [],
 	immich_resolution: "preview",
 	image_fit: 'cover', // cover / contain / fill
@@ -898,8 +899,10 @@ class WallpanelView extends HuiView {
 		if (!screensaver_entity || !this.__hass.states[screensaver_entity]) return;
 		if (this.screensaverRunning() && this.__hass.states[screensaver_entity].state == 'on') return;
 		if (!this.screensaverRunning() && this.__hass.states[screensaver_entity].state == 'off') return;
-
-		this.__hass.callService('input_boolean', this.screensaverRunning() ? "turn_on" : "turn_off", {
+		
+		const service = this.screensaverRunning() ? "turn_on" : "turn_off";
+		logger.debug("Updating screensaver_entity", screensaver_entity, service);
+		this.__hass.callService('input_boolean', service, {
 			entity_id: screensaver_entity
 		}).then(
 			result => {
@@ -907,6 +910,26 @@ class WallpanelView extends HuiView {
 			},
 			error => {
 				logger.error("Failed to set screensaver entity state:", error);
+			}
+		);
+	}
+
+	setImageURLEntityState() {
+		const image_url_entity = config.image_url_entity;
+		if (!image_url_entity || !this.__hass.states[image_url_entity]) return;
+		const activeImage = this.getActiveImageElement();
+		if (!activeImage || !activeImage.imageUrl) return;
+	
+		logger.debug("Updating image_url_entity", image_url_entity, activeImage.imageUrl);
+		this.__hass.callService('input_text', "set_value", {
+			entity_id: image_url_entity,
+			value: activeImage.imageUrl
+		}).then(
+			result => {
+				logger.debug(result);
+			},
+			error => {
+				logger.error("Failed to set image url entity state:", error);
 			}
 		);
 	}
@@ -2440,7 +2463,8 @@ class WallpanelView extends HuiView {
 			newImg = this.imageOne;
 		}
 		logger.debug(`Switching active image to '${newActive.id}'`);
-
+		
+		this.setImageURLEntityState();
 		this.setImageDataInfo(newImg);
 
 		if (newActive.style.opacity != 1) {
@@ -2503,6 +2527,7 @@ class WallpanelView extends HuiView {
 
 		this.updateStyle();
 		this.setupScreensaver();
+		this.setImageURLEntityState();
 		this.restartProgressBarAnimation();
 		this.restartKenBurnsEffect();
 
