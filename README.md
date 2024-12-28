@@ -80,6 +80,7 @@ You can set the following configuration parameters for every individual Home Ass
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
 | image_url                        | Fetch screensaver images from this URL. See below for details.                                         | See below |
+| image_url_entity                 | An entity of type 'input_text' in which the URL of the current screen saver image is stored. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |        |
 | immich_api_key                   | API key that is used for authentication at the immich API.                                             |           |
 | immich_album_names               | Only show images from these immich albums.                                                             | []        |
 | immich_resolution                | The resolution to use for loading images from immich (possible values are: preview / original).        | preview   |
@@ -536,10 +537,17 @@ The Screen Wake Lock API is usually only available when provided over HTTPS.
 If the screen lock API is not available, a short invisible video is played in a loop instead to keep the screen on.
 Due to browser limitations, you must interact with the screen once to enable the screen lock after the Dashboard page loads.
 
+
 ## screensaver_entity
 You can create an input_boolean helper in HA and set `screensaver_entity` to this entity id.
 When the screensaver starts this input_boolean will be set to `on` and to `off` when the screensaver stops.
 It is also possible to start and stop the screensaver by changing this input_boolean.
+
+
+## image_url_entity
+You can create an input_text helper in HA and set `image_url_entity` to this entity id.
+When the screensaver changes the active image, the URL of the new image is stored in this entity.
+
 
 ## Styles
 You can customize the style of every wallpanel element.
