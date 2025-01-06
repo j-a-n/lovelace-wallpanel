@@ -265,7 +265,7 @@ Instead of using `media-source://media_source/` as `image_url` you can just use 
 
 If you are using the [Synology DSM](https://www.home-assistant.io/integrations/synology_dsm/) integration, and want to use an Photo album from there you can use:
 
-`source://synology_dsm/<unique_id>/<album_id>`
+`media-source://synology_dsm/<unique_id>/<album_id>`
 
 `<unique_id>` is the Home Assistant ID for the NAS (usually the serial number of the NAS).
 
