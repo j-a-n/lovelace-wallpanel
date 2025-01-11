@@ -2148,8 +2148,9 @@ class WallpanelView extends HuiView {
 		const api_url = config.image_url.replace(/^immich\+/, "");
 		const http = new XMLHttpRequest();
 		const shared = "?shared=false";
-		if(config.immich_shared && config.immich_shared == "true")
+		if (config.immich_shared) {
 			shared = "?shared=true";
+		}
 		const resolution = config.immich_resolution == "original" ? "original" : "thumbnail?size=preview"
 		http.responseType = "json";
 		http.open("GET", `${api_url}/albums` + shared, true);
