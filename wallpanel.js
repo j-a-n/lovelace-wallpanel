@@ -245,7 +245,7 @@ const defaultConfig = {
 	immich_api_key: '',
 	immich_album_names: [],
 	immich_resolution: "preview",
-	immich_shared: "false",
+	immich_shared: false,
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
