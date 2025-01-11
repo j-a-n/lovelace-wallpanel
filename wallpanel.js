@@ -2162,7 +2162,7 @@ class WallpanelView extends HuiView {
 				logger.debug(`Got immich API response`, allAlbums);
 				allAlbums.forEach(album => {
 					logger.debug(album);
-					if (config.immich_album_names && ! config.immich_album_names.includes(album.albumName)) {
+					if (config.immich_album_names.length && ! config.immich_album_names.includes(album.albumName)) {
 						logger.debug("Skipping album: ", album.albumName);
 					}
 					else {
