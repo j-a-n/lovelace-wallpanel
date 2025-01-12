@@ -2290,7 +2290,11 @@ class WallpanelView extends HuiView {
 			const fallbackTag = currentElem.tagName === "IMG" ? "VIDEO" : "IMG";
 			const fallbackElem = document.createElement(fallbackTag);
 
-			// Clone all attributes except 'src', it will be set later.
+			// Clone all custom and HTML attributes except 'src', it will be set later.
+			Object.entries(currentElem)
+				.filter(([key]) => !(key in HTMLElement.prototype))
+				.forEach(([key, value]) => fallbackElem[key] = value);
+
 			[...currentElem.attributes]
 				.filter((attr) => attr.name !== "src")
 				.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
