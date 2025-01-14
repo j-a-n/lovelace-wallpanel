@@ -207,7 +207,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.33.0";
+const version = "4.34.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -2565,7 +2565,7 @@ class WallpanelView extends HuiView {
 					navigate(config.screensaver_stop_navigation_path);
 					setTimeout(() => {
 						skipDisableScreensaverOnLocationChanged = false;
-					}, 250);
+					}, 5000);
 				}
 				if (config.screensaver_stop_close_browser_mod_popup) {
 					let bmp = getActiveBrowserModPopup();
@@ -2911,10 +2911,14 @@ function locationChanged() {
 		wallpanel &&
 		wallpanel.screensaverRunning &&
 		wallpanel.screensaverRunning() &&
-		config.stop_screensaver_on_location_change &&
-		!skipDisableScreensaverOnLocationChanged
+		config.stop_screensaver_on_location_change
 	) {
-		wallpanel.stopScreensaver();	
+		if (skipDisableScreensaverOnLocationChanged) {
+			skipDisableScreensaverOnLocationChanged = false;
+		}
+		else {
+			wallpanel.stopScreensaver();
+		}
 	}
 
 	let panel = null;
