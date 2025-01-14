@@ -244,8 +244,8 @@ const defaultConfig = {
 	image_url_entity: '',
 	immich_api_key: '',
 	immich_album_names: [],
+	immich_shared_albums: true,
 	immich_resolution: "preview",
-	immich_shared: false,
 	image_fit: 'cover', // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: 'sorted', // sorted / random
@@ -2147,13 +2147,9 @@ class WallpanelView extends HuiView {
 		let data = {};
 		const api_url = config.image_url.replace(/^immich\+/, "");
 		const http = new XMLHttpRequest();
-		let shared = "?shared=false";
-		if (config.immich_shared) {
-			shared = "?shared=true";
-		}
 		const resolution = config.immich_resolution == "original" ? "original" : "thumbnail?size=preview"
 		http.responseType = "json";
-		http.open("GET", `${api_url}/albums` + shared, true);
+		http.open("GET", `${api_url}/albums?shared=${config.immich_shared_albums}`, true);
 		http.setRequestHeader("x-api-key", config.immich_api_key);
 		http.onload = function() {
 			let album_ids = [];
@@ -4125,5 +4121,3 @@ EXIF.pretty = function(img) {
 EXIF.readFromBinaryFile = function(file) {
 	return findEXIFinJPEG(file);
 }
-
-
