@@ -2578,7 +2578,7 @@ class WallpanelView extends HuiView {
 	}
 
 	screensaverRunning() {
-		return this.screensaverStartedAt && this.screensaverStartedAt > 0;
+		return Boolean(this.screensaverStartedAt) && this.screensaverStartedAt > 0;
 	}
 
 	stopScreensaver(fadeOutTime = 0.0) {
@@ -2915,12 +2915,15 @@ function locationChanged() {
 	) {
 		if (skipDisableScreensaverOnLocationChanged) {
 			skipDisableScreensaverOnLocationChanged = false;
+			if (wallpanel.screensaverStopNavigationPathTimeout) {
+				clearTimeout(wallpanel.screensaverStopNavigationPathTimeout);
+			}
 		}
 		else {
 			wallpanel.stopScreensaver();
 		}
 	}
-
+	
 	let panel = null;
 	let tab = null;
 	let path = window.location.pathname.split("/");
