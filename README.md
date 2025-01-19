@@ -809,7 +809,7 @@ Therefore, the username `Jane Doe` will activate the user profile `user.jane_doe
 Normally, it is not possible to set different configuration for different devices. That gap can be closed by integrating WallPanel with [Browser Mod](https://github.com/thomasloven/hass-browser_mod).
 
 Once Browser Mod is correctly installed and configured, Browser ID can be used to define per-device settings.
-The placeholders `${browser_id}` kann be used everywhere in the configuration and will be replaced by the Browser ID.
+The placeholders `${browser_id}` can be used everywhere in the configuration and will be replaced by the Browser ID.
 Minus signs in the browser ID are replaced by underscores.
 
 A separate profile can be defined for each device:
