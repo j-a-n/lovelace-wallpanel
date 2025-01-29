@@ -332,18 +332,7 @@ const elHass = document.querySelector("body > home-assistant");
 const LitElement = Object.getPrototypeOf(customElements.get("hui-masonry-view"));
 const HuiView = customElements.get("hui-view");
 let elHaMain = null;
-
 let browserId = null;
-if (window.browser_mod) {
-	if (window.browser_mod.entity_id) {
-		// V1
-		browserId = window.browser_mod.entity_id;
-	}
-	else if (window.browser_mod.browserID) {
-		// V2
-		browserId = window.browser_mod.browserID.replace('-', '_');
-	}
-}
 
 function getActiveBrowserModPopup() {
 	if (!browserId) {
@@ -3131,12 +3120,33 @@ function locationChanged() {
 	}
 }
 
-function startup() {
+function startup(attempt = 1) {
 	elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 	if (!elHaMain) {
-		setTimeout(startup, 1000);
+		if (attempt > 10) {
+			throw new Error(`Wallpanel startup failed after ${attempt} attempts, element hass not found.`);
+		}
+		setTimeout(startup, 1000, [attempt + 1]);
 		return;
 	}
+	if (!window.browser_mod) {
+		if (attempt < 5) {
+			setTimeout(startup, 1000, [attempt + 1]);
+			return;
+		}
+	}
+
+	if (window.browser_mod) {
+		if (window.browser_mod.entity_id) {
+			// V1
+			browserId = window.browser_mod.entity_id;
+		}
+		else if (window.browser_mod.browserID) {
+			// V2
+			browserId = window.browser_mod.browserID.replace('-', '_');
+		}
+	}
+
 	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 	updateConfig();
 	customElements.define("wallpanel-view", WallpanelView);
