@@ -122,9 +122,7 @@ class CameraMotionDetection {
 
 		this.canvasElement = document.createElement("canvas");
 		this.canvasElement.setAttribute("id", "wallpanelMotionDetectionCanvas");
-		this.canvasElement.style.display = 'none';
-		document.body.appendChild(this.canvasElement);
-
+		
 		this.context = this.canvasElement.getContext('2d', { willReadFrequently: true });
 	}
 
@@ -207,7 +205,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.34.0";
+const version = "4.35.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -1544,38 +1542,54 @@ class WallpanelView extends HuiView {
 		}
 	}
 
+	loadBackgroundImage(medialElem) {
+		const isVideo = medialElem.tagName === 'VIDEO';
+		let srcImageUrl = medialElem.src;
+		if (isVideo) {
+			// Capture the current frame of the video as a background image
+			const canvas = document.createElement('canvas');
+			canvas.width = medialElem.videoWidth;
+			canvas.height = medialElem.videoHeight;
+			
+			const ctx = canvas.getContext('2d');
+			ctx.drawImage(medialElem, 0, 0, canvas.width, canvas.height);
+			try {
+				srcImageUrl = canvas.toDataURL('image/png');
+			} catch (err) {
+				srcImageUrl = null;
+				logger.error("Error extracting canvas image:", err);
+			}
+		}
+		let cont = this.imageOneBackground;
+		if (medialElem == this.imageTwo) {
+			cont = this.imageTwoBackground;
+		}
+		cont.style.backgroundImage = srcImageUrl ? `url(${srcImageUrl})` : '';
+	}
+
 	handleMediaLoaded(medialElem) {
 		medialElem.setAttribute('data-loading', false);
 		const isVideo = medialElem.tagName === 'VIDEO';
-
+		const wp = this;
 		if (config.image_background === "image") {
-			let srcImageUrl = medialElem.src;
 			if (isVideo) {
-				// Capture the current frame of the video as a background image
-				const canvas = document.createElement('canvas');
-				canvas.width = medialElem.videoWidth;
-				canvas.height = medialElem.videoHeight;
-
-				const ctx = canvas.getContext('2d');
-				ctx.drawImage(medialElem, 0, 0, canvas.width, canvas.height);
-				try {
-					srcImageUrl = canvas.toDataURL('image/png');
-				} catch (err) {
-					srcImageUrl = null;
-					logger.error("Error extracting canvas image:", err);
+				if (medialElem.readyState >= medialElem.HAVE_CURRENT_DATA) {
+					wp.loadBackgroundImage(medialElem);
+				}
+				else {
+					medialElem.addEventListener('canplay', function() {
+						wp.loadBackgroundImage(medialElem);
+					});
 				}
 			}
-			let cont = this.imageOneBackground;
-			if (medialElem == this.imageTwo) {
-				cont = this.imageTwoBackground;
+			else {
+				wp.loadBackgroundImage(medialElem);
 			}
-			cont.style.backgroundImage = srcImageUrl ? `url(${srcImageUrl})` : '';
 		}
 		if (!isVideo && config.show_image_info && /.*\.jpe?g$/i.test(medialElem.imageUrl)) {
-			this.fetchEXIFInfo(medialElem);
+			wp.fetchEXIFInfo(medialElem);
 		}
 	}
-
 
 	connectedCallback() {
 		this.style.zIndex = config.z_index;
@@ -2249,32 +2263,15 @@ class WallpanelView extends HuiView {
 		return url;
 	}
 
-	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null) {
+	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = {}) {
 		const loadMediaWithElement = async (elem, url) => {
-			const loadEventName = { IMG: "load", VIDEO: "loadeddata" }[elem.tagName];
-			if (!loadEventName) {
-				throw new Error(`Unsupported element tag "${elem.tagName}"`);
+			const response = await fetch(url, { headers: headers });
+			if (!response.ok) {
+				logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
+				throw new Error(`Failed to load ${elem.tagName} "${url}": ${response.status}`);
 			}
-			return new Promise((resolve, reject) => {
-				const cleanup = () => {
-					elem.onerror = null;
-					elem.removeEventListener(loadEventName, onLoad);
-				};
-
-				const onLoad = () => {
-					cleanup();
-					resolve();
-				};
-
-				const onError = () => {
-					cleanup();
-					reject(new Error(`Failed to load ${elem.tagName} "${url}", ${elem.error?.message | "unknown"}`));
-				};
-
-				elem.addEventListener(loadEventName, onLoad);
-				elem.onerror = onError;
-				elem.src = url;
-			});
+			const blob = await response.blob();
+			elem.src = window.URL.createObjectURL(blob);
 		};
 
 		const createFallbackElement = (currentElem) => {
@@ -2350,30 +2347,7 @@ class WallpanelView extends HuiView {
 		}
 		img.imageUrl = realUrl;
 		logger.debug(`Updating image '${img.id}' from '${realUrl}'`);
-		if (["media-entity", "immich-api"].includes(imageSourceType())) {
-			this.updateImageUrlWithHttpFetch(img, realUrl, mediaType, headers);
-		} else {
-			this.loadMediaFromUrl(img, realUrl, mediaType);
-		}
-	}
-
-	updateImageUrlWithHttpFetch(img, url, mediaType, headers) {
-		let http = new XMLHttpRequest();
-		const wp = this;
-		http.onload = function() {
-			if (this.status == 200 || this.status === 0) {
-				wp.loadMediaFromUrl(img, window.URL.createObjectURL(http.response), mediaType);
-			}
-			http = null;
-		};
-		http.open("GET", url, true);
-		if (headers) {
-			for (const header in headers) {
-				http.setRequestHeader(header, headers[header]);
-			}
-		}
-		http.responseType = "blob";
-		http.send(null);
+		this.loadMediaFromUrl(img, realUrl, mediaType, headers);
 	}
 
 	updateImageIndex() {
