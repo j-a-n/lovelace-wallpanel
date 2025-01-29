@@ -1,5 +1,5 @@
 /**
- * (C) 2020-2024 by Jan Schneider (oss@janschneider.net)
+ * (C) 2020-2025 by Jan Schneider (oss@janschneider.net)
  * Released under the GNU General Public License v3.0
  */
 
@@ -205,7 +205,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.35.0";
+const version = "4.35.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -326,11 +326,15 @@ let imageInfoCacheKeys = [];
 const imageInfoCacheMaxSize = 1000;
 let configEntityStates = {};
 
-const elHass = document.querySelector("body > home-assistant");
 const LitElement = Object.getPrototypeOf(customElements.get("hui-masonry-view"));
 const HuiView = customElements.get("hui-view");
+let elHass = null;
 let elHaMain = null;
 let browserId = null;
+let userId = null;
+let userName = null;
+let userDisplayname = null;
+
 
 function getActiveBrowserModPopup() {
 	if (!browserId) {
@@ -422,13 +426,15 @@ const logger = {
 		logger.addMessage("info", arguments);
 	},
 	warn: function (text) {
-		if (["debug", "info", "warn"].includes(config.log_level_console)) {
+		const logLevel = config.log_level_console || "warn";
+		if (["debug", "info", "warn"].includes(logLevel)) {
 			console.warn.apply(this, arguments);
 		}
 		logger.addMessage("warn", arguments);
 	},
 	error: function (text) {
-		if (["debug", "info", "warn", "error"].includes(config.log_level_console)) {
+		const logLevel = config.log_level_console || "warn";
+		if (["debug", "info", "warn", "error"].includes(logLevel)) {
 			console.error.apply(this, arguments);
 		}
 		logger.addMessage("error", arguments);
@@ -478,8 +484,7 @@ function mergeConfig(target, ...sources) {
 
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
-	const user = elHass.__hass.user.name ? elHass.__hass.user.name.toLowerCase().replace(/\s/g, '_') : null;
-
+	
 	let oldConfig = config;
 	config = {};
 	mergeConfig(config, defaultConfig);
@@ -511,10 +516,20 @@ function updateConfig() {
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from device: ${profile}`);
 	}
-	if (config.profiles && user && config.profiles[`user.${user}`]) {
-		let profile = `user.${user}`;
-		config = mergeConfig(config, config.profiles[profile]);
-		logger.debug(`Profile set from user: ${profile}`);
+	if (config.profiles) {
+		let userIds = [userId, userName, userDisplayname];
+		for (let i=0; i<userIds.length; i++) {
+			let user = userIds[i];
+			if (user) {
+				user = user.toLowerCase().replace(/\s/g, '_');
+				if (config.profiles[`user.${user}`]) {
+					let profile = `user.${user}`;
+					config = mergeConfig(config, config.profiles[profile]);
+					logger.debug(`Profile set from user: ${profile}`);
+					break;
+				}
+			}
+		}
 	}
 	config = mergeConfig(config, paramConfig);
 	const profile_entity = config.profile_entity;
@@ -3112,10 +3127,13 @@ function locationChanged() {
 }
 
 function startup(attempt = 1) {
-	elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
-	if (!elHaMain) {
+	elHass = document.querySelector("body > home-assistant");
+	if (elHass) {
+		elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
+	}
+	if (!elHass || !elHaMain) {
 		if (attempt > 10) {
-			throw new Error(`Wallpanel startup failed after ${attempt} attempts, element hass not found.`);
+			throw new Error(`Wallpanel startup failed after ${attempt} attempts, element home-assistant / home-assistant-main not found.`);
 		}
 		setTimeout(startup, 1000, attempt + 1);
 		return;
@@ -3139,43 +3157,64 @@ function startup(attempt = 1) {
 	}
 
 	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
-	updateConfig();
-	customElements.define("wallpanel-view", WallpanelView);
-	wallpanel = document.createElement("wallpanel-view");
-	elHaMain.shadowRoot.appendChild(wallpanel);
-	window.addEventListener("location-changed", event => {
-		logger.debug("location-changed", event);
-		locationChanged();
-	});
-	elHass.__hass.connection.subscribeEvents(
-		function(event) {
-			logger.debug("lovelace_updated", event);
-			const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
-			if (dashboard == activePanel) {
-				elHass.__hass.connection.sendMessagePromise({
-					type: "lovelace/config",
-					url_path: event.data.url_path
-				})
-				.then((data) => {
-					dashboardConfig = {};
-					if (data.wallpanel) {
-						for (let key in data.wallpanel) {
-							if (key in defaultConfig) {
-								dashboardConfig[key] = data.wallpanel[key];
+	elHass.hass.callWS({
+		type: "config/auth/list"
+	}).then(
+		result => {
+			userId = elHass.__hass.user.id;
+			userDisplayname = elHass.__hass.user.name;
+			result.forEach(userInfo => {
+				if (userInfo.id == userId) {
+					userDisplayname = userInfo.name;
+					userName = userInfo.username;
+				}
+			});
+			if (!userName) {
+				logger.error(`User ${userId} / ${userDisplayname} not found in user list`, result);
+			}
+
+			updateConfig();
+			customElements.define("wallpanel-view", WallpanelView);
+			wallpanel = document.createElement("wallpanel-view");
+			elHaMain.shadowRoot.appendChild(wallpanel);
+			window.addEventListener("location-changed", event => {
+				logger.debug("location-changed", event);
+				locationChanged();
+			});
+			elHass.__hass.connection.subscribeEvents(
+				function(event) {
+					logger.debug("lovelace_updated", event);
+					const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
+					if (dashboard == activePanel) {
+						elHass.__hass.connection.sendMessagePromise({
+							type: "lovelace/config",
+							url_path: event.data.url_path
+						})
+						.then((data) => {
+							dashboardConfig = {};
+							if (data.wallpanel) {
+								for (let key in data.wallpanel) {
+									if (key in defaultConfig) {
+										dashboardConfig[key] = data.wallpanel[key];
+									}
+								}
 							}
-						}
+							reconfigure();
+						});
 					}
-					reconfigure();
-				});
+				},
+				"lovelace_updated"
+			);
+			try {
+				locationChanged();
+			} catch {
+				setTimeout(locationChanged, 1000);
 			}
 		},
-		"lovelace_updated"
+		error => {
+			logger.error("Failed to fetch user list", error);
+		}
 	);
-	try {
-		locationChanged();
-	} catch {
-		setTimeout(locationChanged, 1000);
-	}
 }
 
 setTimeout(startup, 25);

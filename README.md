@@ -801,10 +801,9 @@ C) Adding the line profile: (name) to the profile section (second last line in e
 this may be useful in rare situations only
 
 D) An existing user profile is automatically activated if it matches the logged-in user.
-The name of a user profile must start with the string `user.` followed by a user name.
-The username of the logged in user is converted to lowercase and spaces are replaced with `_`.
-Therefore, the username `Jane Doe` will activate the user profile `user.jane_doe`.
-
+The name of a user profile must start with the string `user.` followed by a user ID, username or user display name.
+The user display name of the logged in user is converted to lowercase and spaces are replaced with `_`.
+Therefore, the user display name `Jane Doe` will be converted to `jane_doe`.
 
 ## Integration with browser_mod
 Normally, it is not possible to set different configuration for different devices. That gap can be closed by integrating WallPanel with [Browser Mod](https://github.com/thomasloven/hass-browser_mod).
