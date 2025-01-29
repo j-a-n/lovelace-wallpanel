@@ -2168,7 +2168,6 @@ class WallpanelView extends HuiView {
 		let data = {};
 		const api_url = config.image_url.replace(/^immich\+/, "");
 		const http = new XMLHttpRequest();
-		const resolution = config.immich_resolution == "original" ? "original" : "thumbnail?size=preview"
 		http.responseType = "json";
 		http.open("GET", `${api_url}/albums?shared=${config.immich_shared_albums}`, true);
 		http.setRequestHeader("x-api-key", config.immich_api_key);
@@ -2200,9 +2199,11 @@ class WallpanelView extends HuiView {
 								logger.debug(`Got immich API response`, albumDetails);
 								albumDetails.assets.forEach(asset => {
 									logger.debug(asset);
-									if (asset.type == "IMAGE") {
+									if (["IMAGE", "VIDEO"].includes(asset.type)) {
+										const resolution = asset.type == "VIDEO" || config.immich_resolution == "original" ? "original" : "thumbnail?size=preview"
 										const url = `${api_url}/assets/${asset.id}/${resolution}`;
 										data[url] = asset.exifInfo;
+										data[url]["mediaType"] = asset.type;
 										data[url]["image"] = {
 											"filename": asset.originalFileName,
 											"folderName": albumDetails.albumName
@@ -2361,19 +2362,18 @@ class WallpanelView extends HuiView {
 		img.imageUrl = realUrl;
 		logger.debug(`Updating image '${img.id}' from '${realUrl}'`);
 		if (["media-entity", "immich-api"].includes(imageSourceType())) {
-			this.updateImageUrlWithHttpFetch(img, realUrl, headers);
+			this.updateImageUrlWithHttpFetch(img, realUrl, mediaType, headers);
 		} else {
 			this.loadMediaFromUrl(img, realUrl, mediaType);
 		}
 	}
 
-	updateImageUrlWithHttpFetch(img, url, headers) {
+	updateImageUrlWithHttpFetch(img, url, mediaType, headers) {
 		let http = new XMLHttpRequest();
 		const wp = this;
 		http.onload = function() {
 			if (this.status == 200 || this.status === 0) {
-				wp.loadMediaFromUrl(
-					img, "data:image/jpeg;base64," + arrayBufferToBase64(http.response), "IMG");
+				wp.loadMediaFromUrl(img, window.URL.createObjectURL(http.response), mediaType);
 			}
 			http = null;
 		};
@@ -2383,7 +2383,7 @@ class WallpanelView extends HuiView {
 				http.setRequestHeader(header, headers[header]);
 			}
 		}
-		http.responseType = "arraybuffer";
+		http.responseType = "blob";
 		http.send(null);
 	}
 
@@ -2442,7 +2442,10 @@ class WallpanelView extends HuiView {
 			return;
 		}
 		this.updateImageIndex();
-		this.updateImageFromUrl(img, this.imageList[this.imageIndex], "IMG", {"x-api-key": config.immich_api_key});
+		const url = this.imageList[this.imageIndex];
+		const imageInfo = imageInfoCache[url] || {};
+		const mediaType = imageInfo["mediaType"] == "VIDEO" ? "VIDEO" : "IMG";
+		this.updateImageFromUrl(img, url, mediaType, {"x-api-key": config.immich_api_key});
 	}
 
 	updateImageFromMediaEntity(img) {
