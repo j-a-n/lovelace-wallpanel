@@ -1273,17 +1273,25 @@ class WallpanelView extends HuiView {
 		this.moveInfoBox(x, y);
 	}
 
-	moveAroundCorners() {
-		this.lastCorner = (this.lastCorner + 1) % 4;
+	moveAroundCorners(correctPostion=false) {
+		let fadeDuration = null;
+		if (correctPostion) {
+			fadeDuration = 0;
+		} else {
+			this.lastCorner = (this.lastCorner + 1) % 4;
+		}
 		let computed = getComputedStyle(this.infoContainer);
 		let x = [2, 3].includes(this.lastCorner) ? this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) - parseInt(computed.paddingRight) - this.infoBox.offsetWidth : 0;
 		let y = [1, 2].includes(this.lastCorner) ? this.infoContainer.offsetHeight - parseInt(computed.paddingTop) - parseInt(computed.paddingBottom) - this.infoBox.offsetHeight : 0;
-		this.moveInfoBox(x, y);
+		this.moveInfoBox(x, y, fadeDuration);
 	}
 
-	moveInfoBox(x, y) {
+	moveInfoBox(x, y, fadeDuration = null) {
 		this.lastMove = Date.now();
-		if (config.info_move_fade_duration > 0) {
+		if (fadeDuration === null) {
+			fadeDuration = config.info_move_fade_duration;
+		}
+		if (fadeDuration > 0) {
 			if (this.infoBox.animate) {
 				let keyframes = [
 					{ opacity: 1 },
@@ -1292,7 +1300,7 @@ class WallpanelView extends HuiView {
 				];
 				this.infoBox.animate(
 					keyframes, {
-						duration: Math.round(config.info_move_fade_duration * 1000),
+						duration: Math.round(fadeDuration * 1000),
 						iterations: 1
 					}
 				);
@@ -1302,7 +1310,7 @@ class WallpanelView extends HuiView {
 			}
 		}
 		let wp = this;
-		let ms = Math.round(config.info_move_fade_duration * 500);
+		let ms = Math.round(fadeDuration * 500);
 		if (ms < 0) {
 			ms = 0;
 		}
@@ -1697,7 +1705,7 @@ class WallpanelView extends HuiView {
 		this.infoBoxContent = document.createElement('div');
 		this.infoBoxContent.id = 'wallpanel-screensaver-info-box-content';
 		this.infoBoxContent.style.display = 'grid';
-
+		
 		this.infoBox.appendChild(this.infoBoxContent);
 		this.infoBoxPosX.appendChild(this.infoBox);
 		this.infoBoxPosY.appendChild(this.infoBoxPosX);
@@ -1743,6 +1751,14 @@ class WallpanelView extends HuiView {
 				wp.moreInfoDialogToForeground();
 			}
 		});
+		const infoBoxResizeObserver = new ResizeObserver((entries) => {
+			if (config.info_move_pattern === 'corners') {
+				// Correct position
+				this.moveAroundCorners(true);
+			}
+		});
+		infoBoxResizeObserver.observe(this.infoBoxContent);
+		
 
 		this.reconfigure();
 		// Correct possibly incorrect entity state
