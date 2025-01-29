@@ -2679,6 +2679,7 @@ class WallpanelView extends HuiView {
 		this.updateStyle();
 		this.setupScreensaver();
 		this.setImageURLEntityState();
+		this.startPlayingActiveMedia();
 		this.restartProgressBarAnimation();
 		this.restartKenBurnsEffect();
 
