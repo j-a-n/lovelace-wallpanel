@@ -3117,12 +3117,12 @@ function startup(attempt = 1) {
 		if (attempt > 10) {
 			throw new Error(`Wallpanel startup failed after ${attempt} attempts, element hass not found.`);
 		}
-		setTimeout(startup, 1000, [attempt + 1]);
+		setTimeout(startup, 1000, attempt + 1);
 		return;
 	}
 	if (!window.browser_mod) {
 		if (attempt < 5) {
-			setTimeout(startup, 1000, [attempt + 1]);
+			setTimeout(startup, 1000, attempt + 1);
 			return;
 		}
 	}
