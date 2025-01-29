@@ -205,7 +205,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.35.1";
+const version = "4.35.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -3156,6 +3156,46 @@ function startup(attempt = 1) {
 		}
 	}
 
+	function continueStartup() {
+		updateConfig();
+		customElements.define("wallpanel-view", WallpanelView);
+		wallpanel = document.createElement("wallpanel-view");
+		elHaMain.shadowRoot.appendChild(wallpanel);
+		window.addEventListener("location-changed", event => {
+			logger.debug("location-changed", event);
+			locationChanged();
+		});
+		elHass.__hass.connection.subscribeEvents(
+			function(event) {
+				logger.debug("lovelace_updated", event);
+				const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
+				if (dashboard == activePanel) {
+					elHass.__hass.connection.sendMessagePromise({
+						type: "lovelace/config",
+						url_path: event.data.url_path
+					})
+					.then((data) => {
+						dashboardConfig = {};
+						if (data.wallpanel) {
+							for (let key in data.wallpanel) {
+								if (key in defaultConfig) {
+									dashboardConfig[key] = data.wallpanel[key];
+								}
+							}
+						}
+						reconfigure();
+					});
+				}
+			},
+			"lovelace_updated"
+		);
+		try {
+			locationChanged();
+		} catch {
+			setTimeout(locationChanged, 1000);
+		}
+	}
+
 	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 	elHass.hass.callWS({
 		type: "config/auth/list"
@@ -3172,47 +3212,11 @@ function startup(attempt = 1) {
 			if (!userName) {
 				logger.error(`User ${userId} / ${userDisplayname} not found in user list`, result);
 			}
-
-			updateConfig();
-			customElements.define("wallpanel-view", WallpanelView);
-			wallpanel = document.createElement("wallpanel-view");
-			elHaMain.shadowRoot.appendChild(wallpanel);
-			window.addEventListener("location-changed", event => {
-				logger.debug("location-changed", event);
-				locationChanged();
-			});
-			elHass.__hass.connection.subscribeEvents(
-				function(event) {
-					logger.debug("lovelace_updated", event);
-					const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
-					if (dashboard == activePanel) {
-						elHass.__hass.connection.sendMessagePromise({
-							type: "lovelace/config",
-							url_path: event.data.url_path
-						})
-						.then((data) => {
-							dashboardConfig = {};
-							if (data.wallpanel) {
-								for (let key in data.wallpanel) {
-									if (key in defaultConfig) {
-										dashboardConfig[key] = data.wallpanel[key];
-									}
-								}
-							}
-							reconfigure();
-						});
-					}
-				},
-				"lovelace_updated"
-			);
-			try {
-				locationChanged();
-			} catch {
-				setTimeout(locationChanged, 1000);
-			}
+			continueStartup();
 		},
 		error => {
 			logger.error("Failed to fetch user list", error);
+			continueStartup();
 		}
 	);
 }
