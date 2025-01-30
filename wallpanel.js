@@ -2294,15 +2294,43 @@ class WallpanelView extends HuiView {
 		return url;
 	}
 
-	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = null) {
+	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = null, useFetch = false) {
 		const loadMediaWithElement = async (elem, url) => {
-			const response = await fetch(url, { headers: headers || {} });
-			if (!response.ok) {
-				logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
-				throw new Error(`Failed to load ${elem.tagName} "${url}": ${response.status}`);
+			if (useFetch) {
+				const response = await fetch(url, { headers: headers || {} });
+				if (!response.ok) {
+					logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
+					throw new Error(`Failed to load ${elem.tagName} "${url}": ${response.status}`);
+				}
+				const blob = await response.blob();
+				elem.src = window.URL.createObjectURL(blob);
 			}
-			const blob = await response.blob();
-			elem.src = window.URL.createObjectURL(blob);
+			else {
+				const loadEventName = { IMG: "load", VIDEO: "loadeddata" }[elem.tagName];
+				if (!loadEventName) {
+					throw new Error(`Unsupported element tag "${elem.tagName}"`);
+				}
+				return new Promise((resolve, reject) => {
+					const cleanup = () => {
+						elem.onerror = null;
+						elem.removeEventListener(loadEventName, onLoad);
+					};
+
+					const onLoad = () => {
+						cleanup();
+						resolve();
+					};
+
+					const onError = () => {
+						cleanup();
+						reject(new Error(`Failed to load ${elem.tagName} "${url}", ${elem.error?.message | "unknown"}`));
+					};
+
+					elem.addEventListener(loadEventName, onLoad);
+					elem.onerror = onError;
+					elem.src = url;
+				});
+			}
 		};
 
 		const createFallbackElement = (currentElem) => {
@@ -2371,14 +2399,15 @@ class WallpanelView extends HuiView {
 		}
 	}
 
-	updateImageFromUrl(img, url, mediaType = null, headers = null) {
+	updateImageFromUrl(img, url, mediaType = null, headers = null, useFetch = false) {
 		const realUrl = this.fillPlaceholders(url);
 		if (realUrl != url && imageInfoCache[url]) {
 			imageInfoCache[realUrl] = imageInfoCache[url];
 		}
 		img.imageUrl = realUrl;
 		logger.debug(`Updating image '${img.id}' from '${realUrl}'`);
-		this.loadMediaFromUrl(img, realUrl, mediaType, headers);
+		
+		this.loadMediaFromUrl(img, realUrl, mediaType, headers, useFetch);
 	}
 
 	updateImageIndex() {
@@ -2439,7 +2468,7 @@ class WallpanelView extends HuiView {
 		const url = this.imageList[this.imageIndex];
 		const imageInfo = imageInfoCache[url] || {};
 		const mediaType = imageInfo["mediaType"] == "VIDEO" ? "VIDEO" : "IMG";
-		this.updateImageFromUrl(img, url, mediaType, {"x-api-key": config.immich_api_key});
+		this.updateImageFromUrl(img, url, mediaType, {"x-api-key": config.immich_api_key}, true);
 	}
 
 	updateImageFromMediaEntity(img) {
@@ -2451,7 +2480,7 @@ class WallpanelView extends HuiView {
 		let entityPicture = entity.attributes.entity_picture;
 		let querySuffix = entityPicture.indexOf('?') > 0 ? '&' : '?';
 		querySuffix += "width=${width}&height=${height}";
-		this.updateImageFromUrl(img, entityPicture + querySuffix, "IMG");
+		this.updateImageFromUrl(img, entityPicture + querySuffix, "IMG", null, true);
 	}
 
 	updateImage(img, callback = null) {
