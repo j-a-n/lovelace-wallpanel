@@ -205,7 +205,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.35.2";
+const version = "4.35.3";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -2294,9 +2294,9 @@ class WallpanelView extends HuiView {
 		return url;
 	}
 
-	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = {}) {
+	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = null) {
 		const loadMediaWithElement = async (elem, url) => {
-			const response = await fetch(url, { headers: headers });
+			const response = await fetch(url, { headers: headers || {} });
 			if (!response.ok) {
 				logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
 				throw new Error(`Failed to load ${elem.tagName} "${url}": ${response.status}`);
