@@ -3155,21 +3155,25 @@ function locationChanged() {
 	}
 }
 
-function startup(attempt = 1) {
+const startTime = performance.now();
+function startup() {
+	const startupSeconds = (performance.now() - startTime) / 1000;
+	
 	elHass = document.querySelector("body > home-assistant");
 	if (elHass) {
 		elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 	}
 	if (!elHass || !elHaMain) {
-		if (attempt > 10) {
+		if (startupSeconds >= 5.0) {
 			throw new Error(`Wallpanel startup failed after ${attempt} attempts, element home-assistant / home-assistant-main not found.`);
 		}
-		setTimeout(startup, 1000, attempt + 1);
+		setTimeout(startup, 100);
 		return;
 	}
+
 	if (!window.browser_mod) {
-		if (attempt < 5) {
-			setTimeout(startup, 1000, attempt + 1);
+		if (startupSeconds < 2.0) {
+			setTimeout(startup, 100);
 			return;
 		}
 	}
@@ -3250,7 +3254,7 @@ function startup(attempt = 1) {
 	);
 }
 
-setTimeout(startup, 25);
+setTimeout(startup, 0);
 
 
 /**
