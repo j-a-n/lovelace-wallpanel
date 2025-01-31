@@ -210,6 +210,7 @@ const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
 	debug: false,
+	wait_for_browser_mod_time: 0.25,
 	log_level_console: "info",
 	hide_toolbar: false,
 	keep_toolbar_space: false,
@@ -626,15 +627,18 @@ function getHaPanelLovelace() {
 }
 
 
-function getHaPanelLovelaceConfig() {
+function getHaPanelLovelaceConfig(keys = []) {
 	let pl = getHaPanelLovelace();
 	let conf = {};
 	if (pl && pl.lovelace && pl.lovelace.config && pl.lovelace.config.wallpanel) {
-		for (let key in pl.lovelace.config.wallpanel) {
+		if (keys.length === 0) {
+			keys = Object.keys(pl.lovelace.config.wallpanel);
+		}
+		keys.forEach(key => {
 			if (key in defaultConfig) {
 				conf[key] = pl.lovelace.config.wallpanel[key];
 			}
-		}
+		});
 	}
 	return conf;
 }
@@ -3170,9 +3174,13 @@ function startup() {
 		setTimeout(startup, 100);
 		return;
 	}
-
+	
 	if (!window.browser_mod) {
-		if (startupSeconds < 2.0) {
+		let waitTime = getHaPanelLovelaceConfig(["wait_for_browser_mod_time"])["wait_for_browser_mod_time"];
+		if (waitTime === undefined) {
+			waitTime = defaultConfig["wait_for_browser_mod_time"];
+		}	
+		if (startupSeconds < waitTime) {
 			setTimeout(startup, 100);
 			return;
 		}
