@@ -2310,6 +2310,7 @@ class WallpanelView extends HuiView {
 				elem.src = window.URL.createObjectURL(blob);
 			}
 			else {
+				// Setting the src attribute on an img works better because cross-origin requests aren't blocked
 				const loadEventName = { IMG: "load", VIDEO: "loadeddata" }[elem.tagName];
 				if (!loadEventName) {
 					throw new Error(`Unsupported element tag "${elem.tagName}"`);
@@ -2484,7 +2485,15 @@ class WallpanelView extends HuiView {
 		let entityPicture = entity.attributes.entity_picture;
 		let querySuffix = entityPicture.indexOf('?') > 0 ? '&' : '?';
 		querySuffix += "width=${width}&height=${height}";
-		this.updateImageFromUrl(img, entityPicture + querySuffix, "IMG", null, true);
+		const url = entityPicture + querySuffix;
+		if ("media_exif" in entity.attributes) {
+			// immich-home-assistant provides media_exif
+			imageInfoCache[url] = entity.attributes["media_exif"];
+		}
+		else {
+			imageInfoCache[url] = entity.attributes;
+		}
+		this.updateImageFromUrl(img, url, "IMG", null, false);
 	}
 
 	updateImage(img, callback = null) {
