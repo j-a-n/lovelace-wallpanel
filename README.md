@@ -51,6 +51,7 @@ You can set the following configuration parameters for every individual Home Ass
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
 | enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, wallpanel is enabled on all tabs. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
+| wait_for_browser_mod_time        | How long to wait for browser_mod to be available (in seconds)? This config attribute can only be set in the main configuration and not in profiles, user-specific or device-specific. | 0.25      |
 | log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
 | hide_toolbar                     | Hide the upper panel toolbar? Please see [FAQ](#dashboard-cannot-be-edited) how to edit your dashboard when toolbar is hidden. | false     |
 | keep_toolbar_space               | If the toolbar is hidden, should the space where the toolbar is normally located remain empty?         | false     |
