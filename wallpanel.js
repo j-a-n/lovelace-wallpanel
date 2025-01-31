@@ -205,7 +205,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.36.0";
+const version = "4.36.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
