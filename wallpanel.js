@@ -2834,8 +2834,8 @@ class WallpanelView extends HuiView {
 		if (screenWakeLock.enabled) {
 			screenWakeLock.disable();
 		}
-
-		this.setScreensaverEntityState();
+		
+		setTimeout(this.setScreensaverEntityState.bind(this), 25);
 	}
 
 	updateScreensaver() {
