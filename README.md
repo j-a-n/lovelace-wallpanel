@@ -250,6 +250,17 @@ image_info_template: '<span style="color:#990000">//</span> ${description|alt_de
 
 See [Unsplash API documentation (Get a random photo)](https://unsplash.com/documentation#get-a-random-photo) for details.
 
+#### Website as iframe
+You can also display a website in an iframe.
+Just add the prefix `iframe+` to the URL of the website you want to show:
+
+For example:
+```yaml
+image_url: iframe+https://projects.sntosh.in/clock/
+```
+
+Note: Not all websites can be used in an iframe. A website can set an X-Frame-Options HTTP header to prevent it from being used in an iframe.
+
 ### Media-source URL
 
 It is also possible to use images from the Home Assistant Local Media source.
@@ -277,7 +288,7 @@ For example:
 
 `media-source://synology_dsm/18C0PEN253705/19`
 
-### immich API (experimental)
+### immich API
 There is experimental support for retrieving images from an immich server.
 
 #### immich server CORS
