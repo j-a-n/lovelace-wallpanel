@@ -205,7 +205,7 @@ class CameraMotionDetection {
 	}
 }
 
-const version = "4.36.1";
+const version = "4.37.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -215,6 +215,7 @@ const defaultConfig = {
 	hide_toolbar: false,
 	keep_toolbar_space: false,
 	hide_toolbar_action_icons: false,
+	hide_toolbar_on_subviews: false,
 	hide_sidebar: false,
 	fullscreen: false,
 	z_index: 1000,
@@ -3115,7 +3116,22 @@ class WallpanelView extends HuiView {
 }
 
 function activateWallpanel() {
-	setToolbarHidden(config.hide_toolbar);
+	let hideToolbar = config.hide_toolbar;
+	if (hideToolbar && !config.hide_toolbar_on_subviews && activeTab) {
+		const pl = getHaPanelLovelace();
+		if (pl && pl.lovelace && pl.lovelace.rawConfig && pl.lovelace.rawConfig.views) {
+			for (let i=0; i<pl.lovelace.rawConfig.views.length; i++) {
+				if (pl.lovelace.rawConfig.views[i].path == activeTab) {
+					if (pl.lovelace.rawConfig.views[i].subview) {
+						// Current tab is a subview
+						hideToolbar = false;
+					}
+					break;
+				}
+			}
+		}
+	}
+	setToolbarHidden(hideToolbar);
 	setSidebarHidden(config.hide_sidebar);
 }
 
@@ -3226,9 +3242,10 @@ function startup() {
 		customElements.define("wallpanel-view", WallpanelView);
 		wallpanel = document.createElement("wallpanel-view");
 		elHaMain.shadowRoot.appendChild(wallpanel);
-		window.addEventListener("location-changed", event => {
-			logger.debug("location-changed", event);
-			locationChanged();
+		// Using navigate event because a back button on a sub-view will not produce a location-changed event
+		navigation.addEventListener("navigate", event => {
+			logger.debug("navigate", event);
+			setTimeout(locationChanged, 0);
 		});
 		elHass.__hass.connection.subscribeEvents(
 			function(event) {
