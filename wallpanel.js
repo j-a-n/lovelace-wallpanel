@@ -613,6 +613,7 @@ function imageSourceType() {
 	if (config.image_url.startsWith("media-source://")) return "media-source";
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
 	if (config.image_url.startsWith("immich+")) return "immich-api";
+	if (config.image_url.startsWith("iframe+")) return "iframe";
 	return "url";
 }
 
@@ -2320,7 +2321,7 @@ class WallpanelView extends HuiView {
 			}
 			else {
 				// Setting the src attribute on an img works better because cross-origin requests aren't blocked
-				const loadEventName = { IMG: "load", VIDEO: "loadeddata" }[elem.tagName];
+				const loadEventName = { IMG: "load", VIDEO: "loadeddata", IFRAME: "load" }[elem.tagName];
 				if (!loadEventName) {
 					throw new Error(`Unsupported element tag "${elem.tagName}"`);
 				}
@@ -2347,9 +2348,11 @@ class WallpanelView extends HuiView {
 			}
 		};
 
-		const createFallbackElement = (currentElem) => {
-			const fallbackTag = currentElem.tagName === "IMG" ? "VIDEO" : "IMG";
-			const fallbackElem = document.createElement(fallbackTag);
+		const createFallbackElement = (currentElem, tagName = null) => {
+			if (!tagName) {
+				tagName = currentElem.tagName === "IMG" ? "VIDEO" : "IMG";
+			}
+			const fallbackElem = document.createElement(tagName);
 
 			// Clone all custom and HTML attributes except 'src', it will be set later.
 			Object.entries(currentElem)
@@ -2360,7 +2363,7 @@ class WallpanelView extends HuiView {
 				.filter((attr) => attr.name !== "src")
 				.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
 
-			if (fallbackTag === "VIDEO") {
+			if (tagName === "VIDEO") {
 				Object.assign(fallbackElem, { preload: "auto", muted: true });
 			}
 			return fallbackElem;
@@ -2372,12 +2375,12 @@ class WallpanelView extends HuiView {
 			currentElem.replaceWith(newElem);
 		};
 
-		const handleFallback = async (currentElem, url, originalError = null) => {
+		const handleFallback = async (currentElem, url, mediaType = null, originalError = null) => {
 			let fallbackSuccessful = false;
-			const fallbackElem = createFallbackElement(currentElem);
+			const fallbackElem = createFallbackElement(currentElem, mediaType);
+			replaceElementWith(currentElem, fallbackElem);
 			try {
 				await loadMediaWithElement(fallbackElem, url);
-				replaceElementWith(currentElem, fallbackElem);
 				fallbackSuccessful = true;
 			} catch (e) {
 				this.handleMediaError(currentElem, originalError || e);
@@ -2394,7 +2397,7 @@ class WallpanelView extends HuiView {
 				loadSuccessful = true;
 			} catch (e) {
 				if (withFallback) {
-					await handleFallback(currentElem, url, e);
+					await handleFallback(currentElem, url, null, e);
 				} else {
 					this.handleMediaError(currentElem, e);
 				}
@@ -2409,7 +2412,7 @@ class WallpanelView extends HuiView {
 		} else if (mediaType === curElem.tagName) {
 			await loadOrFallback(curElem, sourceUrl, false);
 		} else {
-			await handleFallback(curElem, sourceUrl);
+			await handleFallback(curElem, sourceUrl, mediaType);
 		}
 	}
 
@@ -2522,6 +2525,9 @@ class WallpanelView extends HuiView {
 		}
 		else if (imageSourceType() == "media-entity") {
 			this.updateImageFromMediaEntity(img);
+		}
+		else if (imageSourceType() == "iframe") {
+			this.updateImageFromUrl(img, config.image_url.replace(/^iframe\+/, ""), "IFRAME");
 		}
 		else {
 			this.updateImageFromUrl(img, config.image_url);
