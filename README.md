@@ -118,6 +118,7 @@ You can set the following configuration parameters for every individual Home Ass
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
 | profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see below). |            |
 | camera_motion_detection_enabled          | Activate camera based motion detection? Screensaver is stopped when movement is detected.      | false      |
+| camera_motion_detection_facing_mode      | Which camera to use (user / environment / left / right).                                       | user       |
 | camera_motion_detection_threshold        | If this many percent of the pixels change between two images, this is counted as movement.     | 5          |
 | camera_motion_detection_capture_width    | Width of the images captured by the camera in pixels.                                          | 64         |
 | camera_motion_detection_capture_height   | Height of the images captured by the camera in pixels.                                         | 48         |

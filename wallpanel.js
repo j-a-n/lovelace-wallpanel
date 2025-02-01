@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.37.0";
+const version = "4.38.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -67,6 +67,7 @@ const defaultConfig = {
 	image_animation_ken_burns_zoom: 1.3,
 	image_animation_ken_burns_delay: 0,
 	camera_motion_detection_enabled: false,
+	camera_motion_detection_facing_mode: "user",
 	camera_motion_detection_threshold: 5,
 	camera_motion_detection_capture_width: 64,
 	camera_motion_detection_capture_height: 48,
@@ -413,9 +414,14 @@ class CameraMotionDetection {
 			this.canvasElement.style.display = 'none';
 		}
 
-		navigator.mediaDevices.getUserMedia(
-			{ audio: false, video: { facingMode: { acceptable: "user" }, width: this.width, height: this.height } }
-		).then((stream) => {
+		navigator.mediaDevices.getUserMedia({
+			audio: false,
+			video: {
+				facingMode: { ideal: config.camera_motion_detection_facing_mode },
+				width: this.width,
+				height: this.height
+			}
+		}).then((stream) => {
 			this.videoElement.srcObject = stream
 			this.videoElement.play();
 			if (this.enabled) {
@@ -1842,7 +1848,7 @@ class WallpanelView extends HuiView {
 		if (config.disable_screensaver_on_browser_mod_popup_func) {
 			this.disable_screensaver_on_browser_mod_popup_function = new Function('bmp', config.disable_screensaver_on_browser_mod_popup_func);
 		}
-		if (config.camera_motion_detection_enabled) {
+		if (config.enabled && config.camera_motion_detection_enabled) {
 			this.cameraMotionDetection.start();
 		}
 		else {
