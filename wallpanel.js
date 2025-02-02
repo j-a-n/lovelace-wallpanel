@@ -3256,7 +3256,9 @@ function startup() {
 
 	function continueStartup() {
 		updateConfig();
-		customElements.define("wallpanel-view", WallpanelView);
+		if (!customElements.get("wallpanel-view")) {
+			customElements.define("wallpanel-view", WallpanelView);
+		}
 		wallpanel = document.createElement("wallpanel-view");
 		elHaMain.shadowRoot.appendChild(wallpanel);
 		// Using navigate event because a back button on a sub-view will not produce a location-changed event
