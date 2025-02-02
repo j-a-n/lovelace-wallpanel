@@ -124,6 +124,7 @@ const imageInfoCacheMaxSize = 1000;
 let imageInfoCache = {};
 let imageInfoCacheKeys = [];
 let configEntityStates = {};
+let mediaEntityState = null;
 let elHass = null;
 let elHaMain = null;
 let browserId = null;
@@ -881,7 +882,6 @@ class WallpanelView extends HuiView {
 	set hass(hass) {
 		logger.debug("Update hass");
 		this.__hass = hass;
-
 		let changed = false;
 		for (const entityId in configEntityStates) {
 			const entity = this.__hass.states[entityId];
@@ -923,6 +923,10 @@ class WallpanelView extends HuiView {
 			this.__views.forEach(view => {
 				view.hass = this.hass;
 			});
+
+			if (imageSourceType() == "media-entity") {
+				this.switchActiveEntityImage();
+			}
 		}
 	}
 
@@ -2388,8 +2392,12 @@ class WallpanelView extends HuiView {
 		};
 
 		const replaceElementWith = (currentElem, newElem) => {
-			if (currentElem === this.imageOne) this.imageOne = newElem;
-			if (currentElem === this.imageTwo) this.imageTwo = newElem;
+			if (currentElem === this.imageOne) {
+				this.imageOne = newElem;
+			}
+			else {
+				this.imageTwo = newElem;
+			}
 			currentElem.replaceWith(newElem);
 		};
 
@@ -2523,7 +2531,8 @@ class WallpanelView extends HuiView {
 		else {
 			imageInfoCache[url] = entity.attributes;
 		}
-		this.updateImageFromUrl(img, url, "IMG", null, false);
+		mediaEntityState = entity.state;
+		this.updateImageFromUrl(img, url, "IMG", null, true);
 	}
 
 	updateImage(img, callback = null) {
@@ -2613,6 +2622,14 @@ class WallpanelView extends HuiView {
 
 	switchActiveEntityImage(crossfadeMillis = null) {
 		this.lastImageUpdate = Date.now();
+		const imageEntity = config.image_url.replace(/^media-entity:\/\//, '')
+		const entity = this.hass.states[imageEntity];
+		if (!entity || mediaEntityState == entity.state) {
+			// Unchanged
+			return;
+		}
+		logger.debug(`Media entity ${imageEntity} state has changed`);
+		mediaEntityState = entity.state;
 		let next = this.imageTwo;
 		let current = this.imageOne;
 		if (this.imageTwoContainer.style.opacity == 1) {
@@ -2622,9 +2639,7 @@ class WallpanelView extends HuiView {
 		const wp = this;
 		const onLoad = function(e) {
 			next.removeEventListener('load', onLoad);
-			if (next.complete && next.src !== current.src) {
-				wp.switchActiveImage(crossfadeMillis)
-			}
+			wp.switchActiveImage(crossfadeMillis)
 		}
 		next.addEventListener('load', onLoad);
 		this.updateImage(next);
