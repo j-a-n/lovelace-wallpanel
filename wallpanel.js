@@ -87,6 +87,7 @@ const defaultConfig = {
 
 let dashboardConfig = {};
 let config = {};
+let currentLocation = null;
 let activePanel = null;
 let activeTab = null;
 let fullscreen = false;
@@ -3211,6 +3212,13 @@ function locationChanged() {
 		}
 	}
 	
+	if (window.location.href == currentLocation) {
+		return;
+	}
+
+	logger.debug(`Location changed from '${currentLocation}' to '${window.location.href}'`);
+	currentLocation = window.location.href;
+	
 	let panel = null;
 	let tab = null;
 	let path = window.location.pathname.split("/");
@@ -3220,15 +3228,12 @@ function locationChanged() {
 			tab = path[2];
 		}
 	}
-	if (panel != activePanel || tab != activeTab) {
-		logger.info(`Location changed from panel '${activePanel}/${activeTab}' to '${panel}/${tab}'`);
-		if (panel != activePanel) {
-			dashboardConfig = {};
-		}
-		activePanel = panel;
-		activeTab = tab;
-		reconfigure();
+	if (panel != activePanel) {
+		dashboardConfig = {};
 	}
+	activePanel = panel;
+	activeTab = tab;
+	reconfigure();
 }
 
 const startTime = performance.now();
@@ -3277,15 +3282,15 @@ function startup() {
 		}
 		wallpanel = document.createElement("wallpanel-view");
 		elHaMain.shadowRoot.appendChild(wallpanel);
-		try {
+		if (window.navigation) {
 			// Using navigate event because a back button on a sub-view will not produce a location-changed event
-			navigation.addEventListener("navigate", event => {
+			window.navigation.addEventListener("navigate", event => {
 				logger.debug("navigate", event);
 				setTimeout(locationChanged, 0);
 			});
 		}
-		catch {
-			// Not supported by Firefox
+		else {
+			// Not supported (i.e. Firefox)
 			window.addEventListener("location-changed", event => {
 				logger.debug("location-changed", event);
 				setTimeout(locationChanged, 0);
