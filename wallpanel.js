@@ -3270,20 +3270,21 @@ function startup() {
 	}
 
 	function continueStartup() {
+		logger.debug(`userId: ${userId}, userName: ${userName}, userDisplayname: ${userDisplayname}`);
 		updateConfig();
 		if (!customElements.get("wallpanel-view")) {
 			customElements.define("wallpanel-view", WallpanelView);
 		}
 		wallpanel = document.createElement("wallpanel-view");
 		elHaMain.shadowRoot.appendChild(wallpanel);
-		if (navigation) {
+		try {
 			// Using navigate event because a back button on a sub-view will not produce a location-changed event
 			navigation.addEventListener("navigate", event => {
 				logger.debug("navigate", event);
 				setTimeout(locationChanged, 0);
 			});
 		}
-		else {
+		catch {
 			// Not supported by Firefox
 			window.addEventListener("location-changed", event => {
 				logger.debug("location-changed", event);
@@ -3322,28 +3323,37 @@ function startup() {
 	}
 
 	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
-	elHass.hass.callWS({
-		type: "config/auth/list"
-	}).then(
-		result => {
-			userId = elHass.__hass.user.id;
-			userDisplayname = elHass.__hass.user.name;
-			result.forEach(userInfo => {
-				if (userInfo.id == userId) {
-					userDisplayname = userInfo.name;
-					userName = userInfo.username;
+
+	userId = elHass.__hass.user.id;
+	userDisplayname = elHass.__hass.user.name;
+	
+	if (elHass.__hass.user.is_admin) {
+		elHass.hass.callWS({
+			type: "config/auth/list"
+		}).then(
+			result => {
+				result.forEach(userInfo => {
+					if (userInfo.id == userId) {
+						userDisplayname = userInfo.name;
+						userName = userInfo.username;
+					}
+				});
+				if (!userName) {
+					logger.error(`User ${userId} / ${userDisplayname} not found in user list`, result);
 				}
-			});
-			if (!userName) {
-				logger.error(`User ${userId} / ${userDisplayname} not found in user list`, result);
+				continueStartup();
+			},
+			error => {
+				logger.error("Failed to fetch user list", error);
+				continueStartup();
 			}
-			continueStartup();
-		},
-		error => {
-			logger.error("Failed to fetch user list", error);
-			continueStartup();
-		}
-	);
+		);
+	}
+	else {
+		logger.info(`Not an admin user, setting userName to userDisplayname: ${userDisplayname}`);
+		userName = userDisplayname;
+		continueStartup();
+	}
 }
 
 setTimeout(startup, 0);
