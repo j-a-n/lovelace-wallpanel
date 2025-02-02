@@ -3276,11 +3276,20 @@ function startup() {
 		}
 		wallpanel = document.createElement("wallpanel-view");
 		elHaMain.shadowRoot.appendChild(wallpanel);
-		// Using navigate event because a back button on a sub-view will not produce a location-changed event
-		navigation.addEventListener("navigate", event => {
-			logger.debug("navigate", event);
-			setTimeout(locationChanged, 0);
-		});
+		if (navigation) {
+			// Using navigate event because a back button on a sub-view will not produce a location-changed event
+			navigation.addEventListener("navigate", event => {
+				logger.debug("navigate", event);
+				setTimeout(locationChanged, 0);
+			});
+		}
+		else {
+			// Not supported by Firefox
+			window.addEventListener("location-changed", event => {
+				logger.debug("location-changed", event);
+				setTimeout(locationChanged, 0);
+			});
+		}
 		elHass.__hass.connection.subscribeEvents(
 			function(event) {
 				logger.debug("lovelace_updated", event);
