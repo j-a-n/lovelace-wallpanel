@@ -93,7 +93,7 @@ let activeTab = null;
 let fullscreen = false;
 let wallpanel = null;
 let skipDisableScreensaverOnLocationChanged = false;
-let classStyles = {
+const classStyles = {
 	"wallpanel-screensaver-image-background": {
 		"filter": "blur(15px)",
 		"background": "#00000000",
@@ -123,8 +123,8 @@ let classStyles = {
 }
 const imageInfoCacheMaxSize = 1000;
 let imageInfoCache = {};
-let imageInfoCacheKeys = [];
-let configEntityStates = {};
+const imageInfoCacheKeys = [];
+const configEntityStates = {};
 let mediaEntityState = null;
 let elHass = null;
 let elHaMain = null;
@@ -147,8 +147,8 @@ function isObject(item) {
 
 
 function stringify(obj) {
-	let processedObjects = [];
-	let json = JSON.stringify(obj, function(key, value) {
+	const processedObjects = [];
+	const json = JSON.stringify(obj, function(key, value) {
 		if (typeof value === "object" && value !== null) {
 			if (processedObjects.indexOf(value) !== -1) {
 				// Circular reference found, discard key
@@ -168,7 +168,7 @@ const logger = {
 		if (!config.debug) {
 			return;
 		}
-		let msg = {
+		const msg = {
 			"level": level,
 			"date": (new Date()).toISOString(),
 			"text": "",
@@ -205,30 +205,30 @@ const logger = {
 	purgeMessages: function() {
 		logger.messages = [];
 	},
-	log: function(text){
+	log: function(){
 		console.log.apply(this, arguments);
 		logger.addMessage("info", arguments);
 	},
-	debug: function (text) {
+	debug: function () {
 		if (["debug"].includes(config.log_level_console)) {
 			console.debug.apply(this, arguments);
 		}
 		logger.addMessage("debug", arguments);
 	},
-	info: function (text) {
+	info: function () {
 		if (["debug", "info"].includes(config.log_level_console)) {
 			console.info.apply(this, arguments);
 		}
 		logger.addMessage("info", arguments);
 	},
-	warn: function (text) {
+	warn: function () {
 		const logLevel = config.log_level_console || "warn";
 		if (["debug", "info", "warn"].includes(logLevel)) {
 			console.warn.apply(this, arguments);
 		}
 		logger.addMessage("warn", arguments);
 	},
-	error: function (text) {
+	error: function () {
 		const logLevel = config.log_level_console || "warn";
 		if (["debug", "info", "warn", "error"].includes(logLevel)) {
 			console.error.apply(this, arguments);
@@ -258,23 +258,23 @@ class ScreenWakeLock {
 		document.addEventListener("fullscreenchange", handleVisibilityChange);
 
 		if (!this.nativeWakeLockSupported) {
-			let videoData = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAA1NtZGF0AAACrwYF//+r3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzA5NSBiYWVlNDAwIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMiAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOi0zOi0zIGFuYWx5c2U9MHgzOjB4MTEzIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0yLjAwOjAuNzAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0xIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS00IHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTMgYl9weXJhbWlkPTIgYl9hZGFwdD0xIGJfYmlhcz0wIGRpcmVjdD0xIHdlaWdodGI9MSBvcGVuX2dvcD0wIHdlaWdodHA9MiBrZXlpbnQ9MjUwIGtleWludF9taW49MSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMjAAgAAAABFliIQAF85//vfUt8yy7VNwgQAAAAlBmiRsQXzn/vAAAAAJQZ5CeIL5z4aBAAAACQGeYXRBfOeGgAAAAAkBnmNqQXznhoEAAAAPQZpoSahBaJlMCC+c//7xAAAAC0GehkURLBfOf4aBAAAACQGepXRBfOeGgQAAAAkBnqdqQXznhoAAAAAPQZqpSahBbJlMCC+c//7wAAADs21vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAACcQAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAALddHJhawAAAFx0a2hkAAAAAwAAAAAAAAAAAAAAAQAAAAAAACcQAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAIAAAACAAAAAAAJGVkdHMAAAAcZWxzdAAAAAAAAAABAAAnEAAAgAAAAQAAAAACVW1kaWEAAAAgbWRoZAAAAAAAAAAAAAAAAAAAQAAAAoAAVcQAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAgBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAHAc3RibAAAAMBzdHNkAAAAAAAAAAEAAACwYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAIAAgASAAAAEgAAAAAAAAAARVMYXZjNTkuMzcuMTAwIGxpYngyNjQAAAAAAAAAAAAAABj//wAAADZhdmNDAWQACv/hABlnZAAKrNlfllwEQAAAAwBAAAADAIPEiWWAAQAGaOvjxMhM/fj4AAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAAKiAAACogAAABhzdHRzAAAAAAAAAAEAAAAKAABAAAAAABRzdHNzAAAAAAAAAAEAAAABAAAAYGN0dHMAAAAAAAAACgAAAAEAAIAAAAAAAQABQAAAAAABAACAAAAAAAEAAAAAAAAAAQAAQAAAAAABAAFAAAAAAAEAAIAAAAAAAQAAAAAAAAABAABAAAAAAAEAAIAAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAAKAAAAAQAAADxzdHN6AAAAAAAAAAAAAAAKAAACyAAAAA0AAAANAAAADQAAAA0AAAATAAAADwAAAA0AAAANAAAAEwAAABRzdGNvAAAAAAAAAAEAAAAwAAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY1OS4yNy4xMDA=';
+			const videoData = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAA1NtZGF0AAACrwYF//+r3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzA5NSBiYWVlNDAwIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMiAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOi0zOi0zIGFuYWx5c2U9MHgzOjB4MTEzIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0yLjAwOjAuNzAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0xIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS00IHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTMgYl9weXJhbWlkPTIgYl9hZGFwdD0xIGJfYmlhcz0wIGRpcmVjdD0xIHdlaWdodGI9MSBvcGVuX2dvcD0wIHdlaWdodHA9MiBrZXlpbnQ9MjUwIGtleWludF9taW49MSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMjAAgAAAABFliIQAF85//vfUt8yy7VNwgQAAAAlBmiRsQXzn/vAAAAAJQZ5CeIL5z4aBAAAACQGeYXRBfOeGgAAAAAkBnmNqQXznhoEAAAAPQZpoSahBaJlMCC+c//7xAAAAC0GehkURLBfOf4aBAAAACQGepXRBfOeGgQAAAAkBnqdqQXznhoAAAAAPQZqpSahBbJlMCC+c//7wAAADs21vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAACcQAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAALddHJhawAAAFx0a2hkAAAAAwAAAAAAAAAAAAAAAQAAAAAAACcQAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAIAAAACAAAAAAAJGVkdHMAAAAcZWxzdAAAAAAAAAABAAAnEAAAgAAAAQAAAAACVW1kaWEAAAAgbWRoZAAAAAAAAAAAAAAAAAAAQAAAAoAAVcQAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAgBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAHAc3RibAAAAMBzdHNkAAAAAAAAAAEAAACwYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAIAAgASAAAAEgAAAAAAAAAARVMYXZjNTkuMzcuMTAwIGxpYngyNjQAAAAAAAAAAAAAABj//wAAADZhdmNDAWQACv/hABlnZAAKrNlfllwEQAAAAwBAAAADAIPEiWWAAQAGaOvjxMhM/fj4AAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAAKiAAACogAAABhzdHRzAAAAAAAAAAEAAAAKAABAAAAAABRzdHNzAAAAAAAAAAEAAAABAAAAYGN0dHMAAAAAAAAACgAAAAEAAIAAAAAAAQABQAAAAAABAACAAAAAAAEAAAAAAAAAAQAAQAAAAAABAAFAAAAAAAEAAIAAAAAAAQAAAAAAAAABAABAAAAAAAEAAIAAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAAKAAAAAQAAADxzdHN6AAAAAAAAAAAAAAAKAAACyAAAAA0AAAANAAAADQAAAA0AAAATAAAADwAAAA0AAAANAAAAEwAAABRzdGNvAAAAAAAAAAEAAAAwAAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY1OS4yNy4xMDA=';
 			this._player = document.createElement("video");
 			this._player.setAttribute("id", "ScreenWakeLockVideo");
 			this._player.setAttribute("src", videoData);
 			this._player.setAttribute("playsinline", "");
 			this._player.setAttribute("muted", "");
-			this._player.addEventListener('ended', (event) => {
+			this._player.addEventListener('ended', () => {
 				logger.debug("Video ended");
 				if (this.enabled) {
 					this.enable();
 				}
 			});
-			this._player.addEventListener('playing', (event) => {
+			this._player.addEventListener('playing', () => {
 				logger.debug("Video playing");
 				this._isPlaying = true;
 			});
-			this._player.addEventListener('pause', (event) => {
+			this._player.addEventListener('pause', () => {
 				logger.debug("Video pause");
 				this._isPlaying = false;
 			});
@@ -306,18 +306,18 @@ class ScreenWakeLock {
 			if (!this._player.paused && this._player._isPlaying) {
 				this._player.pause();
 			}
-			let playPromise = this._player.play();
+			const playPromise = this._player.play();
 			if (playPromise) {
 				playPromise
-					.then((r) => {
+					.then(() => {
 						this.enabled = true;
 						this.error = null;
 						logger.debug("Video play successful");
 					})
-					.catch((e) => {
+					.catch((error) => {
 						this.enabled = false;
-						this.error = e;
-						logger.error(`Failed to play video: ${e}`);
+						this.error = error;
+						logger.error(`Failed to play video: ${error}`);
 					});
 			}
 		}
@@ -459,7 +459,7 @@ function mergeConfig(target, ...sources) {
 				mergeConfig(target[key], source[key]);
 			} else {
 				let val = source[key];
-				function replacer(match, entityId, offset, string) {
+				function replacer(match, entityId) {
 					if (!(entityId in configEntityStates)) {
 						configEntityStates[entityId] = "";
 						const entity = elHass.__hass.states[entityId];
@@ -491,7 +491,7 @@ function mergeConfig(target, ...sources) {
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
 	
-	let oldConfig = config;
+	const oldConfig = config;
 	config = {};
 	mergeConfig(config, defaultConfig);
 	
@@ -500,10 +500,10 @@ function updateConfig() {
 	}
 	mergeConfig(config, dashboardConfig);
 
-	let paramConfig = {}
-	for (let [key, value] of params) {
+	const paramConfig = {}
+	for (const [key, value] of params) {
 		if (key.startsWith("wp_")) {
-			key = key.substring(3);
+			const key = key.substring(3);
 			if (key in defaultConfig && value) {
 				// Convert to the right type
 				paramConfig[key] = defaultConfig[key].constructor(JSON.parse(value));
@@ -518,18 +518,18 @@ function updateConfig() {
 		logger.debug(`Profile set from config: ${profile}`);
 	}
 	if (config.profiles && browserId && config.profiles[`device.${browserId}`]) {
-		let profile = `device.${browserId}`;
+		const profile = `device.${browserId}`;
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from device: ${profile}`);
 	}
 	if (config.profiles) {
-		let userIds = [userId, userName, userDisplayname];
+		const userIds = [userId, userName, userDisplayname];
 		for (let i=0; i<userIds.length; i++) {
 			let user = userIds[i];
 			if (user) {
 				user = user.toLowerCase().replace(/\s/g, '_');
 				if (config.profiles[`user.${user}`]) {
-					let profile = `user.${user}`;
+					const profile = `user.${user}`;
 					config = mergeConfig(config, config.profiles[profile]);
 					logger.debug(`Profile set from user: ${profile}`);
 					break;
@@ -540,7 +540,7 @@ function updateConfig() {
 	config = mergeConfig(config, paramConfig);
 	const profile_entity = config.profile_entity;
 	if (config.profiles && profile_entity && elHass.__hass.states[profile_entity] && config.profiles[elHass.__hass.states[profile_entity].state]) {
-		let profile = elHass.__hass.states[profile_entity].state;
+		const profile = elHass.__hass.states[profile_entity].state;
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from entity state: ${profile}`);
 	}
@@ -646,8 +646,8 @@ function getHaPanelLovelace() {
 
 
 function getHaPanelLovelaceConfig(keys = []) {
-	let pl = getHaPanelLovelace();
-	let conf = {};
+	const pl = getHaPanelLovelace();
+	const conf = {};
 	if (pl && pl.lovelace) {
 		let wallpanelConfig;
 		if (pl.lovelace.config && pl.lovelace.config.wallpanel) {
@@ -669,20 +669,6 @@ function getHaPanelLovelaceConfig(keys = []) {
 	}
 	return conf;
 }
-
-
-function getCurrentView() {
-	try {
-		return elHaMain.shadowRoot
-		.querySelector('ha-panel-lovelace').shadowRoot
-		.querySelector('hui-root').shadowRoot
-		.querySelector('hui-view')
-	}
-	catch (e) {
-		logger.error(e);
-	}
-}
-
 
 function setSidebarHidden(hidden) {
 	try {
@@ -787,23 +773,28 @@ function navigate(path, keepSearch=true) {
 }
 
 
-document.addEventListener('fullscreenerror', (event) => {
+document.addEventListener('fullscreenerror', () => {
 	logger.error('Failed to enter fullscreen');
 });
 
 
-document.addEventListener('fullscreenchange', (event) => {
-	fullscreen = Boolean(document.fullscreenElement);
+document.addEventListener('fullscreenchange', () => {
+	if (typeof document.webkitCurrentFullScreenElement !== 'undefined') {
+		fullscreen = Boolean(document.webkitCurrentFullScreenElement);
+	}
+	else if (typeof document.fullscreenElement !== 'undefined') {
+		fullscreen = Boolean(document.fullscreenElement);
+	}
 });
 
 
 function enterFullscreen() {
 	logger.debug("Enter fullscreen");
 	// Will need user input event to work
-	let el = document.documentElement;
+	const el = document.documentElement;
 	if (el.requestFullscreen) {
 		el.requestFullscreen().then(
-			result => {
+			() => {
 				logger.debug("Successfully requested fullscreen");
 			},
 			error => {
@@ -819,20 +810,6 @@ function enterFullscreen() {
 	}
 	else if (el.webkitRequestFullscreen) {
 		el.webkitRequestFullscreen();
-	}
-}
-
-function exitFullscreen() {
-	logger.debug("Exit fullscreen");
-	if (document.fullscreenElement) {
-		document.fullscreenElement.exitFullscreen().then(
-			result => {
-				logger.debug("Successfully exited from fullscreen mode");
-			},
-			error => {
-				logger.error(error);
-			}
-		)
 	}
 }
 
@@ -891,7 +868,7 @@ class WallpanelView extends HuiView {
 				changed = true;
 			}
 		}
-		let profileUpdated = this.updateProfile();
+		const profileUpdated = this.updateProfile();
 		if (!profileUpdated && changed) {
 			updateConfig();
 		}
@@ -903,8 +880,8 @@ class WallpanelView extends HuiView {
 		const screensaver_entity = config.screensaver_entity;
 
 		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
-			let lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
-			let state = this.__hass.states[screensaver_entity].state;
+			const lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
+			const state = this.__hass.states[screensaver_entity].state;
 
 			if (state == "off" && this.screensaverStartedAt && lastChanged.getTime() - this.screensaverStartedAt > 0) {
 				this.stopScreensaver(config.fade_out_time_screensaver_entity);
@@ -1231,7 +1208,7 @@ class WallpanelView extends HuiView {
 					elId != 'wallpanel-screensaver-info-box-views' &&
 					!classStyles[elId]
 				) {
-					let el = this.shadowRoot.getElementById(elId);
+					const el = this.shadowRoot.getElementById(elId);
 					if (el) {
 						logger.debug(`Setting style attributes for element #${elId}`);
 						for (const attr in config.style[elId]) {
@@ -1254,9 +1231,9 @@ class WallpanelView extends HuiView {
 	}
 
 	updateShadowStyle() {
-		let computed = getComputedStyle(this.infoContainer);
-		let maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) - parseInt(computed.paddingRight) - this.infoBox.offsetWidth;
-		let maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) - parseInt(computed.paddingBottom) - this.infoBox.offsetHeight;
+		const computed = getComputedStyle(this.infoContainer);
+		const maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) - parseInt(computed.paddingRight) - this.infoBox.offsetWidth;
+		const maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) - parseInt(computed.paddingBottom) - this.infoBox.offsetHeight;
 		let host = '';
 
 		if (config.style) {
@@ -1317,11 +1294,11 @@ class WallpanelView extends HuiView {
 	}
 
 	randomMove() {
-		let computed = getComputedStyle(this.infoContainer);
-		let maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) - parseInt(computed.paddingRight) - this.infoBox.offsetWidth;
-		let maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) - parseInt(computed.paddingBottom) - this.infoBox.offsetHeight;
-		let x = Math.floor(Math.random() * maxX);
-		let y = Math.floor(Math.random() * maxY);
+		const computed = getComputedStyle(this.infoContainer);
+		const maxX = this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) - parseInt(computed.paddingRight) - this.infoBox.offsetWidth;
+		const maxY = this.infoContainer.offsetHeight - parseInt(computed.paddingTop) - parseInt(computed.paddingBottom) - this.infoBox.offsetHeight;
+		const x = Math.floor(Math.random() * maxX);
+		const y = Math.floor(Math.random() * maxY);
 		this.moveInfoBox(x, y);
 	}
 
@@ -1332,9 +1309,9 @@ class WallpanelView extends HuiView {
 		} else {
 			this.lastCorner = (this.lastCorner + 1) % 4;
 		}
-		let computed = getComputedStyle(this.infoContainer);
-		let x = [2, 3].includes(this.lastCorner) ? this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) - parseInt(computed.paddingRight) - this.infoBox.offsetWidth : 0;
-		let y = [1, 2].includes(this.lastCorner) ? this.infoContainer.offsetHeight - parseInt(computed.paddingTop) - parseInt(computed.paddingBottom) - this.infoBox.offsetHeight : 0;
+		const computed = getComputedStyle(this.infoContainer);
+		const x = [2, 3].includes(this.lastCorner) ? this.infoContainer.offsetWidth - parseInt(computed.paddingLeft) - parseInt(computed.paddingRight) - this.infoBox.offsetWidth : 0;
+		const y = [1, 2].includes(this.lastCorner) ? this.infoContainer.offsetHeight - parseInt(computed.paddingTop) - parseInt(computed.paddingBottom) - this.infoBox.offsetHeight : 0;
 		this.moveInfoBox(x, y, fadeDuration);
 	}
 
@@ -1345,7 +1322,7 @@ class WallpanelView extends HuiView {
 		}
 		if (fadeDuration > 0) {
 			if (this.infoBox.animate) {
-				let keyframes = [
+				const keyframes = [
 					{ opacity: 1 },
 					{ opacity: 0, offset: 0.5 },
 					{ opacity: 1 }
@@ -1361,7 +1338,7 @@ class WallpanelView extends HuiView {
 				logger.warn("This browser does not support the animate() method, please set info_move_fade_duration to 0");
 			}
 		}
-		let wp = this;
+		const wp = this;
 		let ms = Math.round(fadeDuration * 500);
 		if (ms < 0) {
 			ms = 0;
@@ -1414,7 +1391,7 @@ class WallpanelView extends HuiView {
 				}
 			}
 			config.badges.forEach(badge => {
-				let badgeConfig = JSON.parse(JSON.stringify(badge));
+				const badgeConfig = JSON.parse(JSON.stringify(badge));
 				logger.debug("Creating badge:", badgeConfig);
 				let style = {};
 				if (badgeConfig.wp_style) {
@@ -1447,7 +1424,7 @@ class WallpanelView extends HuiView {
 			const viewConfigs = this.lovelace.config.views;
 			config.views.forEach(view => {
 				let viewIndex = -1;
-				let viewConfig = JSON.parse(JSON.stringify(view));
+				const viewConfig = JSON.parse(JSON.stringify(view));
 				for (var i = 0; i < viewConfigs.length; i++) {
 					if (
 						(viewConfigs[i].path && view.path && viewConfigs[i].path.toLowerCase() == view.path.toLowerCase()) ||
@@ -1494,7 +1471,7 @@ class WallpanelView extends HuiView {
 		if (config.cards && config.cards.length > 0) {
 			config.cards.forEach(card => {
 				// Copy object
-				let cardConfig = JSON.parse(JSON.stringify(card));
+				const cardConfig = JSON.parse(JSON.stringify(card));
 				logger.debug("Creating card:", cardConfig);
 				let style = {};
 				if (cardConfig.wp_style) {
@@ -1524,7 +1501,7 @@ class WallpanelView extends HuiView {
 				}
 				for (const attr in style) {
 					if (attr == "parent") {
-						let pel = this.shadowRoot.getElementById(style[attr]);
+						const pel = this.shadowRoot.getElementById(style[attr]);
 						if (pel) {
 							parent = pel;
 						}
@@ -1773,14 +1750,14 @@ class WallpanelView extends HuiView {
 
 		this.shadowStyle = document.createElement('style');
 
-		let shadow = this.attachShadow({mode: 'open'});
+		const shadow = this.attachShadow({mode: 'open'});
 		shadow.appendChild(this.shadowStyle);
 		shadow.appendChild(this.screensaverContainer);
 		shadow.appendChild(this.messageBox);
 		shadow.appendChild(this.debugBox);
 
 		const wp = this;
-		let eventNames = ['click', 'touchstart', 'wheel'];
+		const eventNames = ['click', 'touchstart', 'wheel'];
 		if (config.stop_screensaver_on_key_down) {
 			eventNames.push('keydown');
 		}
@@ -1788,22 +1765,22 @@ class WallpanelView extends HuiView {
 			eventNames.push('mousemove');
 		}
 		eventNames.forEach(function(eventName) {
-			let click = ['click', 'touchstart'].includes(eventName);
+			const click = ['click', 'touchstart'].includes(eventName);
 			window.addEventListener(eventName, event => {
 				wp.handleInteractionEvent(event, click);
 			}, { capture: true, passive: !click });
 		});
-		window.addEventListener("resize", event => {
+		window.addEventListener("resize", () => {
 			if (wp.screensaverRunning()) {
 				wp.updateShadowStyle();
 			}
 		});
-		window.addEventListener("hass-more-info", event => {
+		window.addEventListener("hass-more-info", () => {
 			if (wp.screensaverRunning()) {
 				wp.moreInfoDialogToForeground();
 			}
 		});
-		const infoBoxResizeObserver = new ResizeObserver((entries) => {
+		const infoBoxResizeObserver = new ResizeObserver(() => {
 			if (config.info_move_pattern === 'corners') {
 				// Correct position
 				this.moveAroundCorners(true);
@@ -1889,12 +1866,12 @@ class WallpanelView extends HuiView {
 	}
 
 	fetchEXIFInfo(img) {
-		let wp = this;
+		const wp = this;
 		if (imageInfoCache[img.imageUrl]) {
 			return;
 		}
 		if (imageInfoCacheKeys.length >= imageInfoCacheMaxSize) {
-			let oldest = imageInfoCacheKeys.shift();
+			const oldest = imageInfoCacheKeys.shift();
 			if (imageInfoCache[oldest]) {
 				delete imageInfoCache[oldest];
 			}
@@ -1909,18 +1886,18 @@ class WallpanelView extends HuiView {
 			imageInfoCache[tmpImg.imageUrl] = tmpImg.exifdata;
 			wp.setImageDataInfo(tmpImg);
 
-			let exifLong = tmpImg.exifdata["GPSLongitude"];
-			let exifLat = tmpImg.exifdata["GPSLatitude"];
+			const exifLong = tmpImg.exifdata["GPSLongitude"];
+			const exifLat = tmpImg.exifdata["GPSLatitude"];
 			if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
 				let m = (tmpImg.exifdata["GPSLatitudeRef"] == "S") ? -1 : 1;
-				let latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
+				const latitude = (exifLat[0] * m) + (((exifLat[1] * m  * 60) + (exifLat[2] * m)) / 3600);
 				m = (tmpImg.exifdata["GPSLongitudeRef"] == "W") ? -1 : 1;
-				let longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
+				const longitude = (exifLong[0] * m) + (((exifLong[1] * m * 60) + (exifLong[2] * m)) / 3600);
 
 				const xhr = new XMLHttpRequest();
-				xhr.onload = function(event) {
+				xhr.onload = function() {
 					if (this.status == 200 || this.status === 0) {
-						let info = JSON.parse(xhr.responseText);
+						const info = JSON.parse(xhr.responseText);
 						logger.debug("nominatim data:", info);
 						if (info && info.address) {
 							imageInfoCache[tmpImg.imageUrl].address = info.address;
@@ -2000,16 +1977,16 @@ class WallpanelView extends HuiView {
 		logger.debug("Image info:", imageInfo)
 
 		let html = config.image_info_template;
-		html = html.replace(/\${([^}]+)}/g, (match, tags, offset, string) => {
+		html = html.replace(/\${([^}]+)}/g, (match, tags) => {
 			let prefix = "";
 			let suffix = "";
 			let options = null;
 			if (tags.includes("!")) {
-				let tmp = tags.split("!");
+				const tmp = tags.split("!");
 				tags = tmp[0];
 				for (let i=1; i<tmp.length; i++) {
-					let argType = tmp[i].substring(0, tmp[i].indexOf("="));
-					let argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
+					const argType = tmp[i].substring(0, tmp[i].indexOf("="));
+					const argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
 					if (argType == "prefix") {
 						prefix = argValue;
 					}
@@ -2019,7 +1996,7 @@ class WallpanelView extends HuiView {
 					else if (argType == "options") {
 						options = {};
 						argValue.split(",").forEach(optVal => {
-							let tmp2 = optVal.split(":", 2);
+							const tmp2 = optVal.split(":", 2);
 							if (tmp2[0] && tmp2[1]) {
 								options[tmp2[0].replace(/\s/g, '')] = tmp2[1].replace(/\s/g, '');
 							}
@@ -2029,11 +2006,11 @@ class WallpanelView extends HuiView {
 			}
 
 			let val = "";
-			let tagList = tags.split("|");
+			const tagList = tags.split("|");
 			let tag = "";
 			for (let i=0; i<tagList.length; i++) {
 				tag = tagList[i];
-				let keys = tag.replace(/\s/g, '').split(".");
+				const keys = tag.replace(/\s/g, '').split(".");
 				val = imageInfo;
 				keys.forEach(key => {
 					if (val) {
@@ -2048,7 +2025,7 @@ class WallpanelView extends HuiView {
 				return "";
 			}
 			if (/DateTime/i.test(tag)) {
-				let date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
+				const date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, '$1-$2-$3T$4:$5:$6'));
 				if (isNaN(date)) {
 					// Invalid date
 					return "";
@@ -2107,9 +2084,9 @@ class WallpanelView extends HuiView {
 	findMedias(mediaContentId) {
 		const wp = this;
 		logger.debug(`findMedias: ${mediaContentId}`);
-		let excludeRegExp = [];
+		const excludeRegExp = [];
 		if (config.image_excludes) {
-			for (let imageExclude of config.image_excludes) {
+			for (const imageExclude of config.image_excludes) {
 				excludeRegExp.push(new RegExp(imageExclude));
 			}
 		}
@@ -2123,8 +2100,8 @@ class WallpanelView extends HuiView {
 					mediaEntry => {
 						logger.debug("Found media entry", mediaEntry);
 						var promises = mediaEntry.children.map(child => {
-							let filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, '');
-							for (let exclude of excludeRegExp) {
+							const filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, '');
+							for (const exclude of excludeRegExp) {
 								if (exclude.test(filename)) {
 									return;
 								}
@@ -2142,7 +2119,7 @@ class WallpanelView extends HuiView {
 						});
 						Promise.all(promises).then(results => {
 							let result = [];
-							for (let res of results) {
+							for (const res of results) {
 								if (res) {
 									result = result.concat(res);
 								}
@@ -2169,7 +2146,7 @@ class WallpanelView extends HuiView {
 				wp.updatingImageList = false;
 				if (!wp.cancelUpdatingImageList) {
 					if (config.image_order == "random") {
-						wp.imageList = result.sort((a, b) => 0.5 - Math.random());
+						wp.imageList = result.sort(() => 0.5 - Math.random());
 					}
 					else {
 						wp.imageList = result.sort();
@@ -2192,9 +2169,9 @@ class WallpanelView extends HuiView {
 	updateImageListFromUnsplashAPI(preload, preloadCallback = null) {
 		this.updatingImageList = true;
 		this.lastImageListUpdate = Date.now();
-		let wp = this;
-		let urls = [];
-		let data = {};
+		const wp = this;
+		const urls = [];
+		const data = {};
 		const http = new XMLHttpRequest();
 		http.responseType = "json";
 		// count: The number of photos to return. (Default: 1; max: 30)
@@ -2231,19 +2208,19 @@ class WallpanelView extends HuiView {
 		if (!config.immich_api_key) {
 			throw "immich_api_key not configured";
 		}
-		let wp = this;
+		const wp = this;
 		wp.updatingImageList = true;
 		wp.imageList = [];
 		wp.lastImageListUpdate = Date.now();
-		let urls = [];
-		let data = {};
+		const urls = [];
+		const data = {};
 		const api_url = config.image_url.replace(/^immich\+/, "");
 		const http = new XMLHttpRequest();
 		http.responseType = "json";
 		http.open("GET", `${api_url}/albums?shared=${config.immich_shared_albums}`, true);
 		http.setRequestHeader("x-api-key", config.immich_api_key);
 		http.onload = function() {
-			let album_ids = [];
+			const album_ids = [];
 			if (http.status == 200 || http.status === 0) {
 				const allAlbums = http.response;
 				logger.debug(`Got immich API response`, allAlbums);
@@ -2290,7 +2267,7 @@ class WallpanelView extends HuiView {
 								// All processed
 								if (!wp.cancelUpdatingImageList) {
 									if (config.image_order == "random") {
-										wp.imageList = urls.sort((a, b) => 0.5 - Math.random());
+										wp.imageList = urls.sort(() => 0.5 - Math.random());
 									} else {
 										wp.imageList = urls;
 									}
@@ -2320,10 +2297,10 @@ class WallpanelView extends HuiView {
 	}
 
 	fillPlaceholders(url) {
-		let width = this.screensaverContainer.clientWidth;
-		let height = this.screensaverContainer.clientHeight;
-		let timestamp_ms = Date.now();
-		let timestamp = Math.floor(timestamp_ms / 1000);
+		const width = this.screensaverContainer.clientWidth;
+		const height = this.screensaverContainer.clientHeight;
+		const timestamp_ms = Date.now();
+		const timestamp = Math.floor(timestamp_ms / 1000);
 		url = url.replace(/\${width}/g, width);
 		url = url.replace(/\${height}/g, height);
 		url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
@@ -2521,7 +2498,7 @@ class WallpanelView extends HuiView {
 		if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
 			return;
 		}
-		let entityPicture = entity.attributes.entity_picture;
+		const entityPicture = entity.attributes.entity_picture;
 		let querySuffix = entityPicture.indexOf('?') > 0 ? '&' : '?';
 		querySuffix += "width=${width}&height=${height}";
 		const url = entityPicture + querySuffix;
@@ -2599,7 +2576,7 @@ class WallpanelView extends HuiView {
 		logger.debug("Preloading images");
 		if (imageSourceType() === "media-entity") {
 			this.preloadImage(this.imageOne,
-				function(wp, updatedImg) {
+				function(wp) {
 					if (callback) {
 						callback(wp);
 					}
@@ -2608,9 +2585,9 @@ class WallpanelView extends HuiView {
 		}
 		else {
 			this.preloadImage(this.imageOne,
-				function(wp, updatedImg) {
+				function(wp) {
 					wp.preloadImage(wp.imageTwo,
-						function(wp, updatedImg) {
+						function(wp) {
 							if (callback) {
 								callback(wp);
 							}
@@ -2632,13 +2609,11 @@ class WallpanelView extends HuiView {
 		logger.debug(`Media entity ${imageEntity} state has changed`);
 		mediaEntityState = entity.state;
 		let next = this.imageTwo;
-		let current = this.imageOne;
 		if (this.imageTwoContainer.style.opacity == 1) {
 			next = this.imageOne;
-			current = this.imageTwo;
 		}
 		const wp = this;
-		const onLoad = function(e) {
+		const onLoad = function() {
 			next.removeEventListener('load', onLoad);
 			wp.switchActiveImage(crossfadeMillis)
 		}
@@ -2721,13 +2696,11 @@ class WallpanelView extends HuiView {
 
 		let curActive = this.imageOneContainer;
 		let newActive = this.imageTwoContainer;
-		let infoElement = this.imageTwoInfo;
 		let curImg = this.imageOne;
 		let newImg = this.imageTwo;
 		if (this.imageTwoContainer.style.opacity == 1) {
 			curActive = this.imageTwoContainer;
 			newActive = this.imageOneContainer;
-			infoElement = this.imageOneInfo;
 			curImg = this.imageTwo;
 			newImg = this.imageOne;
 		}
@@ -2750,7 +2723,7 @@ class WallpanelView extends HuiView {
 		// Load next image after fade out
 		// only if not media-entity, which will not yet have changed already
 		if (imageSourceType() !== "media-entity") {
-			let wp = this;
+			const wp = this;
 			this.afterFadeoutTimer = setTimeout(function() {
 				if (typeof curImg.pause === "function") {
 					curImg.pause();
@@ -2764,7 +2737,7 @@ class WallpanelView extends HuiView {
 		this.hideMessage();
 		this.messageBox.innerHTML = message;
 		this.messageBox.style.visibility = 'visible';
-		let wp = this;
+		const wp = this;
 		this.messageBoxTimeout = setTimeout(function() {
 			wp.hideMessage();
 		}, timeout);
@@ -2806,7 +2779,7 @@ class WallpanelView extends HuiView {
 		this.restartKenBurnsEffect();
 
 		if (config.keep_screen_on_time > 0) {
-			let wp = this;
+			const wp = this;
 			setTimeout(function() {
 				if (wp.screensaverRunning() && !this.screenWakeLock.enabled) {
 					logger.error("Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD");
@@ -2841,7 +2814,7 @@ class WallpanelView extends HuiView {
 					}, 5000);
 				}
 				if (config.screensaver_stop_close_browser_mod_popup) {
-					let bmp = getActiveBrowserModPopup();
+					const bmp = getActiveBrowserModPopup();
 					if (bmp) {
 						bmp.closeDialog();
 					}
@@ -2888,8 +2861,8 @@ class WallpanelView extends HuiView {
 	}
 
 	updateScreensaver() {
-		let currentDate = new Date();
-		let now = currentDate.getTime();
+		const currentDate = new Date();
+		const now = currentDate.getTime();
 
 		if (this.energyCollectionUpdateEnabled && now - this.lastEnergyCollectionUpdate >= this.energyCollectionUpdateInterval * 1000) {
 			if (this.hass.connection._energy_wallpanel) {
@@ -2948,7 +2921,7 @@ class WallpanelView extends HuiView {
 
 		if (config.debug) {
 			let html = '';
-			let conf = {};
+			const conf = {};
 			for (const key in config) {
 				if (["profiles"].includes(key)) {
 					conf[key] = "...";
@@ -2965,7 +2938,7 @@ class WallpanelView extends HuiView {
 			html += `<b>Screensaver started at:</b> ${wallpanel.screensaverStartedAt}<br/>`;
 			html += `<b>Screen wake lock:</b> enabled=${this.screenWakeLock.enabled} native=${this.screenWakeLock.nativeWakeLockSupported} lock=${this.screenWakeLock._lock} player=${this.screenWakeLock._player} error=${this.screenWakeLock.error}<br/>`;
 			if (this.screenWakeLock._player) {
-				let p = this.screenWakeLock._player;
+				const p = this.screenWakeLock._player;
 				html += `<b>Screen wake lock video</b>: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
 			}
 			const activeImage = this.getActiveImageElement();
@@ -3000,7 +2973,7 @@ class WallpanelView extends HuiView {
 		this.updateImageIndex();
 		const inactiveImage = this.getInactiveImageElement();
 		this.updateImage(inactiveImage,
-			function(wp, img) {
+			function(wp) {
 				wp.switchActiveImage(250);
 			}
 		);
@@ -3011,7 +2984,7 @@ class WallpanelView extends HuiView {
 	}
 
 	handleInteractionEvent(evt, isClick) {
-		let now = Date.now();
+		const now = Date.now();
 		this.idleSince = now;
 
 		if (! this.screensaverRunning()) {
@@ -3123,7 +3096,7 @@ class WallpanelView extends HuiView {
 				return;
 			}
 			else if (right >= 0.40 && right <= 0.60 && bottom <= 0.10) {
-				let now = new Date();
+				const now = new Date();
 				if (isClick && now - this.lastClickTime < 500) {
 					this.clickCount += 1;
 					if (this.clickCount == 3) {
@@ -3221,7 +3194,7 @@ function locationChanged() {
 	
 	let panel = null;
 	let tab = null;
-	let path = window.location.pathname.split("/");
+	const path = window.location.pathname.split("/");
 	if (path.length > 1) {
 		panel = path[1];
 		if (path.length > 2) {
@@ -3246,7 +3219,7 @@ function startup() {
 	}
 	if (!elHass || !elHaMain) {
 		if (startupSeconds >= 5.0) {
-			throw new Error(`Wallpanel startup failed after ${attempt} attempts, element home-assistant / home-assistant-main not found.`);
+			throw new Error(`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`);
 		}
 		setTimeout(startup, 100);
 		return;
@@ -3305,17 +3278,17 @@ function startup() {
 						type: "lovelace/config",
 						url_path: event.data.url_path
 					})
-					.then((data) => {
-						dashboardConfig = {};
-						if (data.wallpanel) {
-							for (let key in data.wallpanel) {
-								if (key in defaultConfig) {
-									dashboardConfig[key] = data.wallpanel[key];
+						.then((data) => {
+							dashboardConfig = {};
+							if (data.wallpanel) {
+								for (const key in data.wallpanel) {
+									if (key in defaultConfig) {
+										dashboardConfig[key] = data.wallpanel[key];
+									}
 								}
 							}
-						}
-						reconfigure();
-					});
+							reconfigure();
+						});
 				}
 			},
 			"lovelace_updated"
@@ -3525,7 +3498,7 @@ var GPSTags = EXIF.GPSTags = {
 	0x001E : "GPSDifferential"
 };
 
-	// EXIF 2.3 Spec
+// EXIF 2.3 Spec
 var IFD1Tags = EXIF.IFD1Tags = {
 	0x0100: "ImageWidth",
 	0x0101: "ImageHeight",
@@ -3692,19 +3665,8 @@ function imageHasData(img) {
 	return !!(img.exifdata);
 }
 
-function arrayBufferToBase64(buffer) {
-    var binary = '';
-    var bytes = new Uint8Array( buffer );
-    var len = bytes.byteLength;
-    for (var i = 0; i < len; i++) {
-        binary += String.fromCharCode( bytes[ i ] );
-    }
-    return btoa(binary);
-}
-
-function base64ToArrayBuffer(base64, contentType) {
-	contentType = contentType || base64.match(/^data\:([^\;]+)\;base64,/mi)[1] || ''; // e.g. 'data:image/jpeg;base64,...' => 'image/jpeg'
-	base64 = base64.replace(/^data\:([^\;]+)\;base64,/gmi, '');
+function base64ToArrayBuffer(base64) {
+	base64 = base64.replace(/^data:([^;]+);base64,/gmi, '');
 	var binary = atob(base64);
 	var len = binary.length;
 	var buffer = new ArrayBuffer(len);
@@ -3719,7 +3681,7 @@ function objectURLToBlob(url, callback) {
 	var http = new XMLHttpRequest();
 	http.open("GET", url, true);
 	http.responseType = "blob";
-	http.onload = function(e) {
+	http.onload = function() {
 		if (this.status == 200 || this.status === 0) {
 			callback(this.response);
 		}
@@ -3743,17 +3705,17 @@ function getImageData(img, callback) {
 	}
 
 	if (img.src) {
-		if (/^data\:/i.test(img.src)) { // Data URI
+		if (/^data:/i.test(img.src)) { // Data URI
 			var arrayBuffer = base64ToArrayBuffer(img.src);
 			handleBinaryFile(arrayBuffer);
 
-		} else if (/^blob\:/i.test(img.src)) { // Object URL
-			var fileReader = new FileReader();
-			fileReader.onload = function(e) {
+		} else if (/^blob:/i.test(img.src)) { // Object URL
+			var blobFileReader = new FileReader();
+			blobFileReader.onload = function(e) {
 				handleBinaryFile(e.target.result);
 			};
 			objectURLToBlob(img.src, function (blob) {
-				fileReader.readAsArrayBuffer(blob);
+				blobFileReader.readAsArrayBuffer(blob);
 			});
 		} else {
 			var http = new XMLHttpRequest();
@@ -3861,9 +3823,6 @@ function findIPTCinJPEG(file) {
 			var sectionLength = dataView.getUint16(offset + 6 + nameHeaderLength);
 
 			return readIPTCData(file, startOffset, sectionLength);
-
-			break;
-
 		}
 
 
@@ -3874,8 +3833,6 @@ function findIPTCinJPEG(file) {
 
 }
 var IptcFieldMap = {
-	0x78 : 'caption',
-	0x6E : 'credit',
 	0x19 : 'keywords',
 	0x37 : 'dateCreated',
 	0x50 : 'byline',
@@ -3888,6 +3845,7 @@ var IptcFieldMap = {
 	0x67 : 'OriginalTransmissionReference',
 	0x69 : 'headline',
 	0x6D : 'credit',
+	0x6E : 'credit',
 	0x74 : 'copyright',
 	0x76 : 'contact',
 	0x78 : 'caption',
@@ -3910,18 +3868,17 @@ var IptcFieldMap = {
 function readIPTCData(file, startOffset, sectionLength){
 	var dataView = new DataView(file);
 	var data = {};
-	var fieldValue, fieldName, dataSize, segmentType, segmentSize;
+	var fieldValue, fieldName, dataSize, segmentType;
 	var segmentStartPos = startOffset;
 	while(segmentStartPos < startOffset+sectionLength) {
 		if(dataView.getUint8(segmentStartPos) === 0x1C && dataView.getUint8(segmentStartPos+1) === 0x02){
 			segmentType = dataView.getUint8(segmentStartPos+2);
 			if(segmentType in IptcFieldMap) {
 				dataSize = dataView.getInt16(segmentStartPos+3);
-				segmentSize = dataSize + 5;
 				fieldName = IptcFieldMap[segmentType];
 				fieldValue = getStringFromDB(dataView, segmentStartPos+5, dataSize);
 				// Check if we already stored a value with this name
-				if(data.hasOwnProperty(fieldName)) {
+				if(Object.prototype.hasOwnProperty.call(data, fieldName)) {
 					// Value already stored with this name, create multivalue field
 					if(data[fieldName] instanceof Array) {
 						data[fieldName].push(fieldValue);
@@ -3968,87 +3925,87 @@ function readTagValue(file, entryOffset, tiffStart, dirStart, bigEnd) {
 		numerator, denominator;
 
 	switch (type) {
-		case 1: // byte, 8-bit unsigned int
-		case 7: // undefined, 8-bit byte, value depending on field
-			if (numValues == 1) {
-				return file.getUint8(entryOffset + 8, !bigEnd);
-			} else {
-				offset = numValues > 4 ? valueOffset : (entryOffset + 8);
-				vals = [];
-				for (n=0;n<numValues;n++) {
-					vals[n] = file.getUint8(offset + n);
-				}
-				return vals;
-			}
-
-		case 2: // ascii, 8-bit byte
+	case 1: // byte, 8-bit unsigned int
+	case 7: // undefined, 8-bit byte, value depending on field
+		if (numValues == 1) {
+			return file.getUint8(entryOffset + 8, !bigEnd);
+		} else {
 			offset = numValues > 4 ? valueOffset : (entryOffset + 8);
-			return getStringFromDB(file, offset, numValues-1);
-
-		case 3: // short, 16 bit int
-			if (numValues == 1) {
-				return file.getUint16(entryOffset + 8, !bigEnd);
-			} else {
-				offset = numValues > 2 ? valueOffset : (entryOffset + 8);
-				vals = [];
-				for (n=0;n<numValues;n++) {
-					vals[n] = file.getUint16(offset + 2*n, !bigEnd);
-				}
-				return vals;
+			vals = [];
+			for (n=0;n<numValues;n++) {
+				vals[n] = file.getUint8(offset + n);
 			}
+			return vals;
+		}
 
-		case 4: // long, 32 bit int
-			if (numValues == 1) {
-				return file.getUint32(entryOffset + 8, !bigEnd);
-			} else {
-				vals = [];
-				for (n=0;n<numValues;n++) {
-					vals[n] = file.getUint32(valueOffset + 4*n, !bigEnd);
-				}
-				return vals;
-			}
+	case 2: // ascii, 8-bit byte
+		offset = numValues > 4 ? valueOffset : (entryOffset + 8);
+		return getStringFromDB(file, offset, numValues-1);
 
-		case 5:    // rational = two long values, first is numerator, second is denominator
-			if (numValues == 1) {
-				numerator = file.getUint32(valueOffset, !bigEnd);
-				denominator = file.getUint32(valueOffset+4, !bigEnd);
-				val = new Number(numerator / denominator);
-				val.numerator = numerator;
-				val.denominator = denominator;
-				return val;
-			} else {
-				vals = [];
-				for (n=0;n<numValues;n++) {
-					numerator = file.getUint32(valueOffset + 8*n, !bigEnd);
-					denominator = file.getUint32(valueOffset+4 + 8*n, !bigEnd);
-					vals[n] = new Number(numerator / denominator);
-					vals[n].numerator = numerator;
-					vals[n].denominator = denominator;
-				}
-				return vals;
+	case 3: // short, 16 bit int
+		if (numValues == 1) {
+			return file.getUint16(entryOffset + 8, !bigEnd);
+		} else {
+			offset = numValues > 2 ? valueOffset : (entryOffset + 8);
+			vals = [];
+			for (n=0;n<numValues;n++) {
+				vals[n] = file.getUint16(offset + 2*n, !bigEnd);
 			}
+			return vals;
+		}
 
-		case 9: // slong, 32 bit signed int
-			if (numValues == 1) {
-				return file.getInt32(entryOffset + 8, !bigEnd);
-			} else {
-				vals = [];
-				for (n=0;n<numValues;n++) {
-					vals[n] = file.getInt32(valueOffset + 4*n, !bigEnd);
-				}
-				return vals;
+	case 4: // long, 32 bit int
+		if (numValues == 1) {
+			return file.getUint32(entryOffset + 8, !bigEnd);
+		} else {
+			vals = [];
+			for (n=0;n<numValues;n++) {
+				vals[n] = file.getUint32(valueOffset + 4*n, !bigEnd);
 			}
+			return vals;
+		}
 
-		case 10: // signed rational, two slongs, first is numerator, second is denominator
-			if (numValues == 1) {
-				return file.getInt32(valueOffset, !bigEnd) / file.getInt32(valueOffset+4, !bigEnd);
-			} else {
-				vals = [];
-				for (n=0;n<numValues;n++) {
-					vals[n] = file.getInt32(valueOffset + 8*n, !bigEnd) / file.getInt32(valueOffset+4 + 8*n, !bigEnd);
-				}
-				return vals;
+	case 5:    // rational = two long values, first is numerator, second is denominator
+		if (numValues == 1) {
+			numerator = file.getUint32(valueOffset, !bigEnd);
+			denominator = file.getUint32(valueOffset+4, !bigEnd);
+			val = new Number(numerator / denominator);
+			val.numerator = numerator;
+			val.denominator = denominator;
+			return val;
+		} else {
+			vals = [];
+			for (n=0;n<numValues;n++) {
+				numerator = file.getUint32(valueOffset + 8*n, !bigEnd);
+				denominator = file.getUint32(valueOffset+4 + 8*n, !bigEnd);
+				vals[n] = new Number(numerator / denominator);
+				vals[n].numerator = numerator;
+				vals[n].denominator = denominator;
 			}
+			return vals;
+		}
+
+	case 9: // slong, 32 bit signed int
+		if (numValues == 1) {
+			return file.getInt32(entryOffset + 8, !bigEnd);
+		} else {
+			vals = [];
+			for (n=0;n<numValues;n++) {
+				vals[n] = file.getInt32(valueOffset + 4*n, !bigEnd);
+			}
+			return vals;
+		}
+
+	case 10: // signed rational, two slongs, first is numerator, second is denominator
+		if (numValues == 1) {
+			return file.getInt32(valueOffset, !bigEnd) / file.getInt32(valueOffset+4, !bigEnd);
+		} else {
+			vals = [];
+			for (n=0;n<numValues;n++) {
+				vals[n] = file.getInt32(valueOffset + 8*n, !bigEnd) / file.getInt32(valueOffset+4 + 8*n, !bigEnd);
+			}
+			return vals;
+		}
 	}
 }
 
@@ -4095,16 +4052,16 @@ function readThumbnailImage(dataView, tiffStart, firstIFDOffset, bigEnd){
 		// logger.log('Thumbnail image found!');
 
 		switch (thumbTags['Compression']) {
-			case 6:
-				// logger.log('Thumbnail image format is JPEG');
-				if (thumbTags.JpegIFOffset && thumbTags.JpegIFByteCount) {
+		case 6:
+			// logger.log('Thumbnail image format is JPEG');
+			if (thumbTags.JpegIFOffset && thumbTags.JpegIFByteCount) {
 				// extract the thumbnail
-					var tOffset = tiffStart + thumbTags.JpegIFOffset;
-					var tLength = thumbTags.JpegIFByteCount;
-					thumbTags['blob'] = new Blob([new Uint8Array(dataView.buffer, tOffset, tLength)], {
-						type: 'image/jpeg'
-					});
-				}
+				var tOffset = tiffStart + thumbTags.JpegIFOffset;
+				var tLength = thumbTags.JpegIFByteCount;
+				thumbTags['blob'] = new Blob([new Uint8Array(dataView.buffer, tOffset, tLength)], {
+					type: 'image/jpeg'
+				});
+			}
 			break;
 
 		case 1:
@@ -4157,16 +4114,16 @@ function Utf8ArrayToStr(array) {
 	while(i < len) {
 		c = array[i++];
 		switch(c >> 4) {
-			case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+		case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
 			// 0xxxxxxx
 			out += String.fromCharCode(c);
 			break;
-			case 12: case 13:
+		case 12: case 13:
 			// 110x xxxx   10xx xxxx
 			char2 = array[i++];
 			out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
 			break;
-			case 14:
+		case 14:
 			// 1110 xxxx  10xx xxxx  10xx xxxx
 			char2 = array[i++];
 			char3 = array[i++];
@@ -4219,36 +4176,36 @@ function readEXIFData(file, start) {
 		exifData = readTags(file, tiffOffset, tiffOffset + tags.ExifIFDPointer, ExifTags, bigEnd);
 		for (tag in exifData) {
 			switch (tag) {
-				case "LightSource" :
-				case "Flash" :
-				case "MeteringMode" :
-				case "ExposureProgram" :
-				case "SensingMethod" :
-				case "SceneCaptureType" :
-				case "SceneType" :
-				case "CustomRendered" :
-				case "WhiteBalance" :
-				case "GainControl" :
-				case "Contrast" :
-				case "Saturation" :
-				case "Sharpness" :
-				case "SubjectDistanceRange" :
-				case "FileSource" :
-					exifData[tag] = StringValues[tag][exifData[tag]];
-					break;
+			case "LightSource" :
+			case "Flash" :
+			case "MeteringMode" :
+			case "ExposureProgram" :
+			case "SensingMethod" :
+			case "SceneCaptureType" :
+			case "SceneType" :
+			case "CustomRendered" :
+			case "WhiteBalance" :
+			case "GainControl" :
+			case "Contrast" :
+			case "Saturation" :
+			case "Sharpness" :
+			case "SubjectDistanceRange" :
+			case "FileSource" :
+				exifData[tag] = StringValues[tag][exifData[tag]];
+				break;
 
-				case "ExifVersion" :
-				case "FlashpixVersion" :
-					exifData[tag] = String.fromCharCode(exifData[tag][0], exifData[tag][1], exifData[tag][2], exifData[tag][3]);
-					break;
+			case "ExifVersion" :
+			case "FlashpixVersion" :
+				exifData[tag] = String.fromCharCode(exifData[tag][0], exifData[tag][1], exifData[tag][2], exifData[tag][3]);
+				break;
 
-				case "ComponentsConfiguration" :
-					exifData[tag] =
+			case "ComponentsConfiguration" :
+				exifData[tag] =
 						StringValues.Components[exifData[tag][0]] +
 						StringValues.Components[exifData[tag][1]] +
 						StringValues.Components[exifData[tag][2]] +
 						StringValues.Components[exifData[tag][3]];
-					break;
+				break;
 			}
 			tags[tag] = exifData[tag];
 		}
@@ -4258,12 +4215,12 @@ function readEXIFData(file, start) {
 		gpsData = readTags(file, tiffOffset, tiffOffset + tags.GPSInfoIFDPointer, GPSTags, bigEnd);
 		for (tag in gpsData) {
 			switch (tag) {
-				case "GPSVersionID" :
-					gpsData[tag] = gpsData[tag][0] +
+			case "GPSVersionID" :
+				gpsData[tag] = gpsData[tag][0] +
 						"." + gpsData[tag][1] +
 						"." + gpsData[tag][2] +
 						"." + gpsData[tag][3];
-					break;
+				break;
 			}
 			tags[tag] = gpsData[tag];
 		}
@@ -4331,11 +4288,11 @@ function xml2json(xml) {
 
 	if (xml.nodeType == 1) { // element node
 		if (xml.attributes.length > 0) {
-		json['@attributes'] = {};
-		for (var j = 0; j < xml.attributes.length; j++) {
-			var attribute = xml.attributes.item(j);
-			json['@attributes'][attribute.nodeName] = attribute.nodeValue;
-		}
+			json['@attributes'] = {};
+			for (var j = 0; j < xml.attributes.length; j++) {
+				var attribute = xml.attributes.item(j);
+				json['@attributes'][attribute.nodeName] = attribute.nodeValue;
+			}
 		}
 	} else if (xml.nodeType == 3) { // text node
 		return xml.nodeValue;
@@ -4344,18 +4301,18 @@ function xml2json(xml) {
 	// deal with children
 	if (xml.hasChildNodes()) {
 		for(var i = 0; i < xml.childNodes.length; i++) {
-		var child = xml.childNodes.item(i);
-		var nodeName = child.nodeName;
-		if (json[nodeName] == null) {
-			json[nodeName] = xml2json(child);
-		} else {
-			if (json[nodeName].push == null) {
-			var old = json[nodeName];
-			json[nodeName] = [];
-			json[nodeName].push(old);
+			var child = xml.childNodes.item(i);
+			var nodeName = child.nodeName;
+			if (json[nodeName] == null) {
+				json[nodeName] = xml2json(child);
+			} else {
+				if (json[nodeName].push == null) {
+					var old = json[nodeName];
+					json[nodeName] = [];
+					json[nodeName].push(old);
+				}
+				json[nodeName].push(xml2json(child));
 			}
-			json[nodeName].push(xml2json(child));
-		}
 		}
 	}
 
@@ -4367,38 +4324,38 @@ function xml2Object(xml) {
 		var obj = {};
 		if (xml.children.length > 0) {
 			for (var i = 0; i < xml.children.length; i++) {
-			var item = xml.children.item(i);
-			var attributes = item.attributes;
-			for(var idx in attributes) {
-				var itemAtt = attributes[idx];
-				var dataKey = itemAtt.nodeName;
-				var dataValue = itemAtt.nodeValue;
+				var item = xml.children.item(i);
+				var attributes = item.attributes;
+				for(var idx in attributes) {
+					var itemAtt = attributes[idx];
+					var dataKey = itemAtt.nodeName;
+					var dataValue = itemAtt.nodeValue;
 
-				if(dataKey !== undefined) {
-					obj[dataKey] = dataValue;
+					if(dataKey !== undefined) {
+						obj[dataKey] = dataValue;
+					}
 				}
-			}
-			var nodeName = item.nodeName;
+				var nodeName = item.nodeName;
 
-			if (typeof (obj[nodeName]) == "undefined") {
-				obj[nodeName] = xml2json(item);
-			} else {
-				if (typeof (obj[nodeName].push) == "undefined") {
-				var old = obj[nodeName];
+				if (typeof (obj[nodeName]) == "undefined") {
+					obj[nodeName] = xml2json(item);
+				} else {
+					if (typeof (obj[nodeName].push) == "undefined") {
+						var old = obj[nodeName];
 
-				obj[nodeName] = [];
-				obj[nodeName].push(old);
+						obj[nodeName] = [];
+						obj[nodeName].push(old);
+					}
+					obj[nodeName].push(xml2json(item));
 				}
-				obj[nodeName].push(xml2json(item));
-			}
 			}
 		} else {
 			obj = xml.textContent;
 		}
 		return obj;
-		} catch (e) {
-			logger.log(e.message);
-		}
+	} catch (e) {
+		logger.log(e.message);
+	}
 }
 
 EXIF.enableXmp = function() {
@@ -4441,7 +4398,7 @@ EXIF.getAllTags = function(img) {
 		data = img.exifdata,
 		tags = {};
 	for (a in data) {
-		if (data.hasOwnProperty(a)) {
+		if (Object.prototype.hasOwnProperty.call(data, a)) {
 			tags[a] = data[a];
 		}
 	}
@@ -4454,7 +4411,7 @@ EXIF.getAllIptcTags = function(img) {
 		data = img.iptcdata,
 		tags = {};
 	for (a in data) {
-		if (data.hasOwnProperty(a)) {
+		if (Object.prototype.hasOwnProperty.call(data, a)) {
 			tags[a] = data[a];
 		}
 	}
@@ -4481,7 +4438,7 @@ EXIF.pretty = function(img) {
 		data = img.exifdata,
 		strPretty = "";
 	for (a in data) {
-		if (data.hasOwnProperty(a)) {
+		if (Object.prototype.hasOwnProperty.call(data, a)) {
 			if (typeof data[a] == "object") {
 				if (data[a] instanceof Number) {
 					strPretty += a + " : " + data[a] + " [" + data[a].numerator + "/" + data[a].denominator + "]\r\n";
