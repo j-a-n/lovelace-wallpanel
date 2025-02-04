@@ -10,6 +10,6 @@ npx browserslist
 # Run linter
 npx eslint wallpanel.js
 
-# --fix
+# Automatically fix problems
 npx eslint --fix wallpanel.js
 ```

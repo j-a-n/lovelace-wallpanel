@@ -1907,7 +1907,6 @@ class WallpanelView extends HuiView {
 					delete imageInfoCache[tmpImg.imageUrl];
 				};
 				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-				//xhr.setRequestHeader("User-Agent", `lovelace-wallpanel/${version}`);
 				xhr.timeout = 15000;
 				xhr.send();
 			}
