@@ -1821,7 +1821,7 @@ class WallpanelView extends HuiView {
 				config.disable_screensaver_on_browser_mod_popup_func
 			);
 		}
-		if (config.enabled && config.camera_motion_detection_enabled) {
+		if (isActive() && config.camera_motion_detection_enabled) {
 			this.cameraMotionDetection.start();
 		} else {
 			this.cameraMotionDetection.stop();
