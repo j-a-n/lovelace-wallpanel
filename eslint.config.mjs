@@ -7,18 +7,16 @@ export default [
 	prettierRecommended,
 	compat.configs["flat/recommended"],
 	{
-		"rules": {
+		rules: {
 			"prefer-const": "error",
-			'prettier/prettier': [
-				'warn',
+			"prettier/prettier": [
+				"warn",
 				{
-					
-						useTabs: true,
-						printWidth: 120,
-						trailingComma: 'none'
-					
+					useTabs: true,
+					printWidth: 120,
+					trailingComma: "none"
 				}
 			]
 		}
 	}
-]
+];
