@@ -662,7 +662,7 @@ function getHaPanelLovelaceConfig(keys = []) {
 	return conf;
 }
 
-function setSidebarHidden(hidden) {
+function setSidebarVisibility(hidden) {
 	try {
 		const panelLovelace = elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
 		if (!panelLovelace) {
@@ -697,7 +697,7 @@ function setSidebarHidden(hidden) {
 	}
 }
 
-function setToolbarHidden(hidden) {
+function setToolbarVisibility(hideToolbar, hideActionItems) {
 	try {
 		const panelLovelace = elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
 		if (!panelLovelace) {
@@ -714,7 +714,7 @@ function setToolbarHidden(hidden) {
 			// Changed with 2023.04
 			appToolbar = huiRoot.querySelector("div.toolbar");
 		}
-		if (hidden) {
+		if (hideToolbar) {
 			appToolbar.style.setProperty("display", "none");
 			if (!config.keep_toolbar_space) {
 				view.style.minHeight = "100vh";
@@ -727,7 +727,7 @@ function setToolbarHidden(hidden) {
 			view.style.removeProperty("margin-top");
 			view.style.removeProperty("padding-top");
 			const actionItems = appToolbar.querySelector("div.action-items");
-			if (config.hide_toolbar_action_icons) {
+			if (hideActionItems) {
 				actionItems.style.setProperty("display", "none");
 			} else {
 				actionItems.style.setProperty("display", "flex");
@@ -3093,6 +3093,7 @@ class WallpanelView extends HuiView {
 
 function activateWallpanel() {
 	let hideToolbar = config.hide_toolbar;
+	let hideActionItems = config.hide_toolbar_action_icons;
 	if (hideToolbar && !config.hide_toolbar_on_subviews && activeTab) {
 		const pl = getHaPanelLovelace();
 		if (pl && pl.lovelace && pl.lovelace.rawConfig && pl.lovelace.rawConfig.views) {
@@ -3101,22 +3102,23 @@ function activateWallpanel() {
 					if (pl.lovelace.rawConfig.views[i].subview) {
 						// Current tab is a subview
 						hideToolbar = false;
+						hideActionItems = false;
 					}
 					break;
 				}
 			}
 		}
 	}
-	setToolbarHidden(hideToolbar);
-	setSidebarHidden(config.hide_sidebar);
+	setToolbarVisibility(hideToolbar, hideActionItems);
+	setSidebarVisibility(config.hide_sidebar);
 }
 
 function deactivateWallpanel() {
 	if (wallpanel.screensaverRunning()) {
 		wallpanel.stopScreensaver();
 	}
-	setToolbarHidden(false);
-	setSidebarHidden(false);
+	setToolbarVisibility(false, false);
+	setSidebarVisibility(false);
 }
 
 function reconfigure() {
