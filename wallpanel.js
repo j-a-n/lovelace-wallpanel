@@ -497,18 +497,17 @@ function updateConfig() {
 	mergeConfig(config, dashboardConfig);
 
 	const paramConfig = {};
-	for (const [key, value] of params) {
+	for (let [key, value] of params) {
 		if (key.startsWith("wp_")) {
-			const conf = key.substring(3);
-			if (conf in defaultConfig && value) {
+			key = key.substring(3);
+			if (key in defaultConfig && value) {
 				// Convert to the right type
 				try {
 					value = JSON.parse(value);
-				}
-				catch {
+				} catch {
 					// Invalid JSON, just take the string
 				}
-				paramConfig[conf] = defaultConfig[conf].constructor(value);
+				paramConfig[key] = defaultConfig[key].constructor(value);
 			}
 		}
 	}
