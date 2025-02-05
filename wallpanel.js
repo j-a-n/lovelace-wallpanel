@@ -135,7 +135,6 @@ let userDisplayname = null;
 const HuiView = customElements.get("hui-view");
 if (!HuiView) {
 	const error = "Failed to get hui-view from customElements";
-	console.error(error, customElements);
 	throw new Error(error);
 }
 
@@ -2759,7 +2758,7 @@ class WallpanelView extends HuiView {
 		if (config.keep_screen_on_time > 0) {
 			const wp = this;
 			setTimeout(function () {
-				if (wp.screensaverRunning() && !this.screenWakeLock.enabled) {
+				if (wp.screensaverRunning() && !wp.screenWakeLock.enabled) {
 					logger.error(
 						"Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD"
 					);
@@ -3188,9 +3187,9 @@ function locationChanged() {
 	reconfigure();
 }
 
-const startTime = performance.now();
+const startTime = Date.now();
 function startup() {
-	const startupSeconds = (performance.now() - startTime) / 1000;
+	const startupSeconds = (Date.now() - startTime) / 1000;
 
 	elHass = document.querySelector("body > home-assistant");
 	if (elHass) {
