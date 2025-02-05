@@ -499,10 +499,16 @@ function updateConfig() {
 	const paramConfig = {};
 	for (const [key, value] of params) {
 		if (key.startsWith("wp_")) {
-			const key = key.substring(3);
-			if (key in defaultConfig && value) {
+			const conf = key.substring(3);
+			if (conf in defaultConfig && value) {
 				// Convert to the right type
-				paramConfig[key] = defaultConfig[key].constructor(JSON.parse(value));
+				try {
+					value = JSON.parse(value);
+				}
+				catch {
+					// Invalid JSON, just take the string
+				}
+				paramConfig[conf] = defaultConfig[conf].constructor(value);
 			}
 		}
 	}
