@@ -10,6 +10,7 @@ const defaultConfig = {
 	debug: false,
 	wait_for_browser_mod_time: 0.25,
 	log_level_console: "info",
+	alert_errors: false,
 	hide_toolbar: false,
 	keep_toolbar_space: false,
 	hide_toolbar_action_icons: false,
@@ -228,6 +229,9 @@ const logger = {
 			console.error.apply(this, arguments);
 		}
 		logger.addMessage("error", arguments);
+		if (config.alert_errors) {
+			alert(`Wallpanel error: ${stringify(arguments)}`);
+		}
 	}
 };
 
@@ -333,6 +337,7 @@ class ScreenWakeLock {
 class CameraMotionDetection {
 	constructor() {
 		this.enabled = false;
+		this.error = false;
 		this.width = 64;
 		this.height = 48;
 		this.threshold = this.width * this.height * 0.05;
@@ -375,10 +380,12 @@ class CameraMotionDetection {
 	}
 
 	start() {
-		if (this.enabled) {
+		if (this.enabled || this.error) {
 			return;
 		}
+
 		if (!navigator.mediaDevices) {
+			this.error = true;
 			logger.error("No media devices found");
 			return;
 		}

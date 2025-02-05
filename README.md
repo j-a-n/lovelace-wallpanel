@@ -53,6 +53,7 @@ You can set the following configuration parameters for every individual Home Ass
 | debug                            | Enable debug mode?                                                                                     | false     |
 | wait_for_browser_mod_time        | How long to wait for browser_mod to be available (in seconds)? This config attribute can only be set in the main configuration and not in profiles, user-specific or device-specific. | 0.25      |
 | log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
+| alert_errors                     | Display error messages in an alert box.                                                                | false     |
 | hide_toolbar                     | Hide the upper panel toolbar? Please see [FAQ](#dashboard-cannot-be-edited) how to edit your dashboard when toolbar is hidden. | false     |
 | hide_toolbar_on_subviews         | Hide the toolbar in subviews too?                                                                      | false     |
 | keep_toolbar_space               | If the toolbar is hidden, should the space where the toolbar is normally located remain empty?         | false     |
