@@ -21,7 +21,7 @@ You can use images and videos from the following sources:
 - Full websites as iframe
 - Unsplash
 
-![Screenshot of screensaver](./doc/screensaver-screenshot.png)
+![Screenshot of screensaver](./docs/screensaver-screenshot.png)
 
 # Installation
 
@@ -702,7 +702,7 @@ style:
     '--primary-text-color': '#e1e1e1'
     '--secondary-text-color': '#9b9b9b'
 ```
-![Dark style](./doc/dark-style.png)
+![Dark style](./docs/dark-style.png)
 
 ## Light style
 ```yaml
@@ -722,7 +722,7 @@ style:
     '--primary-text-color': '#212121'
     '--secondary-text-color': '#727272'
 ```
-![Light style](./doc/light-style.png)
+![Light style](./docs/light-style.png)
 
 ## Transparent style
 ```yaml
@@ -737,7 +737,7 @@ style:
     '--primary-text-color': '#ffffff'
     '--secondary-text-color': '#dddddd'
 ```
-![Transparent style](./doc/transparent-style.png)
+![Transparent style](./docs/transparent-style.png)
 
 ## Alternative transparent style with text shadow
 ```yaml
@@ -783,7 +783,7 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
         grid-row: 3
         grid-column: 2
 ```
-![Grid layout](./doc/grid-layout.png)
+![Grid layout](./docs/grid-layout.png)
 
 
 ## Dynamic configuration using entities
