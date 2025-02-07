@@ -1,1 +1,0 @@
-# WallPanel documentation
