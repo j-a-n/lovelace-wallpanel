@@ -1,0 +1,56 @@
+site_name: WallPanel Documentation
+site_url: https://j-a-n.github.io/lovelace-wallpanel
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.features
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.hightlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/theme-light-dark
+        name: Switch to dark mode
+      primary: teal
+      accent: teal
+    - scheme: slate
+      toggle:
+        icon: material/theme-light-dark
+        name: Switch to light mode
+      primary: teal
+      accent: teal
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick Start: quick-start.md
+  - Configuration: configuration.md
+  - Browser Mod: browser-mod.md
+  - Screensaver:
+    - Screensaver: screensaver.md
+    - Media Sources: media-sources.md
+    - Media Info: media-info.md
+    - Info Box: info-box.md
+  - Styling: styling.md
+  - Motion Detection: camera-motion-detection.md
+  - Other Configuration: other-configuration.md
+  - FAQ: faq.md
+  - Cedits: credits.md
+  - Additional Resources: additional-resources.md
+

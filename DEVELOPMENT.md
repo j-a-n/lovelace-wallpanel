@@ -13,3 +13,8 @@ npx eslint wallpanel.js
 # Automatically fix problems
 npx eslint --fix wallpanel.js
 ```
+
+# Documentation
+```shell
+ uvx --with mkdocs-material mkdocs serve
+```
