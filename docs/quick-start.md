@@ -14,7 +14,11 @@ wallpanel:
   hide_toolbar: false
   hide_sidebar: true
   fullscreen: false
+  idle_time: 10
 ```
+
+After saving and closing the dashboard configuration, WallPanel should now be active for this dashboard.
+The sidebar should be hidden and the screensaver should start after an idle time of 10 seconds.
 
 You can add a view that is displayed above the screensaver images.
 Simply refer to an existing view of the dashboard by its title or path.
