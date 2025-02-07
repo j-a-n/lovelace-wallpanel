@@ -1,4 +1,5 @@
 # https://github.com/daattali/beautiful-jekyll/blob/master/_config.yml
+# https://github.com/pages-themes/leap-day
 plugins:
   - jekyll-relative-links
 relative_links:
