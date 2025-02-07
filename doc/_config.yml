@@ -1,0 +1,6 @@
+# https://github.com/daattali/beautiful-jekyll/blob/master/_config.yml
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: true
