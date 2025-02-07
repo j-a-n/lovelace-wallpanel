@@ -1,4 +1,5 @@
 {
 	"name": "WallPanel",
+	"render_readme": true,
 	"filename": "wallpanel.js"
 }

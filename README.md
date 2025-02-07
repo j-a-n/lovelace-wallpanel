@@ -25,8 +25,6 @@ You can use images and videos from the following sources:
 
 # Installation
 
-The recommended way is to install this plugin using HACS.
-## HACS Installation
 * Search for `WallPanel` in the Home Assistant Community Store
 * Click on the repository
 * Click the `Download` button
@@ -34,14 +32,54 @@ The recommended way is to install this plugin using HACS.
 * Click on `Download`
 
 
-## Manual installation
-* Download [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
-* Be sure to delete the **wallpanel.js.gz** file if it is in the same directory.
-* Open Configuration => Lovelace Dashboards => [Resources](https://my.home-assistant.io/redirect/lovelace_resources/) and add **/local/wallpanel.js** (Resource type: **JavaScript module**).
+# Quick Start
+Add a wallpanel configuration to your Home Assistant Dashboard configuration yaml (raw config).
 
-After a manual upgrade to a newer version, you should change the URL of the resource so that browsers are forced to reload the resource.
-You can add a query string such as **?v2** to the URL or change it: **/local/wallpanel.js?v2**.
+* Click Overview in your sidebar.
+* Click the three dots menu (top-right) and click on Edit Dashboard.
+* Click the three dots menu again and click on Raw configuration editor.
+* Add the `wallpanel` configuration above anything else.
 
+```yaml
+wallpanel:
+  enabled: true
+  hide_toolbar: false
+  hide_sidebar: true
+  fullscreen: false
+```
+
+You can add a view that is displayed above the screensaver images.
+Simply refer to an existing view of the dashboard by its title or path.
+```yaml
+wallpanel:
+  enabled: true
+  cards: []
+  views:
+    - title: Wallpanel
+```
+
+Or add individual cards.
+You can copy the cards yaml from the raw configuration of any dashboard.
+
+```yaml
+wallpanel:
+  enabled: true
+  views: []
+  cards:
+    - type: weather-forecast
+      entity: weather.open_meteo_home
+      forecast_type: daily
+```
+
+You can use [Browser Mod](https://github.com/thomasloven/hass-browser_mod) to activate WallPanel on individual devices only. Replace `<browser-id>` with the Browser ID from Browser Mod.
+
+```yaml
+wallpanel:
+  enabled: false
+  profiles:
+    device.<browser-id>:
+      enabled: true
+```
 
 # Configuration
 You can set the following configuration parameters for every individual Home Assistant Dashboard:
@@ -125,7 +163,6 @@ You can set the following configuration parameters for every individual Home Ass
 | camera_motion_detection_capture_height   | Height of the images captured by the camera in pixels.                                         | 48         |
 | camera_motion_detection_capture_interval | Interval in seconds at which images are captured by the camera.                                | 0.3        |
 | camera_motion_detection_capture_visible  | Should the captured images be displayed on the user interface for debugging?                   | false      |
-
 
 ## Home Assistant Dashboard configuration
 You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).
@@ -905,6 +942,15 @@ For Fully Kiosk Browser, enable "Enable Webcam Access (PLUS)" in `Web Content Se
 * The resolution of the video recording can be configured via `camera_motion_detection_capture_width` (default: `64`) and `camera_motion_detection_capture_height` (default: `48`). Higher values improve accuracy but increase CPU utilization.
 * The time interval between two captured images can be set via `camera_motion_detection_capture_interval` (in seconds, default: `0.3`). Lower values detect movements faster, but consume more CPU.
 * For troubleshooting, set `camera_motion_detection_capture_visible` to `true` to display the captured images in the user interface.
+
+
+# Manual installation
+* Download [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
+* Be sure to delete the **wallpanel.js.gz** file if it is in the same directory.
+* Open Configuration => Lovelace Dashboards => [Resources](https://my.home-assistant.io/redirect/lovelace_resources/) and add **/local/wallpanel.js** (Resource type: **JavaScript module**).
+
+After a manual upgrade to a newer version, you should change the URL of the resource so that browsers are forced to reload the resource.
+You can add a query string such as **?v2** to the URL or change it: **/local/wallpanel.js?v2**.
 
 
 # FAQ - Frequently Asked Questions
