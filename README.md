@@ -5,9 +5,21 @@
 [![GitHub stars](https://img.shields.io/github/stars/j-a-n/lovelace-wallpanel?color=yellow&style=for-the-badge)](https://github.com/j-a-n/lovelace-wallpanel/stargazers)
 ![GitHub All Releases](https://img.shields.io/github/downloads/j-a-n/lovelace-wallpanel/total.svg?color=green&style=for-the-badge)
 
-🖼️ Wall panel mode for your Home Assistant Dashboards.
-A configurable extension that features a full-screen mode, a photo slideshow screensaver, screen wake lock, motion detection and the ability to hide the side and top bar(s).
-Show dashboard views, cards and badges of your choice on top of the images.
+🖼️ **Wall panel mode for your Home Assistant Dashboards.**  
+A configurable extension that features:
+- Photo and video slideshow screensaver
+- Show dashboard views, cards and badges of your choice on top of the images.
+- Full-screen mode
+- Hide the side and or top bar 
+- Screen wake lock
+- Motion detection
+
+You can use images and videos from the following sources:
+- Home Assistant Media-source
+- Immich
+- Home Assitant entities with entity_picture attribute
+- Full websites as iframe
+- Unsplash
 
 ![Screenshot of screensaver](./doc/screensaver-screenshot.png)
 
@@ -15,33 +27,21 @@ Show dashboard views, cards and badges of your choice on top of the images.
 
 The recommended way is to install this plugin using HACS.
 ## HACS Installation
-* Search for `WallPanel` in the Frontend repository list
-* Click on the repository card
-* Click on `Install this repository in HACS`
-* Select the latest version
+* Search for `WallPanel` in the Home Assistant Community Store
+* Click on the repository
+* Click the `Download` button
+* You can now select a special version if required
 * Click on `Download`
 
 
 ## Manual installation
 * Download [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
+* Be sure to delete the **wallpanel.js.gz** file if it is in the same directory.
 * Open Configuration => Lovelace Dashboards => [Resources](https://my.home-assistant.io/redirect/lovelace_resources/) and add **/local/wallpanel.js** (Resource type: **JavaScript module**).
 
+After a manual upgrade to a newer version, you should change the URL of the resource so that browsers are forced to reload the resource.
+You can add a query string such as **?v2** to the URL or change it: **/local/wallpanel.js?v2**.
 
-# Upgrading
-
-The recommended way is to upgrade this plugin using HACS.
-
-## HACS upgrade
-* Search for `WallPanel` in the Frontend repository list
-* Click on the repository card
-* Click on `Install this repository in HACS`
-* Select the latest version
-* Click on `Download`
-
-## Manual upgrade
-* Download current [wallpanel.js](wallpanel.js) and place it into the folder **config/www**.
-* Open Configuration => Lovelace Dashboards => [Resources](https://my.home-assistant.io/redirect/lovelace_resources/) and modify the resource URL to force browsers to reload the resource.
-For example you could add or change the query string: **/local/wallpanel.js?v2**
 
 # Configuration
 You can set the following configuration parameters for every individual Home Assistant Dashboard:
@@ -49,7 +49,7 @@ You can set the following configuration parameters for every individual Home Ass
 | Config                           | Description                                                                                            | Default   |
 | ---------------------------------| ------------------------------------------------------------------------------------------------------ | --------- |
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
-| enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, wallpanel is enabled on all tabs. | []   |
+| enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, WallPanel is enabled on all tabs. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
 | wait_for_browser_mod_time        | How long to wait for browser_mod to be available (in seconds)? This config attribute can only be set in the main configuration and not in profiles, user-specific or device-specific. | 0.25      |
 | log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
@@ -110,7 +110,7 @@ You can set the following configuration parameters for every individual Home Ass
 | info_move_pattern                | Movement pattern of the info box at a specified interval (possible values are: random / corners).      | random     |
 | info_move_interval               | Interval of movement of the info box in seconds (0 = no movement).                                     | 0          |
 | info_move_fade_duration          | Duration of the fade-in and fade-out animation of the info box in case of movement (0 = no animation). | 2.0        |
-| style                            | Additional CSS styles for wallpanel elements.                                                          | {}         |
+| style                            | Additional CSS styles for WallPanel elements.                                                          | {}         |
 | badges                           | Badges to display in info box. Set to [] to show no badges at all. See [Badges](#badges) for details.  | []         |
 | cards                            | Cards to display in info box. Set to [] to show no cards at all. See [Cards](#cards) for details.      | See [below](#cards)  |
 | views                            | Dashboard views to display in info box. Set to [] to show no views at all. See [Views](#views) for details. | []         |
@@ -326,7 +326,7 @@ Note: You should prefer to use a list of URLs in `Access-Control-Allow-Origin` i
 #### Wallpanel configuration
 To access the immich API, first generate an [API key](https://immich.app/docs/features/command-line-interface/#obtain-the-api-key).
 
-Then you can configure wallpanel to use the immich API.
+Then you can configure WallPanel to use the immich API.
 You need to set the `image_url` to `immich+<your api url>` and enter the API key in `immich_api_key`.
 To restrict the images to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
 
@@ -468,6 +468,7 @@ You can then reference the view in the wallpanel configuration:
 
 ```yaml
 wallpanel:
+  cards: []
   views:
     - title: Wallpanel
 ```
@@ -477,6 +478,7 @@ The following example uses 80% of the available width of the viewport:
 
 ```yaml
 wallpanel:
+  cards: []
   views:
     - title: Wallpanel
   style:
@@ -568,7 +570,7 @@ When the screensaver changes the active image, the URL of the new image is store
 
 
 ## Styles
-You can customize the style of every wallpanel element.
+You can customize the style of every WallPanel element.
 
 The most important element IDs are:
 - `wallpanel-screensaver-container`
@@ -748,7 +750,7 @@ The cards and badges are positionend by a [Grid_Layout](https://developer.mozill
 
 
 ## Dynamic configuration using entities
-The wallpanel configuration can be changed dynamically by using input_text or input_select helpers.
+The WallPanel configuration can be changed dynamically by using input_text or input_select helpers.
 Placeholders can be used in the yaml configuration, which are replaced by the state value of the corresponding entity.
 These placeholders have the form `${entity:<entity-id>}`, where `<entity-id>` must be replaced by the ID of an existing HA entity.
 Whenever the state of such an entity changes, the configuration is updated immediately.
@@ -909,7 +911,7 @@ For Fully Kiosk Browser, enable "Enable Webcam Access (PLUS)" in `Web Content Se
 ## Dashboard cannot be edited
 After hiding the toolbar, I can no longer edit the dashboard. How can I recover?
 
-If you add `?edit=1` or `?wp_enabled=false` to the URL in the browser, wallpanel will not be active, so the toolbar will not be hidden either.
+If you add `?edit=1` or `?wp_enabled=false` to the URL in the browser, WallPanel will not be active, so the toolbar will not be hidden either.
 You can also use `?wp_hide_toolbar=false` to only change this setting.
 
 Example: `http://192.168.1.1:8123/lovelace/default_view?wp_enabled=false`
