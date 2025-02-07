@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.39.0";
+const version = "4.39.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -3234,16 +3234,14 @@ function startup() {
 		}
 		wallpanel = document.createElement("wallpanel-view");
 		elHaMain.shadowRoot.appendChild(wallpanel);
+		window.addEventListener("location-changed", (event) => {
+			logger.debug("location-changed", event);
+			setTimeout(locationChanged, 25);
+		});
 		if (window.navigation) {
 			// Using navigate event because a back button on a sub-view will not produce a location-changed event
 			window.navigation.addEventListener("navigate", (event) => {
 				logger.debug("navigate", event);
-				setTimeout(locationChanged, 0);
-			});
-		} else {
-			// Not supported (i.e. Firefox)
-			window.addEventListener("location-changed", (event) => {
-				logger.debug("location-changed", event);
 				setTimeout(locationChanged, 0);
 			});
 		}
