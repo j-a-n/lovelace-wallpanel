@@ -146,7 +146,9 @@ Use JSON syntax for the values.
 **Example**:
 `http://hass:8123/lovelace/default_view?wp_hide_sidebar=false`
 
-Note: Please note that the URL parameters may be lost when navigating in the Home Assistant interface. Therefore, this option should not normally be used.
+!!! info
+    Please note that the URL parameters may be lost when navigating in the Home Assistant interface.
+    Therefore, this option should not normally be used.
 
 ## Dynamic configuration using entities
 The WallPanel configuration can be changed dynamically by using input_text or input_select helpers.

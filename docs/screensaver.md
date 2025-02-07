@@ -2,8 +2,9 @@
 WallPanel offers a screensaver that presents a media slideshow.
 Images, videos and websites are supported as media content.
 
-Tip: If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
-A click on the left side shows the previous picture and reverses the playback order.
+!!! tip
+    If you click on the far right side of the screen while the screen saver is active, the next image will be displayed.
+    A click on the left side shows the previous picture and reverses the playback order.
 
 ## Screensaver entity
 You can create an input_boolean helper in HA and set `screensaver_entity` to this entity id.

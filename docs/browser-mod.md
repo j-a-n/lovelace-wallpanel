@@ -45,7 +45,8 @@ wallpanel:
       screensaver_entity: input_boolean.screensaver_livingroom
 ```
 
-Note: It is not required to define profiles for all devices.
+!!! info
+    It is not required to define profiles for all devices.
 
 ## Placeholder ${browser_id}
 If only individual configuration attributes are to be device-specific,

@@ -121,7 +121,8 @@ traefik.http.middlewares.immich-cors.headers.accessControlMaxAge=1728000
 traefik.http.routers.immich.middlewares=immich-cors
 ```
 
-Note: You should prefer to use a list of URLs in `Access-Control-Allow-Origin` instead of using `*`.
+!!! tip
+    You should prefer to use a list of URLs in `Access-Control-Allow-Origin` instead of using `*`.
 
 ### Wallpanel configuration
 To access the immich API, first generate an [API key](https://immich.app/docs/features/command-line-interface/#obtain-the-api-key).
@@ -148,4 +149,6 @@ For example:
 image_url: iframe+https://projects.sntosh.in/clock/
 ```
 
-Note: Not all websites can be used in an iframe. A website can set an X-Frame-Options HTTP header to prevent it from being used in an iframe.
+!!! info
+    Not all websites can be used in an iframe.
+    A website can set an X-Frame-Options HTTP header to prevent it from being used in an iframe.
