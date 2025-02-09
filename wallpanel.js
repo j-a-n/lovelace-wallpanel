@@ -3147,6 +3147,13 @@ function reconfigure() {
 }
 
 function locationChanged() {
+	if (window.location.href == currentLocation) {
+		return;
+	}
+
+	logger.debug(`Location changed from '${currentLocation}' to '${window.location.href}'`);
+	currentLocation = window.location.href;
+
 	if (
 		wallpanel &&
 		wallpanel.screensaverRunning &&
@@ -3162,13 +3169,6 @@ function locationChanged() {
 			wallpanel.stopScreensaver();
 		}
 	}
-
-	if (window.location.href == currentLocation) {
-		return;
-	}
-
-	logger.debug(`Location changed from '${currentLocation}' to '${window.location.href}'`);
-	currentLocation = window.location.href;
 
 	let panel = null;
 	let tab = null;
