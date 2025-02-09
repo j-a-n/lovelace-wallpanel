@@ -602,11 +602,11 @@ function getActiveBrowserModPopup() {
 function isActive() {
 	const params = new URLSearchParams(window.location.search);
 	if (params.get("edit") == "1") {
-		console.debug("Edit mode active");
+		logger.debug("Edit mode active");
 		return false;
 	}
 	if (!config.enabled) {
-		console.debug("Wallpanel not enabled in config");
+		logger.debug("Wallpanel not enabled in config");
 		return false;
 	}
 	if (
@@ -615,7 +615,7 @@ function isActive() {
 		activeTab &&
 		!config.enabled_on_tabs.includes(activeTab)
 	) {
-		console.debug(`Wallpanel not enabled on current tab ${activeTab}`);
+		logger.debug(`Wallpanel not enabled on current tab ${activeTab}`);
 		return false;
 	}
 	if (
@@ -624,11 +624,11 @@ function isActive() {
 		getActiveBrowserModPopup() &&
 		wallpanel.disable_screensaver_on_browser_mod_popup_function(getActiveBrowserModPopup())
 	) {
-		console.debug("Browser mod popup function returned true, wallpanel disabled");
+		logger.debug("Browser mod popup function returned true, wallpanel disabled");
 		return false;
 	}
 	if (config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup()) {
-		console.debug("Browser mod popup active, wallpanel disabled");
+		logger.debug("Browser mod popup active, wallpanel disabled");
 		return false;
 	}
 	return true;
