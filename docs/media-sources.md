@@ -91,11 +91,13 @@ image_url: media-entity://camera.google_photos_favorites_media
 
 See [Google Photos Integration README](https://github.com/Daanoz/ha-google-photos#lovelace-wall-panel) for details.
 
-## immich API
-There is experimental support for retrieving images from an immich server.
+## Immich API
+Images and videos can be loaded from an Immich server,
+for which wallpanel accesses the [Immich API](https://immich.app/docs/api/).
 
-### immich server CORS
-You must configure the immich server so that it accepts API calls from external domains (CORS).
+
+### Immich server CORS
+You must configure the Immich server so that it accepts API calls from external domains (CORS).
 Depending on your web server, the configuration will be different.
 
 Here is a configuration example for nginx:
@@ -125,9 +127,9 @@ traefik.http.routers.immich.middlewares=immich-cors
     You should prefer to use a list of URLs in `Access-Control-Allow-Origin` instead of using `*`.
 
 ### Wallpanel configuration
-To access the immich API, first generate an [API key](https://immich.app/docs/features/command-line-interface/#obtain-the-api-key).
+To access the Immich API, first generate an [API key](https://immich.app/docs/features/command-line-interface/#obtain-the-api-key).
 
-Then you can configure WallPanel to use the immich API.
+Then you can configure WallPanel to use the Immich API.
 You need to set the `image_url` to `immich+<your api url>` and enter the API key in `immich_api_key`.
 To restrict the images to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
 

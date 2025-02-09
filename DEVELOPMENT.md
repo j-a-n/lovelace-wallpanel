@@ -16,5 +16,5 @@ npx eslint --fix wallpanel.js
 
 # Documentation
 ```shell
- uvx --with mkdocs-material mkdocs serve
+uvx --with mkdocs-material mkdocs serve
 ```

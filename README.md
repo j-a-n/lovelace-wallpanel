@@ -8,7 +8,8 @@
 
 
 🖼️ **Wall panel mode for your Home Assistant Dashboards.**  
-A configurable extension that features:
+
+WallPanel is a configurable extension that features:
 
 - Photo and video slideshow screensaver
 - Show dashboard views, cards and badges of your choice on top of the images.

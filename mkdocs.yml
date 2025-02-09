@@ -1,5 +1,6 @@
 site_name: WallPanel Documentation
 site_url: https://j-a-n.github.io/lovelace-wallpanel
+repo_url: https://github.com/j-a-n/lovelace-wallpanel
 theme:
   name: material
   features:
@@ -14,16 +15,29 @@ theme:
     - content.code.copy
   language: en
   palette:
-    - scheme: default
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
       toggle:
-        icon: material/theme-light-dark
+        icon: material/brightness-auto
+        name: Switch to light mode
+      primary: teal
+      accent: teal
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
         name: Switch to dark mode
       primary: teal
       accent: teal
-    - scheme: slate
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       toggle:
-        icon: material/theme-light-dark
-        name: Switch to light mode
+        icon: material/brightness-4
+        name: Switch to system preference
       primary: teal
       accent: teal
 

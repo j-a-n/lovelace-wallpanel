@@ -6,8 +6,9 @@
 ![GitHub All Releases](https://img.shields.io/github/downloads/j-a-n/lovelace-wallpanel/total.svg?color=green&style=for-the-badge)
 [![Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](https://j-a-n.github.io/lovelace-wallpanel/ "Go to WallPanel documentation")
 
-🖼️ **Wall panel mode for your Home Assistant Dashboards.**  
-A configurable extension that features:
+🖼️ **Wall panel mode for your Home Assistant Dashboards.**
+
+WallPanel is a configurable extension that features:
 
 - Photo and video slideshow screensaver
 - Show dashboard views, cards and badges of your choice on top of the images.
