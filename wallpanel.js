@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.39.2";
+const version = "4.39.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
