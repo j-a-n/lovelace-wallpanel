@@ -681,17 +681,16 @@ function getHaPanelLovelaceConfig(keys = []) {
 function setSidebarVisibility(hidden) {
 	try {
 		const panelLovelace = elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
-		if (!panelLovelace) {
-			return;
-		}
-		const huiRoot = panelLovelace.shadowRoot.querySelector("hui-root");
-		if (huiRoot) {
-			const menuButton = huiRoot.shadowRoot.querySelector("ha-menu-button");
-			if (menuButton) {
-				if (hidden) {
-					menuButton.style.display = "none";
-				} else {
-					menuButton.style.removeProperty("display");
+		if (panelLovelace) {
+			const huiRoot = panelLovelace.shadowRoot.querySelector("hui-root");
+			if (huiRoot) {
+				const menuButton = huiRoot.shadowRoot.querySelector("ha-menu-button");
+				if (menuButton) {
+					if (hidden) {
+						menuButton.style.display = "none";
+					} else {
+						menuButton.style.removeProperty("display");
+					}
 				}
 			}
 		}
