@@ -71,14 +71,18 @@ image_excludes:
 ```
 
 ## Entity with entity_picture attribute
-
-When an entity has the `entity_picture` attribute you can use the image to be shown when the screensaver starts. If the image is dynamic, for example when using a `camera` entity, the image will change when the `entity_picture` resolves to a changed image. You can control how often the the image is checked by adjusting the `display_time` settting. To use an entity as source for images, set the `image_url` setting to `media-entity://<entity_id>`.
+If an entity has the `entity_picture` attribute you can use it as media source for the screensaver.
+To do this, set `image_url` to `media-entity://<entity_id>`, replacing `<entity_id>` with the entity's name.
+When the entity's status changes, a new image is automatically loaded.
+Additionally, a new image is loaded after the configured `display_time` has elapsed.
+If you prefer not to load a new image when the entity state remains unchanged, set `media_entity_load_unchanged` to `false`.
 
 Example:
 
 ```yaml
 display_time: 15
 image_url: media-entity://camera.my_camera_entity_id
+media_entity_load_unchanged: true
 ```
 
 With the `entity_picture` you can combine this integration with the [Google Photos Integration](https://github.com/Daanoz/ha-google-photos) extension from [Daanoz](https://github.com/Daanoz) to display your photos.
@@ -90,6 +94,7 @@ image_url: media-entity://camera.google_photos_favorites_media
 ```
 
 See [Google Photos Integration README](https://github.com/Daanoz/ha-google-photos#lovelace-wall-panel) for details.
+
 
 ## Immich API
 Images and videos can be loaded from an Immich server,

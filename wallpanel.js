@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.39.1";
+const version = "4.40.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -41,6 +41,7 @@ const defaultConfig = {
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_url_entity: "",
+	media_entity_load_unchanged: true,
 	immich_api_key: "",
 	immich_album_names: [],
 	immich_shared_albums: true,
@@ -890,7 +891,7 @@ class WallpanelView extends HuiView {
 			});
 
 			if (imageSourceType() == "media-entity") {
-				this.switchActiveEntityImage();
+				this.switchActiveEntityImage(false);
 			}
 		}
 	}
@@ -2579,15 +2580,26 @@ class WallpanelView extends HuiView {
 		}
 	}
 
-	switchActiveEntityImage(crossfadeMillis = null) {
-		this.lastImageUpdate = Date.now();
+	switchActiveEntityImage(displayTimeElapsed, crossfadeMillis = null) {
+		if (displayTimeElapsed) {
+			this.lastImageUpdate = Date.now();
+		}
 		const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
 		const entity = this.hass.states[imageEntity];
-		if (!entity || mediaEntityState == entity.state) {
-			// Unchanged
+		if (!entity) {
 			return;
 		}
-		logger.debug(`Media entity ${imageEntity} state has changed`);
+
+		if (mediaEntityState != entity.state) {
+			logger.debug(`Media entity ${imageEntity} state has changed`);
+		}
+		else if (displayTimeElapsed && config.media_entity_load_unchanged) {
+			logger.debug(`Media entity ${imageEntity} state unchanged, but media_entity_load_unchanged = true`);
+		}
+		else {
+			return;
+		}
+		
 		mediaEntityState = entity.state;
 		let next = this.imageTwo;
 		if (this.imageTwoContainer.style.opacity == 1) {
@@ -2883,7 +2895,7 @@ class WallpanelView extends HuiView {
 		} else if (config.show_images) {
 			if (now - this.lastImageUpdate >= config.display_time * 1000) {
 				if (imageSourceType() === "media-entity") {
-					this.switchActiveEntityImage();
+					this.switchActiveEntityImage(true);
 				} else {
 					this.switchActiveImage();
 				}
