@@ -2592,14 +2592,12 @@ class WallpanelView extends HuiView {
 
 		if (mediaEntityState != entity.state) {
 			logger.debug(`Media entity ${imageEntity} state has changed`);
-		}
-		else if (displayTimeElapsed && config.media_entity_load_unchanged) {
+		} else if (displayTimeElapsed && config.media_entity_load_unchanged) {
 			logger.debug(`Media entity ${imageEntity} state unchanged, but media_entity_load_unchanged = true`);
-		}
-		else {
+		} else {
 			return;
 		}
-		
+
 		mediaEntityState = entity.state;
 		let next = this.imageTwo;
 		if (this.imageTwoContainer.style.opacity == 1) {
