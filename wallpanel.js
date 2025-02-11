@@ -891,7 +891,7 @@ class WallpanelView extends HuiView {
 			});
 
 			if (imageSourceType() == "media-entity") {
-				this.switchActiveEntityImage(false);
+				this.switchActiveImage("entity_update");
 			}
 		}
 	}
@@ -1818,7 +1818,7 @@ class WallpanelView extends HuiView {
 
 			function preloadCallback(wp) {
 				if (switchImages) {
-					wp.switchActiveImage();
+					wp.switchActiveImage("init");
 				} else {
 					wp.startPlayingActiveMedia();
 				}
@@ -2563,7 +2563,7 @@ class WallpanelView extends HuiView {
 
 	preloadImages(callback = null) {
 		logger.debug("Preloading images");
-		if (imageSourceType() === "media-entity") {
+		if (["media-entity", "iframe"].includes(imageSourceType())) {
 			this.preloadImage(this.imageOne, function (wp) {
 				if (callback) {
 					callback(wp);
@@ -2578,38 +2578,6 @@ class WallpanelView extends HuiView {
 				});
 			});
 		}
-	}
-
-	switchActiveEntityImage(displayTimeElapsed, crossfadeMillis = null) {
-		if (displayTimeElapsed) {
-			this.lastImageUpdate = Date.now();
-		}
-		const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
-		const entity = this.hass.states[imageEntity];
-		if (!entity) {
-			return;
-		}
-
-		if (mediaEntityState != entity.state) {
-			logger.debug(`Media entity ${imageEntity} state has changed`);
-		} else if (displayTimeElapsed && config.media_entity_load_unchanged) {
-			logger.debug(`Media entity ${imageEntity} state unchanged, but media_entity_load_unchanged = true`);
-		} else {
-			return;
-		}
-
-		mediaEntityState = entity.state;
-		let next = this.imageTwo;
-		if (this.imageTwoContainer.style.opacity == 1) {
-			next = this.imageOne;
-		}
-		const wp = this;
-		const onLoad = function () {
-			next.removeEventListener("load", onLoad);
-			wp.switchActiveImage(crossfadeMillis);
-		};
-		next.addEventListener("load", onLoad);
-		this.updateImage(next);
 	}
 
 	startPlayingActiveMedia() {
@@ -2640,14 +2608,14 @@ class WallpanelView extends HuiView {
 				if (activeElem.currentTime > config.crossfade_time) {
 					const remainingTime = activeElem.duration - activeElem.currentTime;
 					if (remainingTime <= config.crossfade_time) {
-						this.switchActiveImage();
+						this.switchActiveImage("display_time_elapsed");
 						cleanupListeners();
 					}
 				}
 			};
 			const onMediaEnded = () => {
 				if (this.getActiveImageElement() === activeElem) {
-					this.switchActiveImage();
+					this.switchActiveImage("media_end");
 				}
 				cleanupListeners();
 			};
@@ -2672,7 +2640,45 @@ class WallpanelView extends HuiView {
 		});
 	}
 
-	switchActiveImage(crossfadeMillis = null) {
+	switchActiveImage(eventType) {
+		const sourceType = imageSourceType();
+
+		if (sourceType === "media-entity") {
+			const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
+			const entity = this.hass.states[imageEntity];
+			if (!entity) {
+				return;
+			}
+
+			if (mediaEntityState != entity.state) {
+				logger.debug(`Media entity ${imageEntity} state has changed`);
+			} else if (eventType == "entity_update") {
+				return;
+			} else if (config.media_entity_load_unchanged) {
+				logger.debug(`Media entity ${imageEntity} state unchanged, but media_entity_load_unchanged = true`);
+			} else {
+				this.lastImageUpdate = Date.now();
+				this.restartProgressBarAnimation();
+				return;
+			}
+			mediaEntityState = entity.state;
+		}
+
+		this.lastImageUpdate = Date.now();
+
+		const crossfadeMillis = eventType == "user_action" ? 250 : null;
+		if (["media-entity", "iframe"].includes(sourceType)) {
+			const nextImg = this.imageTwoContainer.style.opacity == 1 ? this.imageOne : this.imageTwo;
+			const wp = this;
+			wp.updateImage(nextImg, () => {
+				wp._switchActiveImage(crossfadeMillis);
+			});
+		} else {
+			this._switchActiveImage(crossfadeMillis);
+		}
+	}
+
+	_switchActiveImage(crossfadeMillis = null) {
 		if (this.afterFadeoutTimer) {
 			clearTimeout(this.afterFadeoutTimer);
 		}
@@ -2713,7 +2719,9 @@ class WallpanelView extends HuiView {
 
 		// Load next image after fade out
 		// only if not media-entity, which will not yet have changed already
-		if (imageSourceType() !== "media-entity") {
+		// iframe will be loaded when switching images
+		// TODO: Refactor, always load new media right before switch
+		if (!["media-entity", "iframe"].includes(imageSourceType())) {
 			const wp = this;
 			this.afterFadeoutTimer = setTimeout(function () {
 				if (typeof curImg.pause === "function") {
@@ -2892,11 +2900,7 @@ class WallpanelView extends HuiView {
 			this.screensaverOverlay.style.background = "#000000";
 		} else if (config.show_images) {
 			if (now - this.lastImageUpdate >= config.display_time * 1000) {
-				if (imageSourceType() === "media-entity") {
-					this.switchActiveEntityImage(true);
-				} else {
-					this.switchActiveImage();
-				}
+				this.switchActiveImage("display_time_elapsed");
 			}
 			if (now - this.lastImageListUpdate >= config.image_list_update_interval * 1000) {
 				this.updateImageList();
@@ -2966,7 +2970,7 @@ class WallpanelView extends HuiView {
 		this.updateImageIndex();
 		const inactiveImage = this.getInactiveImageElement();
 		this.updateImage(inactiveImage, function (wp) {
-			wp.switchActiveImage(250);
+			wp.switchActiveImage("user_action");
 		});
 	}
 
@@ -3072,7 +3076,7 @@ class WallpanelView extends HuiView {
 						this.imageOne.getAttribute("data-loading") == "false" &&
 						this.imageTwo.getAttribute("data-loading") == "false"
 					) {
-						this.switchActiveImage(250);
+						this.switchActiveImage("user_action");
 					}
 				}
 				return;
@@ -3087,7 +3091,7 @@ class WallpanelView extends HuiView {
 						this.imageOne.getAttribute("data-loading") == "false" &&
 						this.imageTwo.getAttribute("data-loading") == "false"
 					) {
-						this.switchActiveImage(250);
+						this.switchActiveImage("user_action");
 					}
 				}
 				return;
