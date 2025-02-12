@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.40.1";
+const version = "4.40.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -160,6 +160,7 @@ function stringify(obj) {
 
 const logger = {
 	messages: [],
+	logLevel: "warn",
 	addMessage: function (level, args) {
 		if (!config.debug) {
 			return;
@@ -205,27 +206,25 @@ const logger = {
 		logger.addMessage("info", arguments);
 	},
 	debug: function () {
-		if (["debug"].includes(config.log_level_console)) {
+		if (["debug"].includes(logger.logLevel)) {
 			console.debug.apply(this, arguments);
 		}
 		logger.addMessage("debug", arguments);
 	},
 	info: function () {
-		if (["debug", "info"].includes(config.log_level_console)) {
+		if (["debug", "info"].includes(logger.logLevel)) {
 			console.info.apply(this, arguments);
 		}
 		logger.addMessage("info", arguments);
 	},
 	warn: function () {
-		const logLevel = config.log_level_console || "warn";
-		if (["debug", "info", "warn"].includes(logLevel)) {
+		if (["debug", "info", "warn"].includes(logger.logLevel)) {
 			console.warn.apply(this, arguments);
 		}
 		logger.addMessage("warn", arguments);
 	},
 	error: function () {
-		const logLevel = config.log_level_console || "warn";
-		if (["debug", "info", "warn", "error"].includes(logLevel)) {
+		if (["debug", "info", "warn", "error"].includes(logger.logLevel)) {
 			console.error.apply(this, arguments);
 		}
 		logger.addMessage("error", arguments);
@@ -579,7 +578,12 @@ function updateConfig() {
 		config.show_images = false;
 	}
 
+	if (!Object.keys(oldConfig).length) {
+		// Keep old log level to get log messages when navigating between different dashboards
+		logger.logLevel = config.log_level_console;
+	}
 	logger.debug("Wallpanel config is now:", config);
+
 	if (wallpanel) {
 		if (isActive()) {
 			wallpanel.reconfigure(oldConfig);
@@ -1814,7 +1818,7 @@ class WallpanelView extends HuiView {
 
 		if (config.show_images && (!oldConfig || !oldConfig.show_images || oldConfig.image_url != config.image_url)) {
 			let switchImages = false;
-			if (oldConfig) {
+			if (Object.keys(oldConfig).length) {
 				switchImages = true;
 			}
 
@@ -3170,11 +3174,12 @@ function reconfigure() {
 }
 
 function locationChanged() {
+	logger.debug(`Location changed from '${currentLocation}' to '${window.location.href}'`);
+
 	if (window.location.href == currentLocation) {
 		return;
 	}
 
-	logger.debug(`Location changed from '${currentLocation}' to '${window.location.href}'`);
 	currentLocation = window.location.href;
 
 	if (
@@ -3303,6 +3308,8 @@ function startup() {
 					});
 			}
 		}, "lovelace_updated");
+
+		currentLocation = null;
 		try {
 			setTimeout(locationChanged, 10);
 		} catch {
