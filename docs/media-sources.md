@@ -116,7 +116,17 @@ if ($request_method = 'OPTIONS') {
   add_header 'Content-Length' 0;
   return 204;
 }
+if ($request_method = 'GET') {
+    add_header 'Access-Control-Allow-Origin' '*' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'X-Api-Key, User-Agent, Content-Type' always;
+    add_header 'Access-Control-Max-Age' 1728000;
+}
 ```
+
+!!! note
+    If you are using Nginx Proxy Manager add a custom location at root "/" and insert the configuration there.
+
 
 For Traefik, you can use:
 
@@ -128,8 +138,13 @@ traefik.http.middlewares.immich-cors.headers.accessControlMaxAge=1728000
 traefik.http.routers.immich.middlewares=immich-cors
 ```
 
-!!! tip
-    You should prefer to use a list of URLs in `Access-Control-Allow-Origin` instead of using `*`.
+!!! warning
+    For security reasons, it's best to specify a list of URLs in `Access-Control-Allow-Origin` rather than using `*`.
+
+!!! note
+    If you're coming from an internal IP, make sure your traffic is properly routed
+    through the proxy rather than directly reaching the internal IP.  
+    To prevent SSL errors, you'll likely need a router that supports NAT reflection.
 
 ### Wallpanel configuration
 To access the Immich API, first generate an [API key](https://immich.app/docs/features/command-line-interface/#obtain-the-api-key).
