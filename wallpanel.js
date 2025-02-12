@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.40.0";
+const version = "4.40.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -680,6 +680,7 @@ function getHaPanelLovelaceConfig(keys = []) {
 }
 
 function setSidebarVisibility(hidden) {
+	logger.debug(`setSidebarVisibility: hidden=${hidden}`);
 	try {
 		const panelLovelace = elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
 		if (panelLovelace) {
@@ -714,6 +715,7 @@ function setSidebarVisibility(hidden) {
 }
 
 function setToolbarVisibility(hideToolbar, hideActionItems) {
+	logger.debug(`setToolbarVisibility: hideToolbar=${hideToolbar}, hideActionItems=${hideActionItems}`);
 	try {
 		const panelLovelace = elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
 		if (!panelLovelace) {
@@ -3121,6 +3123,7 @@ class WallpanelView extends HuiView {
 }
 
 function activateWallpanel() {
+	logger.debug("activateWallpanel");
 	let hideToolbar = config.hide_toolbar;
 	let hideActionItems = config.hide_toolbar_action_icons;
 	if (hideToolbar && !config.hide_toolbar_on_subviews && activeTab) {
@@ -3143,6 +3146,7 @@ function activateWallpanel() {
 }
 
 function deactivateWallpanel() {
+	logger.debug("deactivateWallpanel");
 	if (wallpanel.screensaverRunning()) {
 		wallpanel.stopScreensaver();
 	}
@@ -3255,14 +3259,26 @@ function startup() {
 		wallpanel = document.createElement("wallpanel-view");
 		elHaMain.shadowRoot.appendChild(wallpanel);
 		window.addEventListener("location-changed", (event) => {
-			logger.debug("location-changed", event);
-			setTimeout(locationChanged, 25);
+			let url = null;
+			try {
+				url = event.target.location.href;
+			} catch (e) {
+				logger.debug(e);
+			}
+			logger.debug("location-changed", url, event);
+			setTimeout(locationChanged, 20);
 		});
 		if (window.navigation) {
 			// Using navigate event because a back button on a sub-view will not produce a location-changed event
 			window.navigation.addEventListener("navigate", (event) => {
-				logger.debug("navigate", event);
-				setTimeout(locationChanged, 0);
+				let url = null;
+				try {
+					url = event.destination.url;
+				} catch (e) {
+					logger.debug(e);
+				}
+				logger.debug("navigate", url, event);
+				setTimeout(locationChanged, 30);
 			});
 		}
 		elHass.__hass.connection.subscribeEvents(function (event) {
@@ -3288,7 +3304,7 @@ function startup() {
 			}
 		}, "lovelace_updated");
 		try {
-			locationChanged();
+			setTimeout(locationChanged, 10);
 		} catch {
 			setTimeout(locationChanged, 1000);
 		}
