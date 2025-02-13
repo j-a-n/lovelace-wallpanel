@@ -3271,7 +3271,7 @@ function startup() {
 	logger.debug(`userId: ${userId}, userName: ${userName}, userDisplayname: ${userDisplayname}`);
 
 	updateConfig();
-	
+
 	if (!customElements.get("wallpanel-view")) {
 		customElements.define("wallpanel-view", WallpanelView);
 	}
