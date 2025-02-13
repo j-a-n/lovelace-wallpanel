@@ -220,7 +220,10 @@ C) Adding the line profile: (name) to the profile section (second last line in e
 this may be useful in rare situations only
 
 D) An existing user profile is automatically activated if it matches the logged-in user.
-The name of a user profile must start with the string `user.` followed by a user ID, username or user display name
-(username currently only available for admin users).
+The name of a user profile must start with the string `user.` followed by a user ID or user display name
+(the username is currently not available).
 The user display name of the logged in user is converted to lowercase and spaces are replaced with `_`.
 Therefore, the user display name `Jane Doe` will be converted to `jane_doe`.
+
+!!! tip
+    The ID of a user can be found when you click on a user entry in Settings => Persons => [Users](https://my.home-assistant.io/redirect/users/)

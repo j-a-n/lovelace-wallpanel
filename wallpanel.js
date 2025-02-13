@@ -130,7 +130,7 @@ let elHass = null;
 let elHaMain = null;
 let browserId = null;
 let userId = null;
-let userName = null;
+const userName = null;
 let userDisplayname = null;
 
 const HuiView = customElements.get("hui-view");
@@ -3237,9 +3237,7 @@ function startup() {
 	const pl = getHaPanelLovelace();
 	if (!pl || !pl.lovelace || !pl.lovelace.config || !pl.lovelace.config) {
 		if (startupSeconds >= 5.0) {
-			throw new Error(
-				`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`
-			);
+			throw new Error(`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`);
 		}
 		setTimeout(startup, 100);
 		return;
@@ -3266,100 +3264,70 @@ function startup() {
 		}
 	}
 
-	function continueStartup() {
-		logger.debug(`userId: ${userId}, userName: ${userName}, userDisplayname: ${userDisplayname}`);
-		updateConfig();
-		if (!customElements.get("wallpanel-view")) {
-			customElements.define("wallpanel-view", WallpanelView);
-		}
-		wallpanel = document.createElement("wallpanel-view");
-		elHaMain.shadowRoot.appendChild(wallpanel);
-		window.addEventListener("location-changed", (event) => {
-			let url = null;
-			try {
-				url = event.target.location.href;
-			} catch (e) {
-				logger.debug(e);
-			}
-			logger.debug("location-changed", url, event);
-			setTimeout(locationChanged, 20);
-		});
-		if (window.navigation) {
-			// Using navigate event because a back button on a sub-view will not produce a location-changed event
-			window.navigation.addEventListener("navigate", (event) => {
-				let url = null;
-				try {
-					url = event.destination.url;
-				} catch (e) {
-					logger.debug(e);
-				}
-				logger.debug("navigate", url, event);
-				setTimeout(locationChanged, 30);
-			});
-		}
-		elHass.__hass.connection.subscribeEvents(function (event) {
-			logger.debug("lovelace_updated", event);
-			const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
-			if (dashboard == activePanel) {
-				elHass.__hass.connection
-					.sendMessagePromise({
-						type: "lovelace/config",
-						url_path: event.data.url_path
-					})
-					.then((data) => {
-						dashboardConfig = {};
-						if (data.wallpanel) {
-							for (const key in data.wallpanel) {
-								if (key in defaultConfig) {
-									dashboardConfig[key] = data.wallpanel[key];
-								}
-							}
-						}
-						reconfigure();
-					});
-			}
-		}, "lovelace_updated");
-
-		currentLocation = null;
-		try {
-			setTimeout(locationChanged, 10);
-		} catch {
-			setTimeout(locationChanged, 1000);
-		}
-	}
-
 	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 
 	userId = elHass.__hass.user.id;
 	userDisplayname = elHass.__hass.user.name;
+	logger.debug(`userId: ${userId}, userName: ${userName}, userDisplayname: ${userDisplayname}`);
 
-	if (elHass.__hass.user.is_admin) {
-		elHass.hass
-			.callWS({
-				type: "config/auth/list"
-			})
-			.then(
-				(result) => {
-					result.forEach((userInfo) => {
-						if (userInfo.id == userId) {
-							userDisplayname = userInfo.name;
-							userName = userInfo.username;
+	updateConfig();
+	
+	if (!customElements.get("wallpanel-view")) {
+		customElements.define("wallpanel-view", WallpanelView);
+	}
+	wallpanel = document.createElement("wallpanel-view");
+	elHaMain.shadowRoot.appendChild(wallpanel);
+	window.addEventListener("location-changed", (event) => {
+		let url = null;
+		try {
+			url = event.target.location.href;
+		} catch (e) {
+			logger.debug(e);
+		}
+		logger.debug("location-changed", url, event);
+		setTimeout(locationChanged, 20);
+	});
+	if (window.navigation) {
+		// Using navigate event because a back button on a sub-view will not produce a location-changed event
+		window.navigation.addEventListener("navigate", (event) => {
+			let url = null;
+			try {
+				url = event.destination.url;
+			} catch (e) {
+				logger.debug(e);
+			}
+			logger.debug("navigate", url, event);
+			setTimeout(locationChanged, 30);
+		});
+	}
+	elHass.__hass.connection.subscribeEvents(function (event) {
+		logger.debug("lovelace_updated", event);
+		const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
+		if (dashboard == activePanel) {
+			elHass.__hass.connection
+				.sendMessagePromise({
+					type: "lovelace/config",
+					url_path: event.data.url_path
+				})
+				.then((data) => {
+					dashboardConfig = {};
+					if (data.wallpanel) {
+						for (const key in data.wallpanel) {
+							if (key in defaultConfig) {
+								dashboardConfig[key] = data.wallpanel[key];
+							}
 						}
-					});
-					if (!userName) {
-						logger.error(`User ${userId} / ${userDisplayname} not found in user list`, result);
 					}
-					continueStartup();
-				},
-				(error) => {
-					logger.error("Failed to fetch user list", error);
-					continueStartup();
-				}
-			);
-	} else {
-		logger.info(`Not an admin user, setting userName to userDisplayname: ${userDisplayname}`);
-		userName = userDisplayname;
-		continueStartup();
+					reconfigure();
+				});
+		}
+	}, "lovelace_updated");
+
+	currentLocation = null;
+	try {
+		setTimeout(locationChanged, 10);
+	} catch {
+		setTimeout(locationChanged, 1000);
 	}
 }
 

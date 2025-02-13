@@ -18,3 +18,6 @@ npx eslint --fix wallpanel.js
 ```shell
 uvx --with mkdocs-material mkdocs serve
 ```
+
+## my.home-assistant.io
+Supported redirect pages: https://my.home-assistant.io/faq/
