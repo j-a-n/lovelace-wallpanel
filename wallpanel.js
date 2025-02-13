@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.40.2";
+const version = "4.40.3";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -578,7 +578,7 @@ function updateConfig() {
 		config.show_images = false;
 	}
 
-	if (!Object.keys(oldConfig).length) {
+	if (!oldConfig || !Object.keys(oldConfig).length) {
 		// Keep old log level to get log messages when navigating between different dashboards
 		logger.logLevel = config.log_level_console;
 	}
@@ -1818,7 +1818,7 @@ class WallpanelView extends HuiView {
 
 		if (config.show_images && (!oldConfig || !oldConfig.show_images || oldConfig.image_url != config.image_url)) {
 			let switchImages = false;
-			if (Object.keys(oldConfig).length) {
+			if (oldConfig && Object.keys(oldConfig).length) {
 				switchImages = true;
 			}
 
@@ -3228,6 +3228,17 @@ function startup() {
 		if (startupSeconds >= 5.0) {
 			throw new Error(
 				`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`
+			);
+		}
+		setTimeout(startup, 100);
+		return;
+	}
+
+	const pl = getHaPanelLovelace();
+	if (!pl || !pl.lovelace || !pl.lovelace.config || !pl.lovelace.config) {
+		if (startupSeconds >= 5.0) {
+			throw new Error(
+				`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`
 			);
 		}
 		setTimeout(startup, 100);
