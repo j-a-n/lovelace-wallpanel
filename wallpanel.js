@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.40.3";
+const version = "4.40.4";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -491,8 +491,12 @@ function updateConfig() {
 	mergeConfig(config, defaultConfig);
 
 	if (Object.keys(dashboardConfig).length === 0) {
-		dashboardConfig = getHaPanelLovelaceConfig();
+		dashboardConfig = getDashboardWallpanelConfig();
+		if (Object.keys(dashboardConfig).length === 0) {
+			logger.debug("No wallpanel config found in dashboard config");
+		}
 	}
+	
 	mergeConfig(config, dashboardConfig);
 
 	const paramConfig = {};
@@ -659,7 +663,7 @@ function getHaPanelLovelace() {
 	}
 }
 
-function getHaPanelLovelaceConfig(keys = []) {
+function getDashboardWallpanelConfig(keys = []) {
 	const pl = getHaPanelLovelace();
 	const conf = {};
 	if (pl && pl.lovelace) {
@@ -3208,6 +3212,7 @@ function locationChanged() {
 		}
 	}
 	if (panel != activePanel) {
+		logger.debug("Reset dashboard config");
 		dashboardConfig = {};
 	}
 	activePanel = panel;
@@ -3244,7 +3249,7 @@ function startup() {
 	}
 
 	if (!window.browser_mod) {
-		let waitTime = getHaPanelLovelaceConfig(["wait_for_browser_mod_time"])["wait_for_browser_mod_time"];
+		let waitTime = getDashboardWallpanelConfig(["wait_for_browser_mod_time"])["wait_for_browser_mod_time"];
 		if (waitTime === undefined) {
 			waitTime = defaultConfig["wait_for_browser_mod_time"];
 		}
