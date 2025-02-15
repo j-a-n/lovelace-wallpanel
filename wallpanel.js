@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.40.4";
+const version = "4.40.5";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -496,7 +496,7 @@ function updateConfig() {
 			logger.debug("No wallpanel config found in dashboard config");
 		}
 	}
-	
+
 	mergeConfig(config, dashboardConfig);
 
 	const paramConfig = {};
@@ -3211,18 +3211,23 @@ function locationChanged() {
 			tab = path[2];
 		}
 	}
-	if (panel != activePanel) {
-		logger.debug("Reset dashboard config");
-		dashboardConfig = {};
-	}
+	const panelChanged = activePanel && panel != activePanel;
 	activePanel = panel;
 	activeTab = tab;
 
-	setTimeout(reconfigure, 25);
+	if (panelChanged) {
+		logger.debug("Reset dashboard config");
+		dashboardConfig = {};
+		waitForEnv(reconfigure);
+	} else {
+		reconfigure();
+	}
 }
 
-const startTime = Date.now();
-function startup() {
+function waitForEnv(callback, startTime = null) {
+	if (!startTime) {
+		startTime = Date.now();
+	}
 	const startupSeconds = (Date.now() - startTime) / 1000;
 
 	elHass = document.querySelector("body > home-assistant");
@@ -3235,7 +3240,7 @@ function startup() {
 				`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`
 			);
 		}
-		setTimeout(startup, 100);
+		setTimeout(startup, 100, [callback, startTime]);
 		return;
 	}
 
@@ -3244,7 +3249,7 @@ function startup() {
 		if (startupSeconds >= 5.0) {
 			throw new Error(`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`);
 		}
-		setTimeout(startup, 100);
+		setTimeout(startup, 100, [callback, startTime]);
 		return;
 	}
 
@@ -3254,7 +3259,7 @@ function startup() {
 			waitTime = defaultConfig["wait_for_browser_mod_time"];
 		}
 		if (startupSeconds < waitTime) {
-			setTimeout(startup, 100);
+			setTimeout(startup, 100, [callback, startTime]);
 			return;
 		}
 	}
@@ -3268,9 +3273,10 @@ function startup() {
 			browserId = window.browser_mod.browserID.replace("-", "_");
 		}
 	}
+	callback();
+}
 
-	console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
-
+function startup() {
 	userId = elHass.__hass.user.id;
 	userDisplayname = elHass.__hass.user.name;
 	logger.debug(`userId: ${userId}, userName: ${userName}, userDisplayname: ${userDisplayname}`);
@@ -3328,15 +3334,11 @@ function startup() {
 		}
 	}, "lovelace_updated");
 
-	currentLocation = null;
-	try {
-		setTimeout(locationChanged, 10);
-	} catch {
-		setTimeout(locationChanged, 1000);
-	}
+	setTimeout(locationChanged, 0);
 }
 
-setTimeout(startup, 0);
+console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
+waitForEnv(startup);
 
 /**
  * https://github.com/exif-js/exif-js
