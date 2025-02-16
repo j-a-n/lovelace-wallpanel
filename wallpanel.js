@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.40.5";
+const version = "4.40.6";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -3225,10 +3225,11 @@ function locationChanged() {
 }
 
 function waitForEnv(callback, startTime = null) {
-	if (!startTime) {
-		startTime = Date.now();
+	const now = Date.now();
+	if (startTime === null) {
+		startTime = now;
 	}
-	const startupSeconds = (Date.now() - startTime) / 1000;
+	const startupSeconds = (now - startTime) / 1000;
 
 	elHass = document.querySelector("body > home-assistant");
 	if (elHass) {
@@ -3240,7 +3241,7 @@ function waitForEnv(callback, startTime = null) {
 				`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`
 			);
 		}
-		setTimeout(startup, 100, [callback, startTime]);
+		setTimeout(waitForEnv, 100, callback, startTime);
 		return;
 	}
 
@@ -3249,7 +3250,7 @@ function waitForEnv(callback, startTime = null) {
 		if (startupSeconds >= 5.0) {
 			throw new Error(`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`);
 		}
-		setTimeout(startup, 100, [callback, startTime]);
+		setTimeout(waitForEnv, 100, callback, startTime);
 		return;
 	}
 
@@ -3259,7 +3260,7 @@ function waitForEnv(callback, startTime = null) {
 			waitTime = defaultConfig["wait_for_browser_mod_time"];
 		}
 		if (startupSeconds < waitTime) {
-			setTimeout(startup, 100, [callback, startTime]);
+			setTimeout(waitForEnv, 100, callback, startTime);
 			return;
 		}
 	}
