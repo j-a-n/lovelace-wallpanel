@@ -153,9 +153,10 @@ Then you can configure WallPanel to use the Immich API.
 You need to set the `image_url` to `immich+<your api url>` and enter the API key in `immich_api_key`.
 With the config option `immich_shared_albums` (`true` / `false`) you can include or exclude shared albums.
 To restrict the images to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
+Alternatively you can configure a list of tag names in `immich_tag_names`.
 With the config option `immich_resolution` (`preview` / `original`) you can select the resolution of the images. 
 
-Example:
+Example using album names:
 ```yaml
 image_url: immich+https://immich.your.domain/api
 immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
@@ -164,6 +165,16 @@ immich_album_names:
   - Tokio
   - New York
 immich_resolution: preview
+```
+
+Example using tag names:
+```yaml
+image_url: immich+https://immich.your.domain/api
+immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_tag_names:
+  - Family
+  - Friends
+immich_resolution: original
 ```
 
 ## Website as iframe
