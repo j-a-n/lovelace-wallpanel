@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.40.6";
+const version = "4.41.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -45,6 +45,7 @@ const defaultConfig = {
 	immich_api_key: "",
 	immich_album_names: [],
 	immich_shared_albums: true,
+	immich_tag_names: [],
 	immich_resolution: "preview",
 	image_fit: "cover", // cover / contain / fill
 	image_list_update_interval: 3600,
@@ -1943,23 +1944,23 @@ class WallpanelView extends HuiView {
 		if (!img || !img.imageUrl) {
 			return;
 		}
-		let infoElement = null;
+		const infoElements = [];
 		if (this.imageOne.imageUrl == img.imageUrl) {
-			infoElement = this.imageOneInfo;
+			infoElements.push(this.imageOneInfo);
 		} else if (this.imageTwo.imageUrl == img.imageUrl) {
-			infoElement = this.imageTwoInfo;
+			infoElements.push(this.imageTwoInfo);
 		}
-		if (!infoElement) {
+		if (infoElements.length == 0) {
 			return;
 		}
 
 		if (!config.show_image_info || !config.image_info_template) {
-			infoElement.innerHTML = "";
-			infoElement.style.display = "none";
+			infoElements.forEach((infoElement) => {
+				infoElement.innerHTML = "";
+				infoElement.style.display = "none";
+			});
 			return;
 		}
-
-		infoElement.style.display = "block";
 
 		let imageInfo = imageInfoCache[img.imageUrl];
 		if (!imageInfo) {
@@ -2051,7 +2052,11 @@ class WallpanelView extends HuiView {
 			}
 			return prefix + val + suffix;
 		});
-		infoElement.innerHTML = html;
+
+		infoElements.forEach((infoElement) => {
+			infoElement.innerHTML = html;
+			infoElement.style.display = "block";
+		});
 	}
 
 	updateImageList(preload = false, preloadCallback = null) {
@@ -2211,7 +2216,8 @@ class WallpanelView extends HuiView {
 
 	updateImageListFromImmichAPI(preload, preloadCallback = null) {
 		if (!config.immich_api_key) {
-			throw "immich_api_key not configured";
+			logger.error("immich_api_key not configured");
+			return;
 		}
 		const wp = this;
 		wp.updatingImageList = true;
@@ -2219,87 +2225,143 @@ class WallpanelView extends HuiView {
 		wp.lastImageListUpdate = Date.now();
 		const urls = [];
 		const data = {};
-		const api_url = config.image_url.replace(/^immich\+/, "");
+		const apiUrl = config.image_url.replace(/^immich\+/, "");
+
+		function processAssets(assets, folderName = null) {
+			assets.forEach((asset) => {
+				logger.debug(asset);
+				if (["IMAGE", "VIDEO"].includes(asset.type)) {
+					const resolution =
+						asset.type == "VIDEO" || config.immich_resolution == "original" ? "original" : "thumbnail?size=preview";
+					const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+					data[url] = asset.exifInfo;
+					data[url]["mediaType"] = asset.type;
+					data[url]["image"] = {
+						filename: asset.originalFileName,
+						folderName: folderName
+					};
+					urls.push(url);
+				}
+			});
+		}
+
+		function processUrls() {
+			if (!wp.cancelUpdatingImageList) {
+				if (config.image_order == "random") {
+					wp.imageList = urls.sort(() => 0.5 - Math.random());
+				} else {
+					wp.imageList = urls;
+				}
+				imageInfoCache = data;
+				logger.debug("Image list from immich is now:", wp.imageList);
+				if (preload) {
+					wp.updatingImageList = false;
+					wp.preloadImages(preloadCallback);
+				}
+			}
+			wp.updatingImageList = false;
+		}
+
 		const http = new XMLHttpRequest();
 		http.responseType = "json";
-		http.open("GET", `${api_url}/albums?shared=${config.immich_shared_albums}`, true);
-		http.setRequestHeader("x-api-key", config.immich_api_key);
-		http.onload = function () {
-			const album_ids = [];
-			if (http.status == 200 || http.status === 0) {
-				const allAlbums = http.response;
-				logger.debug(`Got immich API response`, allAlbums);
-				allAlbums.forEach((album) => {
-					logger.debug(album);
-					if (config.immich_album_names.length && !config.immich_album_names.includes(album.albumName)) {
-						logger.debug("Skipping album: ", album.albumName);
-					} else {
-						logger.debug("Adding album: ", album.albumName);
-						album_ids.push(album.id);
-					}
-				});
-				if (album_ids) {
-					album_ids.forEach((album_id) => {
-						logger.debug("Fetching album metdata: ", album_id);
+		if (config.immich_tag_names && config.immich_tag_names.length) {
+			const tagNames = config.immich_tag_names.map((v) => v.toLowerCase());
+			http.open("GET", `${apiUrl}/tags`, true);
+			http.setRequestHeader("x-api-key", config.immich_api_key);
+			http.onload = function () {
+				const tagIds = [];
+				if (http.status == 200 || http.status === 0) {
+					const allTags = http.response;
+					logger.debug(`Got immich API response`, allTags);
+					allTags.forEach((tag) => {
+						logger.debug(tag);
+						if (!tagNames.includes(tag.name.toLowerCase())) {
+							logger.debug("Skipping tag: ", tag.name);
+						} else {
+							logger.debug("Adding tag: ", tag.name);
+							tagIds.push(tag.id);
+						}
+					});
+					if (tagIds.length > 0) {
 						const http2 = new XMLHttpRequest();
 						http2.responseType = "json";
-						http2.open("GET", `${api_url}/albums/${album_id}`, true);
+						http2.open("POST", `${apiUrl}/search/metadata`, true);
 						http2.setRequestHeader("x-api-key", config.immich_api_key);
+						http2.setRequestHeader("Content-Type", "application/json");
+						logger.debug("Searching asset metdata for tags: ", tagIds);
 						http2.onload = function () {
 							if (http2.status == 200 || http2.status === 0) {
-								const albumDetails = http2.response;
-								logger.debug(`Got immich API response`, albumDetails);
-								albumDetails.assets.forEach((asset) => {
-									logger.debug(asset);
-									if (["IMAGE", "VIDEO"].includes(asset.type)) {
-										const resolution =
-											asset.type == "VIDEO" || config.immich_resolution == "original"
-												? "original"
-												: "thumbnail?size=preview";
-										const url = `${api_url}/assets/${asset.id}/${resolution}`;
-										data[url] = asset.exifInfo;
-										data[url]["mediaType"] = asset.type;
-										data[url]["image"] = {
-											filename: asset.originalFileName,
-											folderName: albumDetails.albumName
-										};
-										urls.push(url);
-									}
-								});
+								const searchResults = http2.response;
+								logger.debug(`Got immich API response`, searchResults);
+								processAssets(searchResults.assets.items);
+								processUrls();
 							} else {
 								logger.error("Immich API error", http2);
 							}
-							album_ids.pop(album_id);
-							if (album_ids.length == 0) {
-								// All processed
-								if (!wp.cancelUpdatingImageList) {
-									if (config.image_order == "random") {
-										wp.imageList = urls.sort(() => 0.5 - Math.random());
-									} else {
-										wp.imageList = urls;
-									}
-									imageInfoCache = data;
-									logger.debug("Image list from immich is now:", wp.imageList);
-									if (preload) {
-										wp.updatingImageList = false;
-										wp.preloadImages(preloadCallback);
-									}
-								}
-								wp.updatingImageList = false;
-							}
 						};
-						http2.send();
-					});
+						http2.send(JSON.stringify({ tagIds: tagIds, withExif: true, size: 1000 }));
+					} else {
+						logger.error("No immich tags selected");
+						wp.updatingImageList = false;
+					}
 				} else {
-					logger.error("No immich albums selected");
+					logger.error("Immich API error", http);
 					wp.updatingImageList = false;
 				}
-			} else {
-				logger.error("Immich API error", http);
-				wp.updatingImageList = false;
-			}
-		};
-		http.send();
+			};
+			http.send({});
+		} else {
+			http.open("GET", `${apiUrl}/albums?shared=${config.immich_shared_albums}`, true);
+			http.setRequestHeader("x-api-key", config.immich_api_key);
+			http.onload = function () {
+				const albumIds = [];
+				const albumNames = (config.immich_album_names || []).map((v) => v.toLowerCase());
+				if (http.status == 200 || http.status === 0) {
+					const allAlbums = http.response;
+					logger.debug(`Got immich API response`, allAlbums);
+					allAlbums.forEach((album) => {
+						logger.debug(album);
+						if (albumNames.length && !albumNames.includes(album.albumName.toLowerCase())) {
+							logger.debug("Skipping album: ", album.albumName);
+						} else {
+							logger.debug("Adding album: ", album.albumName);
+							albumIds.push(album.id);
+						}
+					});
+					if (albumIds) {
+						albumIds.forEach((albumId) => {
+							logger.debug("Fetching album metdata: ", albumId);
+							const http2 = new XMLHttpRequest();
+							http2.responseType = "json";
+							http2.open("GET", `${apiUrl}/albums/${albumId}`, true);
+							http2.setRequestHeader("x-api-key", config.immich_api_key);
+							http2.onload = function () {
+								if (http2.status == 200 || http2.status === 0) {
+									const albumDetails = http2.response;
+									logger.debug(`Got immich API response`, albumDetails);
+									processAssets(albumDetails.assets, albumDetails.albumName);
+								} else {
+									logger.error("Immich API error", http2);
+								}
+								albumIds.pop(albumId);
+								if (albumIds.length == 0) {
+									// All processed
+									processUrls();
+								}
+							};
+							http2.send();
+						});
+					} else {
+						logger.error("No immich albums selected");
+						wp.updatingImageList = false;
+					}
+				} else {
+					logger.error("Immich API error", http);
+					wp.updatingImageList = false;
+				}
+			};
+			http.send();
+		}
 	}
 
 	fillPlaceholders(url) {
@@ -2320,7 +2382,7 @@ class WallpanelView extends HuiView {
 				const response = await fetch(url, { headers: headers || {} });
 				if (!response.ok) {
 					logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
-					throw new Error(`Failed to load ${elem.tagName} "${url}": ${response.status}`);
+					return;
 				}
 				const blob = await response.blob();
 				elem.src = window.URL.createObjectURL(blob);
@@ -2328,7 +2390,8 @@ class WallpanelView extends HuiView {
 				// Setting the src attribute on an img works better because cross-origin requests aren't blocked
 				const loadEventName = { IMG: "load", VIDEO: "loadeddata", IFRAME: "load" }[elem.tagName];
 				if (!loadEventName) {
-					throw new Error(`Unsupported element tag "${elem.tagName}"`);
+					logger.error(`Unsupported element tag "${elem.tagName}"`);
+					return;
 				}
 				return new Promise((resolve, reject) => {
 					const cleanup = () => {
@@ -3237,9 +3300,10 @@ function waitForEnv(callback, startTime = null) {
 	}
 	if (!elHass || !elHaMain) {
 		if (startupSeconds >= 5.0) {
-			throw new Error(
+			logger.error(
 				`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`
 			);
+			return;
 		}
 		setTimeout(waitForEnv, 100, callback, startTime);
 		return;
@@ -3248,7 +3312,8 @@ function waitForEnv(callback, startTime = null) {
 	const pl = getHaPanelLovelace();
 	if (!pl || !pl.lovelace || !pl.lovelace.config || !pl.lovelace.config) {
 		if (startupSeconds >= 5.0) {
-			throw new Error(`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`);
+			logger.error(`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`);
+			return;
 		}
 		setTimeout(waitForEnv, 100, callback, startTime);
 		return;
@@ -3726,7 +3791,8 @@ function getImageData(img, callback) {
 				if (this.status == 200 || this.status === 0) {
 					handleBinaryFile(http.response);
 				} else {
-					throw "Could not load image";
+					logger.error("Could not load image");
+					return;
 				}
 				http = null;
 			};
