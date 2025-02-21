@@ -116,7 +116,7 @@ if ($request_method = 'OPTIONS') {
   add_header 'Content-Length' 0;
   return 204;
 }
-if ($request_method = 'GET') {
+if ($request_method ~* '(GET|POST)') {
     add_header 'Access-Control-Allow-Origin' '*' always;
     add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
     add_header 'Access-Control-Allow-Headers' 'X-Api-Key, User-Agent, Content-Type' always;
