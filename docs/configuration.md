@@ -152,7 +152,7 @@ Use JSON syntax for the values.
     Please note that the URL parameters may be lost when navigating in the Home Assistant interface.
     Therefore, this option should not normally be used.
 
-## Dynamic configuration using entities
+## Dynamic configuration using placeholders
 The WallPanel configuration can be changed dynamically by using input_text or input_select helpers.
 Placeholders can be used in the yaml configuration, which are replaced by the state value of the corresponding entity.
 These placeholders have the form `${entity:<entity-id>}`, where `<entity-id>` must be replaced by the ID of an existing HA entity.
@@ -173,23 +173,30 @@ wallpanel:
   image_url: 'https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=${entity:input_text.wallpanel_unsplash_query}'
 ```
 
+If Browser Mod is available, you can also use the `${browser_id}` placeholder:
+```yaml
+wallpanel:
+  screensaver_entity: input_boolean.${browser_id}_wallpanel_screensaver
+```
+See [Browser Mod - Placeholder ${browser_id}](browser-mod.md#placeholder-browser_id) for details.
+
+
 ## Profiles
-With profiles you can easily switch between different configurations. The profiles definition is added at the end of the wallpanel definition. everything before this section represents the 'standard' or default profile.
+With profiles you can easily switch between different configurations.
+Each profile is defined under the `profiles` attribute, while settings outside of a profile serve as the default configuration.
 
 **Example**
 
 ```yaml
 wallpanel:
   enabled: true
-  info_animation_duration_x: 30
-  info_animation_duration_y: 20
+  idle_time: 60
   style:
     wallpanel-screensaver-overlay:
       background: '#00000000'
   profiles:
     night:
-      info_animation_duration_x: 0
-      info_animation_duration_y: 0
+      idle_time: 5
       style:
         wallpanel-screensaver-overlay:
           background: '#000000bb'
@@ -197,34 +204,60 @@ wallpanel:
       black_screen_after_time: 1
     user.jane:
       enabled: false
-  profile: night
-  profile_entity: input_text.wallpanel_profile
+    device.e9a2c86e_5526f1ee:
+      idle_time: 25
+      screensaver_entity: input_boolean.kitchen_wallpanel_screensaver
 ```
 
-The example contains three (additional) profiles `night`, `black` and `user.jane`.
-Setting the `profile` configuration to a profile name will overwrite the
-main (default) configuration with the settings defined in the referenced profile.
+In this example, there are four additional profiles: `night`, `black`, `user.jane` and `device.e9a2c86e_5526f1ee`.
+When a profile is activated, its settings override the default configuration.
 
-There are three different options to activate a profile:
+### Activating a Profile
+There are several ways to activate a profile:
 
-A) Activation by a query string parameter:
-`http://hass:8123/lovelace/default_view?wp_profile="night"`
+**1. Automatic Activation for User Profiles**
 
-B) Dynamically activation by using an input_text or input_select helper.
-For the example, an input_text helper named `wallpanel_profile` must be created in HA.
-The profile can then be changed by setting the status of `input_text.wallpanel_profile` either
-manually or by an (e.g. time based) automation. Changing the value of the helper to the
-(exact) name of the profile will change the display immediately. Any value different to
-the defined additional profiles will switch back to the default/standard definitions
+A user profile is automatically applied if it matches the logged-in user.
 
-C) Adding the line profile: (name) to the profile section (second last line in example) however
-this may be useful in rare situations only
-
-D) An existing user profile is automatically activated if it matches the logged-in user.
-The name of a user profile must start with the string `user.` followed by a user ID or user display name
-(the username is currently not available).
-The user display name of the logged in user is converted to lowercase and spaces are replaced with `_`.
-Therefore, the user display name `Jane Doe` will be converted to `jane_doe`.
+* The name of a user profile must begin with `user.`, followed by a user ID or display name (usernames are not supported).
+* The display name of the logged-in user is converted to lowercase, and spaces are replaced with underscores (`_`). For example, `Jane Doe` would be converted to `jane_doe`.
 
 !!! tip
     The ID of a user can be found when you click on a user entry in Settings => Persons => [Users](https://my.home-assistant.io/redirect/users/)
+
+**2. Automatic Activation for Device Profiles**
+
+A device profile is activated if it matches the Browser Mod Browser ID.
+
+* The profile name must begin with `device.`, followed by the Browser ID configured in Browser Mod.
+* Any hyphens (`-`) in the Browser ID are replaced with underscores (`_`).
+
+For more details, refer to [Integration with Browser Mod](browser-mod.md).
+
+**3. Dynamic Activation via an Input Helper**
+
+Profiles can be dynamically switched using an `input_text` or `input_select` helper.
+
+* In the example, an `input_text` helper named `wallpanel_profile` must be created in Home Assistant.
+* The profile can then be changed by updating `input_text.wallpanel_profile` manually or through automation (e.g., based on time).
+* Setting it to a valid profile name applies that profile immediately. Any value that does not match a defined profile will revert to the default settings.
+
+
+```yaml
+wallpanel:
+  profile_entity: input_text.wallpanel_profile
+```
+
+**4. Manual Activation via Configuration**
+
+You can specify a profile directly in the wallpanel configuration, although this method is rarely needed.
+
+```yaml
+wallpanel:
+  profile: night
+```
+
+**5. Activation via Query String Parameter**
+
+A profile can be selected using a URL parameter:
+`http://hass:8123/lovelace/default_view?wp_profile=night`
