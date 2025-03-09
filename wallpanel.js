@@ -659,8 +659,8 @@ function imageSourceType() {
 function getHaPanelLovelace() {
 	try {
 		return elHaMain.shadowRoot.querySelector("ha-panel-lovelace");
-	} catch (e) {
-		logger.error(e);
+	} catch (err) {
+		logger.error("Failed to get ha-panel-lovelace:", err);
 	}
 }
 
@@ -802,7 +802,7 @@ function enterFullscreen() {
 				logger.debug("Successfully requested fullscreen");
 			},
 			(error) => {
-				logger.error(error);
+				logger.error("Failed to enter fullscreen:", error);
 			}
 		);
 	} else if (el.mozRequestFullScreen) {
