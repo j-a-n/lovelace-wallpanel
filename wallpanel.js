@@ -1597,7 +1597,7 @@ function initWallpanel() {
 		}
 
 		loadBackgroundImage(medialElem) {
-			const isVideo = medialElem.tagName === "VIDEO";
+			const isVideo = medialElem.tagName.toLowerCase() === "video";
 			let srcImageUrl = medialElem.src;
 			if (isVideo) {
 				// Capture the current frame of the video as a background image
@@ -1623,7 +1623,7 @@ function initWallpanel() {
 
 		handleMediaLoaded(medialElem) {
 			medialElem.setAttribute("data-loading", false);
-			const isVideo = medialElem.tagName === "VIDEO";
+			const isVideo = medialElem.tagName.toLowerCase() === "video";
 			const wp = this;
 			if (config.image_background === "image") {
 				if (isVideo) {
@@ -2231,12 +2231,13 @@ function initWallpanel() {
 			function processAssets(assets, folderName = null) {
 				assets.forEach((asset) => {
 					logger.debug(asset);
-					if (["IMAGE", "VIDEO"].includes(asset.type)) {
+					const assetType = asset.type.toLowerCase()
+					if (["image", "video"].includes(assetType)) {
 						const resolution =
-							asset.type == "VIDEO" || config.immich_resolution == "original" ? "original" : "thumbnail?size=preview";
+							assetType == "video" || config.immich_resolution == "original" ? "original" : "thumbnail?size=preview";
 						const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
 						data[url] = asset.exifInfo;
-						data[url]["mediaType"] = asset.type;
+						data[url]["mediaType"] = assetType;
 						data[url]["image"] = {
 							filename: asset.originalFileName,
 							folderName: folderName
@@ -2389,7 +2390,7 @@ function initWallpanel() {
 					elem.src = window.URL.createObjectURL(blob);
 				} else {
 					// Setting the src attribute on an img works better because cross-origin requests aren't blocked
-					const loadEventName = { IMG: "load", VIDEO: "loadeddata", IFRAME: "load" }[elem.tagName];
+					const loadEventName = { img: "load", video: "loadeddata", iframe: "load" }[elem.tagName.toLowerCase()];
 					if (!loadEventName) {
 						logger.error(`Unsupported element tag "${elem.tagName}"`);
 						return;
@@ -2419,7 +2420,7 @@ function initWallpanel() {
 
 			const createFallbackElement = (currentElem, tagName = null) => {
 				if (!tagName) {
-					tagName = currentElem.tagName === "IMG" ? "VIDEO" : "IMG";
+					tagName = currentElem.tagName.toLowerCase() === "img" ? "video" : "img";
 				}
 				const fallbackElem = document.createElement(tagName);
 
@@ -2432,7 +2433,7 @@ function initWallpanel() {
 					.filter((attr) => attr.name !== "src")
 					.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
 
-				if (tagName === "VIDEO") {
+				if (tagName.toLowerCase() === "video") {
 					Object.assign(fallbackElem, { preload: "auto", muted: true });
 				}
 				return fallbackElem;
@@ -2481,7 +2482,7 @@ function initWallpanel() {
 
 			if (!mediaType) {
 				await loadOrFallback(curElem, sourceUrl, true);
-			} else if (mediaType === curElem.tagName) {
+			} else if (mediaType === curElem.tagName.toLowerCase()) {
 				await loadOrFallback(curElem, sourceUrl, false);
 			} else {
 				await handleFallback(curElem, sourceUrl, mediaType);
@@ -2532,7 +2533,7 @@ function initWallpanel() {
 						logger.debug(`Setting image src: ${src}`);
 
 						const matchedType = result.mime_type?.match(/^(image|video)\//);
-						const mediaType = { image: "IMG", video: "VIDEO" }[matchedType?.[1]] || null;
+						const mediaType = { image: "img", video: "video" }[matchedType?.[1]] || null;
 						this.loadMediaFromUrl(img, src, mediaType);
 					},
 					(error) => {
@@ -2546,7 +2547,7 @@ function initWallpanel() {
 				return;
 			}
 			this.updateImageIndex();
-			this.updateImageFromUrl(img, this.imageList[this.imageIndex], "IMG");
+			this.updateImageFromUrl(img, this.imageList[this.imageIndex], "img");
 		}
 
 		updateImageFromImmichAPI(img) {
@@ -2556,7 +2557,7 @@ function initWallpanel() {
 			this.updateImageIndex();
 			const url = this.imageList[this.imageIndex];
 			const imageInfo = imageInfoCache[url] || {};
-			const mediaType = imageInfo["mediaType"] == "VIDEO" ? "VIDEO" : "IMG";
+			const mediaType = imageInfo["mediaType"] == "video" ? "video" : "img";
 			this.updateImageFromUrl(img, url, mediaType, { "x-api-key": config.immich_api_key }, true);
 		}
 
@@ -2577,7 +2578,7 @@ function initWallpanel() {
 				imageInfoCache[url] = entity.attributes;
 			}
 			mediaEntityState = entity.state;
-			this.updateImageFromUrl(img, url, "IMG", null, true);
+			this.updateImageFromUrl(img, url, "img", null, true);
 		}
 
 		updateImage(img, callback = null) {
@@ -2595,7 +2596,7 @@ function initWallpanel() {
 			} else if (imageSourceType() == "media-entity") {
 				this.updateImageFromMediaEntity(img);
 			} else if (imageSourceType() == "iframe") {
-				this.updateImageFromUrl(img, config.image_url.replace(/^iframe\+/, ""), "IFRAME");
+				this.updateImageFromUrl(img, config.image_url.replace(/^iframe\+/, ""), "iframe");
 			} else {
 				this.updateImageFromUrl(img, config.image_url);
 			}
@@ -2710,7 +2711,9 @@ function initWallpanel() {
 			// Start playing the media.
 			activeElem.play().catch((e) => {
 				cleanupListeners();
-				logger.error(`Failed to play media "${activeElem.src}":`, e);
+				if (activeElem === this.getActiveImageElement()) {
+					logger.error(`Failed to play media "${activeElem.src}":`, e);
+				}
 			});
 		}
 
@@ -2798,7 +2801,7 @@ function initWallpanel() {
 			if (!["media-entity", "iframe"].includes(imageSourceType())) {
 				const wp = this;
 				this.afterFadeoutTimer = setTimeout(function () {
-					if (typeof curImg.pause === "function") {
+					if (curImg.tagName.toLowerCase() === "video" && curImg.currentTime > 0 && !curImg.paused && !curImg.ended && curImg.readyState > curImg.HAVE_CURRENT_DATA) {
 						curImg.pause();
 					}
 					wp.updateImage(curImg);
@@ -3151,9 +3154,9 @@ function initWallpanel() {
 			}
 			evt.stopImmediatePropagation();
 
-			let switchImageDirection = "";
+			let switchImage = "";
 			if (swipe) {
-				switchImageDirection = swipe == "left" ? "backwards" : "forwards";
+				switchImage = swipe == "left" ? "backwards" : "forwards";
 			}
 			else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
 				let right = 0.0;
@@ -3166,7 +3169,7 @@ function initWallpanel() {
 				}
 				if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
 					if (isClick) {
-						switchImageDirection = "forwards";
+						switchImage = "forwards";
 					}
 					else {
 						return;
@@ -3176,7 +3179,7 @@ function initWallpanel() {
 					right >= (100 - config.touch_zone_size_previous_image) / 100
 				) {
 					if (isClick) {
-						switchImageDirection = "backwards";
+						switchImage = "backwards";
 					}
 					else {
 						return;
@@ -3199,14 +3202,20 @@ function initWallpanel() {
 				}
 			}
 
-			if (switchImageDirection) {
-				if (this.imageListDirection != switchImageDirection) {
-					this.switchImageDirection(switchImageDirection);
-				} else if (
-					this.imageOne.getAttribute("data-loading") == "false" &&
-					this.imageTwo.getAttribute("data-loading") == "false"
+			if (switchImage) {
+				if (
+					this.imageOne.getAttribute("data-loading") == "true" ||
+					this.imageTwo.getAttribute("data-loading") == "true"
 				) {
-					this.switchActiveImage("user_action");
+					logger.debug("Already switching image");
+				}
+				else {
+					logger.debug(`Switching image, direction ${switchImage}`);
+					if (this.imageListDirection != switchImage) {
+						this.switchImageDirection(switchImage);
+					} else {
+						this.switchActiveImage("user_action");
+					}
 				}
 				return;
 			}
