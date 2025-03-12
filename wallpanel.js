@@ -887,7 +887,11 @@ function initWallpanel() {
 
 				if (state == "off" && this.screensaverStartedAt && lastChanged.getTime() - this.screensaverStartedAt > 0) {
 					this.stopScreensaver(config.fade_out_time_screensaver_entity);
-				} else if (state == "on" && this.screensaverStoppedAt && lastChanged.getTime() - this.screensaverStoppedAt > 0) {
+				} else if (
+					state == "on" &&
+					this.screensaverStoppedAt &&
+					lastChanged.getTime() - this.screensaverStoppedAt > 0
+				) {
 					this.startScreensaver();
 				}
 			}
@@ -2231,13 +2235,12 @@ function initWallpanel() {
 			function processAssets(assets, folderName = null) {
 				assets.forEach((asset) => {
 					logger.debug(asset);
-					const assetType = asset.type.toLowerCase()
+					const assetType = asset.type.toLowerCase();
 					if (["image", "video"].includes(assetType)) {
 						let url = `${apiUrl}/assets/${asset.id}/original`;
 						if (assetType == "video") {
 							url = `${apiUrl}/assets/${asset.id}/video/playback`;
-						}
-						else if (config.immich_resolution == "preview") {
+						} else if (config.immich_resolution == "preview") {
 							url = `${apiUrl}/assets/${asset.id}/thumbnail?size=preview`;
 						}
 						data[url] = asset.exifInfo;
@@ -2805,7 +2808,13 @@ function initWallpanel() {
 			if (!["media-entity", "iframe"].includes(imageSourceType())) {
 				const wp = this;
 				this.afterFadeoutTimer = setTimeout(function () {
-					if (curImg.tagName.toLowerCase() === "video" && curImg.currentTime > 0 && !curImg.paused && !curImg.ended && curImg.readyState > curImg.HAVE_CURRENT_DATA) {
+					if (
+						curImg.tagName.toLowerCase() === "video" &&
+						curImg.currentTime > 0 &&
+						!curImg.paused &&
+						!curImg.ended &&
+						curImg.readyState > curImg.HAVE_CURRENT_DATA
+					) {
 						curImg.pause();
 					}
 					wp.updateImage(curImg);
@@ -3068,19 +3077,18 @@ function initWallpanel() {
 			const isClick = ["click", "touchend"].includes(evt.type);
 			const now = Date.now();
 			this.idleSince = now;
-			
+
 			let swipe = "";
 			if (evt.type == "touchstart") {
 				if (evt.touches && evt.touches[0]) {
 					this.touchStartX = evt.touches[0].clientX;
 				}
 				return;
-			}
-			else if (evt.type == "touchend" && this.touchStartX >= 0 && evt.changedTouches && evt.changedTouches[0]) {
+			} else if (evt.type == "touchend" && this.touchStartX >= 0 && evt.changedTouches && evt.changedTouches[0]) {
 				const diffX = evt.changedTouches[0].clientX - this.touchStartX;
-				if (diffX >= 5) { 
+				if (diffX >= 5) {
 					swipe = "right";
-				} else if (diffX <= -5) { 
+				} else if (diffX <= -5) {
 					swipe = "left";
 				}
 				this.touchStartX = -1;
@@ -3125,7 +3133,10 @@ function initWallpanel() {
 
 			const bmp = getActiveBrowserModPopup();
 			if (bmp) {
-				const bm_elements = [bmp.shadowRoot.querySelector(".content"), bmp.shadowRoot.querySelector("ha-dialog-header")];
+				const bm_elements = [
+					bmp.shadowRoot.querySelector(".content"),
+					bmp.shadowRoot.querySelector("ha-dialog-header")
+				];
 				for (let i = 0; i < bm_elements.length; i++) {
 					if (bm_elements[i]) {
 						const pos = bm_elements[i].getBoundingClientRect();
@@ -3166,8 +3177,7 @@ function initWallpanel() {
 			let switchImage = "";
 			if (swipe) {
 				switchImage = swipe == "left" ? "backwards" : "forwards";
-			}
-			else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
+			} else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
 				let right = 0.0;
 				let bottom = 0.0;
 				if (x) {
@@ -3179,8 +3189,7 @@ function initWallpanel() {
 				if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
 					if (isClick) {
 						switchImage = "forwards";
-					}
-					else {
+					} else {
 						return;
 					}
 				} else if (
@@ -3189,8 +3198,7 @@ function initWallpanel() {
 				) {
 					if (isClick) {
 						switchImage = "backwards";
-					}
-					else {
+					} else {
 						return;
 					}
 				} else if (right >= 0.4 && right <= 0.6 && bottom <= 0.1) {
@@ -3217,8 +3225,7 @@ function initWallpanel() {
 					this.imageTwo.getAttribute("data-loading") == "true"
 				) {
 					logger.debug("Already switching image");
-				}
-				else {
+				} else {
 					logger.debug(`Switching image, direction ${switchImage}`);
 					if (this.imageListDirection != switchImage) {
 						this.switchImageDirection(switchImage);
@@ -3228,7 +3235,7 @@ function initWallpanel() {
 				}
 				return;
 			}
-			
+
 			if (!isClick || config.stop_screensaver_on_mouse_click) {
 				// Prevent interaction with the dashboards after screensaver was stopped
 				this.blockEventsUntil = now + config.control_reactivation_time * 1000;
@@ -3409,7 +3416,7 @@ function startup() {
 
 	updateConfig();
 	initWallpanel();
-	
+
 	window.addEventListener("location-changed", (event) => {
 		let url = null;
 		try {
