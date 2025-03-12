@@ -837,6 +837,7 @@ class WallpanelView extends HuiView {
 		this.translateInterval = null;
 		this.lastClickTime = 0;
 		this.clickCount = 0;
+		this.touchStartX = -1;
 		this.energyCollectionUpdateEnabled = false;
 		this.energyCollectionUpdateInterval = 60;
 		this.lastEnergyCollectionUpdate = 0;
@@ -1770,7 +1771,7 @@ class WallpanelView extends HuiView {
 		shadow.appendChild(this.debugBox);
 
 		const wp = this;
-		const eventNames = ["click", "touchstart", "wheel"];
+		const eventNames = ["click", "touchstart", "touchend", "wheel"];
 		if (config.stop_screensaver_on_key_down) {
 			eventNames.push("keydown");
 		}
@@ -1778,13 +1779,12 @@ class WallpanelView extends HuiView {
 			eventNames.push("mousemove");
 		}
 		eventNames.forEach(function (eventName) {
-			const click = ["click", "touchstart"].includes(eventName);
 			window.addEventListener(
 				eventName,
 				(event) => {
-					wp.handleInteractionEvent(event, click);
+					wp.handleInteractionEvent(event);
 				},
-				{ capture: true, passive: !click }
+				{ capture: true }
 			);
 		});
 		window.addEventListener("resize", () => {
@@ -3051,9 +3051,27 @@ class WallpanelView extends HuiView {
 		this.stopScreensaver(config.fade_out_time_motion_detected);
 	}
 
-	handleInteractionEvent(evt, isClick) {
+	handleInteractionEvent(evt) {
+		const isClick = ["click", "touchend"].includes(evt.type);
 		const now = Date.now();
 		this.idleSince = now;
+		
+		let swipe = "";
+		if (evt.type == "touchstart") {
+			if (evt.touches && evt.touches[0]) {
+				this.touchStartX = evt.touches[0].clientX;
+			}
+			return;
+		}
+		else if (evt.type == "touchend" && this.touchStartX >= 0 && evt.changedTouches && evt.changedTouches[0]) {
+			const diffX = evt.changedTouches[0].clientX - this.touchStartX;
+			if (diffX >= 5) { 
+				swipe = "right";
+			} else if (diffX <= -5) { 
+				swipe = "left";
+			}
+			this.touchStartX = -1;
+		}
 
 		if (!this.screensaverRunning()) {
 			if (this.blockEventsUntil > now) {
@@ -3080,11 +3098,11 @@ class WallpanelView extends HuiView {
 
 		let x = evt.clientX;
 		let y = evt.clientY;
-		if (!x && evt.touches && evt.touches[0]) {
-			x = evt.touches[0].clientX;
+		if (!x && evt.changedTouches && evt.changedTouches[0]) {
+			x = evt.changedTouches[0].clientX;
 		}
-		if (!y && evt.touches && evt.touches[0]) {
-			y = evt.touches[0].clientY;
+		if (!y && evt.changedTouches && evt.changedTouches[0]) {
+			y = evt.changedTouches[0].clientY;
 		}
 
 		if (config.debug && x && x < 100 && y && y < 100) {
@@ -3132,7 +3150,11 @@ class WallpanelView extends HuiView {
 		}
 		evt.stopImmediatePropagation();
 
-		if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
+		let switchImageDirection = "";
+		if (swipe) {
+			switchImageDirection = swipe == "left" ? "backwards" : "forwards";
+		}
+		else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
 			let right = 0.0;
 			let bottom = 0.0;
 			if (x) {
@@ -3143,31 +3165,21 @@ class WallpanelView extends HuiView {
 			}
 			if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
 				if (isClick) {
-					if (this.imageListDirection != "forwards") {
-						this.switchImageDirection("forwards");
-					} else if (
-						this.imageOne.getAttribute("data-loading") == "false" &&
-						this.imageTwo.getAttribute("data-loading") == "false"
-					) {
-						this.switchActiveImage("user_action");
-					}
+					switchImageDirection = "forwards";
 				}
-				return;
+				else {
+					return;
+				}
 			} else if (
 				config.touch_zone_size_previous_image > 0 &&
 				right >= (100 - config.touch_zone_size_previous_image) / 100
 			) {
 				if (isClick) {
-					if (this.imageListDirection != "backwards") {
-						this.switchImageDirection("backwards");
-					} else if (
-						this.imageOne.getAttribute("data-loading") == "false" &&
-						this.imageTwo.getAttribute("data-loading") == "false"
-					) {
-						this.switchActiveImage("user_action");
-					}
+					switchImageDirection = "backwards";
 				}
-				return;
+				else {
+					return;
+				}
 			} else if (right >= 0.4 && right <= 0.6 && bottom <= 0.1) {
 				const now = new Date();
 				if (isClick && now - this.lastClickTime < 500) {
@@ -3185,6 +3197,19 @@ class WallpanelView extends HuiView {
 				return;
 			}
 		}
+
+		if (switchImageDirection) {
+			if (this.imageListDirection != switchImageDirection) {
+				this.switchImageDirection(switchImageDirection);
+			} else if (
+				this.imageOne.getAttribute("data-loading") == "false" &&
+				this.imageTwo.getAttribute("data-loading") == "false"
+			) {
+				this.switchActiveImage("user_action");
+			}
+			return;
+		}
+		
 		if (!isClick || config.stop_screensaver_on_mouse_click) {
 			// Prevent interaction with the dashboards after screensaver was stopped
 			this.blockEventsUntil = now + config.control_reactivation_time * 1000;
