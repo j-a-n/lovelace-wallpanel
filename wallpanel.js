@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.41.0";
+const version = "4.42.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -2809,6 +2809,11 @@ function initWallpanel() {
 						curImg.pause();
 					}
 					wp.updateImage(curImg);
+					let cont = wp.imageOneBackground;
+					if (curImg == wp.imageTwo) {
+						cont = wp.imageTwoBackground;
+					}
+					cont.style.backgroundImage = "";
 				}, crossfadeMillis);
 			}
 		}
