@@ -2233,9 +2233,13 @@ function initWallpanel() {
 					logger.debug(asset);
 					const assetType = asset.type.toLowerCase()
 					if (["image", "video"].includes(assetType)) {
-						const resolution =
-							assetType == "video" || config.immich_resolution == "original" ? "original" : "thumbnail?size=preview";
-						const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+						let url = `${apiUrl}/assets/${asset.id}/original`;
+						if (assetType == "video") {
+							url = `${apiUrl}/assets/${asset.id}/video/playback`;
+						}
+						else if (config.immich_resolution == "preview") {
+							url = `${apiUrl}/assets/${asset.id}/thumbnail?size=preview`;
+						}
 						data[url] = asset.exifInfo;
 						data[url]["mediaType"] = assetType;
 						data[url]["image"] = {
