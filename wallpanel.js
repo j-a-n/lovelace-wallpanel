@@ -134,12 +134,6 @@ let userId = null;
 const userName = null;
 let userDisplayname = null;
 
-const HuiView = customElements.get("hui-view");
-if (!HuiView) {
-	const error = "Failed to get hui-view from customElements";
-	throw new Error(error);
-}
-
 function isObject(item) {
 	return item && typeof item === "object" && !Array.isArray(item);
 }
@@ -814,2408 +808,2422 @@ function enterFullscreen() {
 	}
 }
 
-class WallpanelView extends HuiView {
-	constructor() {
-		super();
-
-		this.imageList = [];
-		this.imageIndex = -1;
-		this.imageListDirection = "forwards"; // forwards, backwards
-		this.lastImageListUpdate;
-		this.updatingImageList = false;
-		this.cancelUpdatingImageList = false;
-		this.lastImageUpdate = 0;
-		this.messageBoxTimeout = null;
-		this.blockEventsUntil = 0;
-		this.screensaverStartedAt;
-		this.screensaverStoppedAt = new Date();
-		this.infoBoxContentCreatedDate;
-		this.idleSince = Date.now();
-		this.lastProfileSet = config.profile;
-		this.lastMove = null;
-		this.lastCorner = 0; // 0 - top left, 1 - bottom left, 2 - bottom right, 3 - top right
-		this.translateInterval = null;
-		this.lastClickTime = 0;
-		this.clickCount = 0;
-		this.touchStartX = -1;
-		this.energyCollectionUpdateEnabled = false;
-		this.energyCollectionUpdateInterval = 60;
-		this.lastEnergyCollectionUpdate = 0;
-		this.screensaverStopNavigationPathTimeout = null;
-		this.disable_screensaver_on_browser_mod_popup_function = null;
-
-		this.screenWakeLock = new ScreenWakeLock();
-		this.cameraMotionDetection = new CameraMotionDetection();
-
-		this.lovelace = null;
-		this.__hass = elHass.__hass;
-		this.__cards = [];
-		this.__badges = [];
-		this.__views = [];
-
-		elHass.provideHass(this);
-		setInterval(this.timer.bind(this), 1000);
+function initWallpanel() {
+	const HuiView = customElements.get("hui-view");
+	if (!HuiView) {
+		const error = "Failed to get hui-view from customElements";
+		throw new Error(error);
 	}
 
-	// Whenever the state changes, a new `hass` object is set.
-	set hass(hass) {
-		logger.debug("Update hass");
-		this.__hass = hass;
-		let changed = false;
-		for (const entityId in configEntityStates) {
-			const entity = this.__hass.states[entityId];
-			if (entity && entity.state != configEntityStates[entityId]) {
-				configEntityStates[entityId] = entity.state;
-				changed = true;
-			}
+	class WallpanelView extends HuiView {
+		constructor() {
+			super();
+
+			this.imageList = [];
+			this.imageIndex = -1;
+			this.imageListDirection = "forwards"; // forwards, backwards
+			this.lastImageListUpdate;
+			this.updatingImageList = false;
+			this.cancelUpdatingImageList = false;
+			this.lastImageUpdate = 0;
+			this.messageBoxTimeout = null;
+			this.blockEventsUntil = 0;
+			this.screensaverStartedAt;
+			this.screensaverStoppedAt = new Date();
+			this.infoBoxContentCreatedDate;
+			this.idleSince = Date.now();
+			this.lastProfileSet = config.profile;
+			this.lastMove = null;
+			this.lastCorner = 0; // 0 - top left, 1 - bottom left, 2 - bottom right, 3 - top right
+			this.translateInterval = null;
+			this.lastClickTime = 0;
+			this.clickCount = 0;
+			this.touchStartX = -1;
+			this.energyCollectionUpdateEnabled = false;
+			this.energyCollectionUpdateInterval = 60;
+			this.lastEnergyCollectionUpdate = 0;
+			this.screensaverStopNavigationPathTimeout = null;
+			this.disable_screensaver_on_browser_mod_popup_function = null;
+
+			this.screenWakeLock = new ScreenWakeLock();
+			this.cameraMotionDetection = new CameraMotionDetection();
+
+			this.lovelace = null;
+			this.__hass = elHass.__hass;
+			this.__cards = [];
+			this.__badges = [];
+			this.__views = [];
+
+			elHass.provideHass(this);
+			setInterval(this.timer.bind(this), 1000);
 		}
-		const profileUpdated = this.updateProfile();
-		if (!profileUpdated && changed) {
-			updateConfig();
-		}
 
-		if (!isActive()) {
-			return;
-		}
-
-		const screensaver_entity = config.screensaver_entity;
-
-		if (screensaver_entity && this.__hass.states[screensaver_entity]) {
-			const lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
-			const state = this.__hass.states[screensaver_entity].state;
-
-			if (state == "off" && this.screensaverStartedAt && lastChanged.getTime() - this.screensaverStartedAt > 0) {
-				this.stopScreensaver(config.fade_out_time_screensaver_entity);
-			} else if (state == "on" && this.screensaverStoppedAt && lastChanged.getTime() - this.screensaverStoppedAt > 0) {
-				this.startScreensaver();
-			}
-		}
-
-		if (this.screensaverRunning()) {
-			this.__cards.forEach((card) => {
-				card.hass = this.hass;
-			});
-			this.__badges.forEach((badge) => {
-				badge.hass = this.hass;
-			});
-			this.__views.forEach((view) => {
-				view.hass = this.hass;
-			});
-
-			if (imageSourceType() == "media-entity") {
-				this.switchActiveImage("entity_update");
-			}
-		}
-	}
-
-	get hass() {
-		return this.__hass;
-	}
-
-	setScreensaverEntityState() {
-		const screensaver_entity = config.screensaver_entity;
-		if (!screensaver_entity || !this.__hass.states[screensaver_entity]) return;
-		if (this.screensaverRunning() && this.__hass.states[screensaver_entity].state == "on") return;
-		if (!this.screensaverRunning() && this.__hass.states[screensaver_entity].state == "off") return;
-
-		const service = this.screensaverRunning() ? "turn_on" : "turn_off";
-		logger.debug("Updating screensaver_entity", screensaver_entity, service);
-		this.__hass
-			.callService("input_boolean", service, {
-				entity_id: screensaver_entity
-			})
-			.then(
-				(result) => {
-					logger.debug(result);
-				},
-				(error) => {
-					logger.error("Failed to set screensaver entity state:", error);
+		// Whenever the state changes, a new `hass` object is set.
+		set hass(hass) {
+			logger.debug("Update hass");
+			this.__hass = hass;
+			let changed = false;
+			for (const entityId in configEntityStates) {
+				const entity = this.__hass.states[entityId];
+				if (entity && entity.state != configEntityStates[entityId]) {
+					configEntityStates[entityId] = entity.state;
+					changed = true;
 				}
-			);
-	}
-
-	setImageURLEntityState() {
-		const image_url_entity = config.image_url_entity;
-		if (!image_url_entity || !this.__hass.states[image_url_entity]) return;
-		const activeImage = this.getActiveImageElement();
-		if (!activeImage || !activeImage.imageUrl) return;
-
-		logger.debug("Updating image_url_entity", image_url_entity, activeImage.imageUrl);
-		this.__hass
-			.callService("input_text", "set_value", {
-				entity_id: image_url_entity,
-				value: activeImage.imageUrl
-			})
-			.then(
-				(result) => {
-					logger.debug(result);
-				},
-				(error) => {
-					logger.error("Failed to set image url entity state:", error);
-				}
-			);
-	}
-
-	updateProfile() {
-		const profile_entity = config.profile_entity;
-		if (profile_entity && this.__hass.states[profile_entity]) {
-			const profile = this.__hass.states[profile_entity].state;
-			if ((profile && profile != this.lastProfileSet) || (!profile && this.lastProfileSet)) {
-				logger.debug(`Set profile to ${profile}`);
-				this.lastProfileSet = profile;
+			}
+			const profileUpdated = this.updateProfile();
+			if (!profileUpdated && changed) {
 				updateConfig();
-				return true;
+			}
+
+			if (!isActive()) {
+				return;
+			}
+
+			const screensaver_entity = config.screensaver_entity;
+
+			if (screensaver_entity && this.__hass.states[screensaver_entity]) {
+				const lastChanged = new Date(this.__hass.states[screensaver_entity].last_changed);
+				const state = this.__hass.states[screensaver_entity].state;
+
+				if (state == "off" && this.screensaverStartedAt && lastChanged.getTime() - this.screensaverStartedAt > 0) {
+					this.stopScreensaver(config.fade_out_time_screensaver_entity);
+				} else if (state == "on" && this.screensaverStoppedAt && lastChanged.getTime() - this.screensaverStoppedAt > 0) {
+					this.startScreensaver();
+				}
+			}
+
+			if (this.screensaverRunning()) {
+				this.__cards.forEach((card) => {
+					card.hass = this.hass;
+				});
+				this.__badges.forEach((badge) => {
+					badge.hass = this.hass;
+				});
+				this.__views.forEach((view) => {
+					view.hass = this.hass;
+				});
+
+				if (imageSourceType() == "media-entity") {
+					this.switchActiveImage("entity_update");
+				}
 			}
 		}
-		return false;
-	}
 
-	timer() {
-		if (!config.enabled || !activePanel) {
-			return;
+		get hass() {
+			return this.__hass;
 		}
-		if (this.screensaverRunning()) {
-			if (config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup()) {
-				this.stopScreensaver(config.fade_out_time_browser_mod_popup);
+
+		setScreensaverEntityState() {
+			const screensaver_entity = config.screensaver_entity;
+			if (!screensaver_entity || !this.__hass.states[screensaver_entity]) return;
+			if (this.screensaverRunning() && this.__hass.states[screensaver_entity].state == "on") return;
+			if (!this.screensaverRunning() && this.__hass.states[screensaver_entity].state == "off") return;
+
+			const service = this.screensaverRunning() ? "turn_on" : "turn_off";
+			logger.debug("Updating screensaver_entity", screensaver_entity, service);
+			this.__hass
+				.callService("input_boolean", service, {
+					entity_id: screensaver_entity
+				})
+				.then(
+					(result) => {
+						logger.debug(result);
+					},
+					(error) => {
+						logger.error("Failed to set screensaver entity state:", error);
+					}
+				);
+		}
+
+		setImageURLEntityState() {
+			const image_url_entity = config.image_url_entity;
+			if (!image_url_entity || !this.__hass.states[image_url_entity]) return;
+			const activeImage = this.getActiveImageElement();
+			if (!activeImage || !activeImage.imageUrl) return;
+
+			logger.debug("Updating image_url_entity", image_url_entity, activeImage.imageUrl);
+			this.__hass
+				.callService("input_text", "set_value", {
+					entity_id: image_url_entity,
+					value: activeImage.imageUrl
+				})
+				.then(
+					(result) => {
+						logger.debug(result);
+					},
+					(error) => {
+						logger.error("Failed to set image url entity state:", error);
+					}
+				);
+		}
+
+		updateProfile() {
+			const profile_entity = config.profile_entity;
+			if (profile_entity && this.__hass.states[profile_entity]) {
+				const profile = this.__hass.states[profile_entity].state;
+				if ((profile && profile != this.lastProfileSet) || (!profile && this.lastProfileSet)) {
+					logger.debug(`Set profile to ${profile}`);
+					this.lastProfileSet = profile;
+					updateConfig();
+					return true;
+				}
+			}
+			return false;
+		}
+
+		timer() {
+			if (!config.enabled || !activePanel) {
+				return;
+			}
+			if (this.screensaverRunning()) {
+				if (config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup()) {
+					this.stopScreensaver(config.fade_out_time_browser_mod_popup);
+				} else {
+					this.updateScreensaver();
+				}
+			} else if (isActive()) {
+				if (config.idle_time > 0 && Date.now() - this.idleSince >= config.idle_time * 1000) {
+					this.startScreensaver();
+				}
+			}
+		}
+
+		setDefaultStyle() {
+			this.messageBox.removeAttribute("style");
+			this.messageBox.style.position = "fixed";
+			this.messageBox.style.pointerEvents = "none";
+			this.messageBox.style.top = 0;
+			this.messageBox.style.left = 0;
+			this.messageBox.style.width = "100%";
+			this.messageBox.style.height = "10%";
+			this.messageBox.style.zIndex = this.style.zIndex + 1;
+			if (!this.screensaverRunning()) {
+				this.messageBox.style.visibility = "hidden";
+			}
+			//this.messageBox.style.margin = '5vh auto auto auto';
+			this.messageBox.style.padding = "5vh 0 0 0";
+			this.messageBox.style.fontSize = "5vh";
+			this.messageBox.style.textAlign = "center";
+			this.messageBox.style.transition = "visibility 200ms ease-in-out";
+
+			this.debugBox.removeAttribute("style");
+			this.debugBox.style.position = "fixed";
+			this.debugBox.style.pointerEvents = "none";
+			this.debugBox.style.top = "0%";
+			this.debugBox.style.left = "0%";
+			this.debugBox.style.width = "100%";
+			this.debugBox.style.height = "100%";
+			this.debugBox.style.background = "#00000099";
+			this.debugBox.style.color = "#ffffff";
+			this.debugBox.style.zIndex = this.style.zIndex + 2;
+			if (!this.screensaverRunning()) {
+				this.debugBox.style.visibility = "hidden";
+			}
+			this.debugBox.style.fontFamily = "monospace";
+			this.debugBox.style.fontSize = "12px";
+			this.debugBox.style.overflowWrap = "break-word";
+			this.debugBox.style.overflowY = "auto";
+
+			this.screensaverContainer.removeAttribute("style");
+			this.screensaverContainer.style.position = "fixed";
+			this.screensaverContainer.style.top = 0;
+			this.screensaverContainer.style.left = 0;
+			this.screensaverContainer.style.width = "100vw";
+			this.screensaverContainer.style.height = "100vh";
+			this.screensaverContainer.style.background = "#000000";
+
+			if (!this.screensaverRunning()) {
+				this.imageOneContainer.removeAttribute("style");
+				this.imageOneContainer.style.opacity = 1;
+			}
+			this.imageOneContainer.style.position = "absolute";
+			this.imageOneContainer.style.pointerEvents = "none";
+			this.imageOneContainer.style.top = 0;
+			this.imageOneContainer.style.left = 0;
+			this.imageOneContainer.style.width = "100%";
+			this.imageOneContainer.style.height = "100%";
+			this.imageOneContainer.style.border = "none";
+
+			this.imageOneBackground.style.position = "absolute";
+			this.imageOneBackground.style.pointerEvents = "none";
+			this.imageOneBackground.style.top = 0;
+			this.imageOneBackground.style.left = 0;
+			this.imageOneBackground.style.width = "100%";
+			this.imageOneBackground.style.height = "100%";
+			this.imageOneBackground.style.border = "none";
+
+			if (!this.screensaverRunning()) {
+				this.imageOne.removeAttribute("style");
+			}
+			this.imageOne.style.position = "relative";
+			this.imageOne.style.pointerEvents = "none";
+			this.imageOne.style.width = "100%";
+			this.imageOne.style.height = "100%";
+			this.imageOne.style.objectFit = "contain";
+			this.imageOne.style.border = "none";
+
+			this.imageOneInfoContainer.removeAttribute("style");
+			this.imageOneInfoContainer.style.position = "absolute";
+			this.imageOneInfoContainer.style.pointerEvents = "none";
+			this.imageOneInfoContainer.style.top = 0;
+			this.imageOneInfoContainer.style.left = 0;
+			this.imageOneInfoContainer.style.width = "100%";
+			this.imageOneInfoContainer.style.height = "100%";
+			this.imageOneInfoContainer.style.border = "none";
+
+			if (!this.screensaverRunning()) {
+				this.imageTwoContainer.removeAttribute("style");
+				this.imageTwoContainer.style.opacity = 0;
+			}
+			this.imageTwoContainer.style.position = "absolute";
+			this.imageTwoContainer.style.pointerEvents = "none";
+			this.imageTwoContainer.style.top = 0;
+			this.imageTwoContainer.style.left = 0;
+			this.imageTwoContainer.style.width = "100%";
+			this.imageTwoContainer.style.height = "100%";
+			this.imageTwoContainer.style.border = "none";
+
+			this.imageTwoBackground.style.position = "absolute";
+			this.imageTwoBackground.style.pointerEvents = "none";
+			this.imageTwoBackground.style.top = 0;
+			this.imageTwoBackground.style.left = 0;
+			this.imageTwoBackground.style.width = "100%";
+			this.imageTwoBackground.style.height = "100%";
+			this.imageTwoBackground.style.border = "none";
+
+			if (!this.screensaverRunning()) {
+				this.imageTwo.removeAttribute("style");
+			}
+			this.imageTwo.style.position = "relative";
+			this.imageTwo.style.pointerEvents = "none";
+			this.imageTwo.style.width = "100%";
+			this.imageTwo.style.height = "100%";
+			this.imageTwo.style.objectFit = "contain";
+			this.imageTwo.style.border = "none";
+
+			this.imageTwoInfoContainer.removeAttribute("style");
+			this.imageTwoInfoContainer.style.position = "absolute";
+			this.imageTwoInfoContainer.style.pointerEvents = "none";
+			this.imageTwoInfoContainer.style.top = 0;
+			this.imageTwoInfoContainer.style.left = 0;
+			this.imageTwoInfoContainer.style.width = "100%";
+			this.imageTwoInfoContainer.style.height = "100%";
+			this.imageTwoInfoContainer.style.border = "none";
+
+			this.screensaverImageOverlay.removeAttribute("style");
+			this.screensaverImageOverlay.style.position = "absolute";
+			if (config.card_interaction) {
+				this.screensaverImageOverlay.style.pointerEvents = "none";
+			}
+			this.screensaverImageOverlay.style.top = 0;
+			this.screensaverImageOverlay.style.left = 0;
+			this.screensaverImageOverlay.style.width = "100%";
+			this.screensaverImageOverlay.style.height = "100%";
+			this.screensaverImageOverlay.style.background = "#00000000";
+
+			this.infoContainer.removeAttribute("style");
+			this.infoContainer.style.position = "absolute";
+			this.infoContainer.style.pointerEvents = "none";
+			this.infoContainer.style.top = 0;
+			this.infoContainer.style.left = 0;
+			this.infoContainer.style.width = "100%";
+			this.infoContainer.style.height = "100%";
+			this.infoContainer.style.transition = "opacity 2000ms ease-in-out";
+			this.infoContainer.style.padding = "25px";
+			this.infoContainer.style.boxSizing = "border-box";
+
+			this.infoBox.removeAttribute("style");
+			this.infoBox.style.pointerEvents = "none";
+			this.infoBox.style.width = "fit-content";
+			this.infoBox.style.maxHeight = "100%";
+			this.infoBox.style.borderRadius = "10px";
+			this.infoBox.style.overflowY = "auto";
+			this.infoBox.style.scrollbarWidth = "none";
+			this.infoBox.style.setProperty("--wp-card-width", "500px");
+			this.infoBox.style.setProperty("--wp-card-padding", "0");
+			this.infoBox.style.setProperty("--wp-card-margin", "5px");
+			this.infoBox.style.setProperty("--wp-card-backdrop-filter", "none");
+			this.infoBox.style.setProperty("--wp-badges-minwidth", "200px");
+
+			this.infoBoxPosX.style.height = "100%";
+			this.infoBoxPosX.style.width = "100%";
+
+			this.infoBoxPosY.style.height = "100%";
+			this.infoBoxPosY.style.width = "100%";
+
+			this.infoBoxContent.style.width = "fit-content";
+			this.infoBoxContent.style.height = "100%";
+			this.infoBoxContent.style.display = "grid";
+
+			this.fixedInfoContainer.removeAttribute("style");
+			this.fixedInfoContainer.style.position = "fixed";
+			this.fixedInfoContainer.style.pointerEvents = "none";
+			this.fixedInfoContainer.style.top = 0;
+			this.fixedInfoContainer.style.left = 0;
+			this.fixedInfoContainer.style.width = "100%";
+			this.fixedInfoContainer.style.height = "100%";
+
+			this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
+			this.fixedInfoBox.style.pointerEvents = "none";
+
+			this.screensaverOverlay.removeAttribute("style");
+			this.screensaverOverlay.style.position = "absolute";
+			if (config.card_interaction) {
+				this.screensaverOverlay.style.pointerEvents = "none";
+			}
+			this.screensaverOverlay.style.top = 0;
+			this.screensaverOverlay.style.left = 0;
+			this.screensaverOverlay.style.width = "100%";
+			this.screensaverOverlay.style.height = "100%";
+			this.screensaverOverlay.style.background = "#00000000";
+		}
+
+		updateStyle() {
+			this.screensaverOverlay.style.background = "#00000000";
+			this.debugBox.style.visibility = config.debug ? "visible" : "hidden";
+			//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
+			this.style.transition = `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out`;
+			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
+			this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
+			this.imageOne.style.objectFit = config.image_fit;
+			this.imageTwo.style.objectFit = config.image_fit;
+
+			if (config.info_animation_duration_x) {
+				this.infoBoxPosX.style.animation = `moveX ${config.info_animation_duration_x}s ${config.info_animation_timing_function_x} infinite alternate`;
 			} else {
-				this.updateScreensaver();
+				this.infoBoxPosX.style.animation = "";
 			}
-		} else if (isActive()) {
-			if (config.idle_time > 0 && Date.now() - this.idleSince >= config.idle_time * 1000) {
-				this.startScreensaver();
+
+			if (config.info_animation_duration_y) {
+				this.infoBoxPosY.style.animation = `moveY ${config.info_animation_duration_y}s ${config.info_animation_timing_function_y} infinite alternate`;
+			} else {
+				this.infoBoxPosY.style.animation = "";
 			}
-		}
-	}
 
-	setDefaultStyle() {
-		this.messageBox.removeAttribute("style");
-		this.messageBox.style.position = "fixed";
-		this.messageBox.style.pointerEvents = "none";
-		this.messageBox.style.top = 0;
-		this.messageBox.style.left = 0;
-		this.messageBox.style.width = "100%";
-		this.messageBox.style.height = "10%";
-		this.messageBox.style.zIndex = this.style.zIndex + 1;
-		if (!this.screensaverRunning()) {
-			this.messageBox.style.visibility = "hidden";
-		}
-		//this.messageBox.style.margin = '5vh auto auto auto';
-		this.messageBox.style.padding = "5vh 0 0 0";
-		this.messageBox.style.fontSize = "5vh";
-		this.messageBox.style.textAlign = "center";
-		this.messageBox.style.transition = "visibility 200ms ease-in-out";
-
-		this.debugBox.removeAttribute("style");
-		this.debugBox.style.position = "fixed";
-		this.debugBox.style.pointerEvents = "none";
-		this.debugBox.style.top = "0%";
-		this.debugBox.style.left = "0%";
-		this.debugBox.style.width = "100%";
-		this.debugBox.style.height = "100%";
-		this.debugBox.style.background = "#00000099";
-		this.debugBox.style.color = "#ffffff";
-		this.debugBox.style.zIndex = this.style.zIndex + 2;
-		if (!this.screensaverRunning()) {
-			this.debugBox.style.visibility = "hidden";
-		}
-		this.debugBox.style.fontFamily = "monospace";
-		this.debugBox.style.fontSize = "12px";
-		this.debugBox.style.overflowWrap = "break-word";
-		this.debugBox.style.overflowY = "auto";
-
-		this.screensaverContainer.removeAttribute("style");
-		this.screensaverContainer.style.position = "fixed";
-		this.screensaverContainer.style.top = 0;
-		this.screensaverContainer.style.left = 0;
-		this.screensaverContainer.style.width = "100vw";
-		this.screensaverContainer.style.height = "100vh";
-		this.screensaverContainer.style.background = "#000000";
-
-		if (!this.screensaverRunning()) {
-			this.imageOneContainer.removeAttribute("style");
-			this.imageOneContainer.style.opacity = 1;
-		}
-		this.imageOneContainer.style.position = "absolute";
-		this.imageOneContainer.style.pointerEvents = "none";
-		this.imageOneContainer.style.top = 0;
-		this.imageOneContainer.style.left = 0;
-		this.imageOneContainer.style.width = "100%";
-		this.imageOneContainer.style.height = "100%";
-		this.imageOneContainer.style.border = "none";
-
-		this.imageOneBackground.style.position = "absolute";
-		this.imageOneBackground.style.pointerEvents = "none";
-		this.imageOneBackground.style.top = 0;
-		this.imageOneBackground.style.left = 0;
-		this.imageOneBackground.style.width = "100%";
-		this.imageOneBackground.style.height = "100%";
-		this.imageOneBackground.style.border = "none";
-
-		if (!this.screensaverRunning()) {
-			this.imageOne.removeAttribute("style");
-		}
-		this.imageOne.style.position = "relative";
-		this.imageOne.style.pointerEvents = "none";
-		this.imageOne.style.width = "100%";
-		this.imageOne.style.height = "100%";
-		this.imageOne.style.objectFit = "contain";
-		this.imageOne.style.border = "none";
-
-		this.imageOneInfoContainer.removeAttribute("style");
-		this.imageOneInfoContainer.style.position = "absolute";
-		this.imageOneInfoContainer.style.pointerEvents = "none";
-		this.imageOneInfoContainer.style.top = 0;
-		this.imageOneInfoContainer.style.left = 0;
-		this.imageOneInfoContainer.style.width = "100%";
-		this.imageOneInfoContainer.style.height = "100%";
-		this.imageOneInfoContainer.style.border = "none";
-
-		if (!this.screensaverRunning()) {
-			this.imageTwoContainer.removeAttribute("style");
-			this.imageTwoContainer.style.opacity = 0;
-		}
-		this.imageTwoContainer.style.position = "absolute";
-		this.imageTwoContainer.style.pointerEvents = "none";
-		this.imageTwoContainer.style.top = 0;
-		this.imageTwoContainer.style.left = 0;
-		this.imageTwoContainer.style.width = "100%";
-		this.imageTwoContainer.style.height = "100%";
-		this.imageTwoContainer.style.border = "none";
-
-		this.imageTwoBackground.style.position = "absolute";
-		this.imageTwoBackground.style.pointerEvents = "none";
-		this.imageTwoBackground.style.top = 0;
-		this.imageTwoBackground.style.left = 0;
-		this.imageTwoBackground.style.width = "100%";
-		this.imageTwoBackground.style.height = "100%";
-		this.imageTwoBackground.style.border = "none";
-
-		if (!this.screensaverRunning()) {
-			this.imageTwo.removeAttribute("style");
-		}
-		this.imageTwo.style.position = "relative";
-		this.imageTwo.style.pointerEvents = "none";
-		this.imageTwo.style.width = "100%";
-		this.imageTwo.style.height = "100%";
-		this.imageTwo.style.objectFit = "contain";
-		this.imageTwo.style.border = "none";
-
-		this.imageTwoInfoContainer.removeAttribute("style");
-		this.imageTwoInfoContainer.style.position = "absolute";
-		this.imageTwoInfoContainer.style.pointerEvents = "none";
-		this.imageTwoInfoContainer.style.top = 0;
-		this.imageTwoInfoContainer.style.left = 0;
-		this.imageTwoInfoContainer.style.width = "100%";
-		this.imageTwoInfoContainer.style.height = "100%";
-		this.imageTwoInfoContainer.style.border = "none";
-
-		this.screensaverImageOverlay.removeAttribute("style");
-		this.screensaverImageOverlay.style.position = "absolute";
-		if (config.card_interaction) {
-			this.screensaverImageOverlay.style.pointerEvents = "none";
-		}
-		this.screensaverImageOverlay.style.top = 0;
-		this.screensaverImageOverlay.style.left = 0;
-		this.screensaverImageOverlay.style.width = "100%";
-		this.screensaverImageOverlay.style.height = "100%";
-		this.screensaverImageOverlay.style.background = "#00000000";
-
-		this.infoContainer.removeAttribute("style");
-		this.infoContainer.style.position = "absolute";
-		this.infoContainer.style.pointerEvents = "none";
-		this.infoContainer.style.top = 0;
-		this.infoContainer.style.left = 0;
-		this.infoContainer.style.width = "100%";
-		this.infoContainer.style.height = "100%";
-		this.infoContainer.style.transition = "opacity 2000ms ease-in-out";
-		this.infoContainer.style.padding = "25px";
-		this.infoContainer.style.boxSizing = "border-box";
-
-		this.infoBox.removeAttribute("style");
-		this.infoBox.style.pointerEvents = "none";
-		this.infoBox.style.width = "fit-content";
-		this.infoBox.style.maxHeight = "100%";
-		this.infoBox.style.borderRadius = "10px";
-		this.infoBox.style.overflowY = "auto";
-		this.infoBox.style.scrollbarWidth = "none";
-		this.infoBox.style.setProperty("--wp-card-width", "500px");
-		this.infoBox.style.setProperty("--wp-card-padding", "0");
-		this.infoBox.style.setProperty("--wp-card-margin", "5px");
-		this.infoBox.style.setProperty("--wp-card-backdrop-filter", "none");
-		this.infoBox.style.setProperty("--wp-badges-minwidth", "200px");
-
-		this.infoBoxPosX.style.height = "100%";
-		this.infoBoxPosX.style.width = "100%";
-
-		this.infoBoxPosY.style.height = "100%";
-		this.infoBoxPosY.style.width = "100%";
-
-		this.infoBoxContent.style.width = "fit-content";
-		this.infoBoxContent.style.height = "100%";
-		this.infoBoxContent.style.display = "grid";
-
-		this.fixedInfoContainer.removeAttribute("style");
-		this.fixedInfoContainer.style.position = "fixed";
-		this.fixedInfoContainer.style.pointerEvents = "none";
-		this.fixedInfoContainer.style.top = 0;
-		this.fixedInfoContainer.style.left = 0;
-		this.fixedInfoContainer.style.width = "100%";
-		this.fixedInfoContainer.style.height = "100%";
-
-		this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
-		this.fixedInfoBox.style.pointerEvents = "none";
-
-		this.screensaverOverlay.removeAttribute("style");
-		this.screensaverOverlay.style.position = "absolute";
-		if (config.card_interaction) {
-			this.screensaverOverlay.style.pointerEvents = "none";
-		}
-		this.screensaverOverlay.style.top = 0;
-		this.screensaverOverlay.style.left = 0;
-		this.screensaverOverlay.style.width = "100%";
-		this.screensaverOverlay.style.height = "100%";
-		this.screensaverOverlay.style.background = "#00000000";
-	}
-
-	updateStyle() {
-		this.screensaverOverlay.style.background = "#00000000";
-		this.debugBox.style.visibility = config.debug ? "visible" : "hidden";
-		//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
-		this.style.transition = `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out`;
-		this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
-		this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
-		this.imageOne.style.objectFit = config.image_fit;
-		this.imageTwo.style.objectFit = config.image_fit;
-
-		if (config.info_animation_duration_x) {
-			this.infoBoxPosX.style.animation = `moveX ${config.info_animation_duration_x}s ${config.info_animation_timing_function_x} infinite alternate`;
-		} else {
-			this.infoBoxPosX.style.animation = "";
-		}
-
-		if (config.info_animation_duration_y) {
-			this.infoBoxPosY.style.animation = `moveY ${config.info_animation_duration_y}s ${config.info_animation_timing_function_y} infinite alternate`;
-		} else {
-			this.infoBoxPosY.style.animation = "";
-		}
-
-		if (config.style) {
-			for (const elId in config.style) {
-				if (
-					elId.startsWith("wallpanel-") &&
-					elId != "wallpanel-shadow-host" &&
-					elId != "wallpanel-screensaver-info-box-badges" &&
-					elId != "wallpanel-screensaver-info-box-views" &&
-					!classStyles[elId]
-				) {
-					const el = this.shadowRoot.getElementById(elId);
-					if (el) {
-						logger.debug(`Setting style attributes for element #${elId}`);
-						for (const attr in config.style[elId]) {
-							logger.debug(`Setting style attribute ${attr} to ${config.style[elId][attr]}`);
-							el.style.setProperty(attr, config.style[elId][attr]);
+			if (config.style) {
+				for (const elId in config.style) {
+					if (
+						elId.startsWith("wallpanel-") &&
+						elId != "wallpanel-shadow-host" &&
+						elId != "wallpanel-screensaver-info-box-badges" &&
+						elId != "wallpanel-screensaver-info-box-views" &&
+						!classStyles[elId]
+					) {
+						const el = this.shadowRoot.getElementById(elId);
+						if (el) {
+							logger.debug(`Setting style attributes for element #${elId}`);
+							for (const attr in config.style[elId]) {
+								logger.debug(`Setting style attribute ${attr} to ${config.style[elId][attr]}`);
+								el.style.setProperty(attr, config.style[elId][attr]);
+							}
+							if (el == this.infoBox) {
+								this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
+							} else if (el == this.infoBoxContent) {
+								this.fixedInfoBoxContent.style.cssText = this.infoBoxContent.style.cssText;
+							}
+						} else {
+							logger.error(`Element #${elId} not found`);
 						}
-						if (el == this.infoBox) {
-							this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
-						} else if (el == this.infoBoxContent) {
-							this.fixedInfoBoxContent.style.cssText = this.infoBoxContent.style.cssText;
-						}
-					} else {
-						logger.error(`Element #${elId} not found`);
 					}
 				}
 			}
 		}
-	}
 
-	updateShadowStyle() {
-		const computed = getComputedStyle(this.infoContainer);
-		const maxX =
-			this.infoContainer.offsetWidth -
-			parseInt(computed.paddingLeft) -
-			parseInt(computed.paddingRight) -
-			this.infoBox.offsetWidth;
-		const maxY =
-			this.infoContainer.offsetHeight -
-			parseInt(computed.paddingTop) -
-			parseInt(computed.paddingBottom) -
-			this.infoBox.offsetHeight;
-		let host = "";
-
-		if (config.style) {
-			if (config.style["wallpanel-shadow-host"]) {
-				for (const attr in config.style["wallpanel-shadow-host"]) {
-					host += `${attr}: ${config.style["wallpanel-shadow-host"][attr]};\n`;
-				}
-			}
-			for (const className in classStyles) {
-				if (config.style[className]) {
-					mergeConfig(classStyles[className], config.style[className]);
-				}
-			}
-		}
-
-		let classCss = "";
-		for (const className in classStyles) {
-			classCss += `.${className} {\n`;
-			for (const attr in classStyles[className]) {
-				classCss += `${attr}: ${classStyles[className][attr]};\n`;
-			}
-			classCss += `}\n`;
-		}
-
-		this.shadowStyle.innerHTML = `
-			:host {
-				${host}
-			}
-			@keyframes moveX {
-				100% {
-					transform: translate3d(${maxX}px, 0, 0);
-				}
-			}
-			@keyframes moveY {
-				100% {
-					transform: translate3d(0, ${maxY}px, 0);
-				}
-			}
-			@keyframes horizontalProgress {
-				0% {
-					width: 0%;
-				}
-				100% {
-					width: 100%;
-				}
-			}
-			@keyframes kenBurnsEffect {
-				0% {
-					transform-origin: bottom left;
-					transform: scale(1.0);
-				}
-				100% {
-					transform: scale(${config.image_animation_ken_burns_zoom});
-				}
-			}
-			${classCss}
-		`;
-	}
-
-	randomMove() {
-		const computed = getComputedStyle(this.infoContainer);
-		const maxX =
-			this.infoContainer.offsetWidth -
-			parseInt(computed.paddingLeft) -
-			parseInt(computed.paddingRight) -
-			this.infoBox.offsetWidth;
-		const maxY =
-			this.infoContainer.offsetHeight -
-			parseInt(computed.paddingTop) -
-			parseInt(computed.paddingBottom) -
-			this.infoBox.offsetHeight;
-		const x = Math.floor(Math.random() * maxX);
-		const y = Math.floor(Math.random() * maxY);
-		this.moveInfoBox(x, y);
-	}
-
-	moveAroundCorners(correctPostion = false) {
-		let fadeDuration = null;
-		if (correctPostion) {
-			fadeDuration = 0;
-		} else {
-			this.lastCorner = (this.lastCorner + 1) % 4;
-		}
-		const computed = getComputedStyle(this.infoContainer);
-		const x = [2, 3].includes(this.lastCorner)
-			? this.infoContainer.offsetWidth -
+		updateShadowStyle() {
+			const computed = getComputedStyle(this.infoContainer);
+			const maxX =
+				this.infoContainer.offsetWidth -
 				parseInt(computed.paddingLeft) -
 				parseInt(computed.paddingRight) -
-				this.infoBox.offsetWidth
-			: 0;
-		const y = [1, 2].includes(this.lastCorner)
-			? this.infoContainer.offsetHeight -
+				this.infoBox.offsetWidth;
+			const maxY =
+				this.infoContainer.offsetHeight -
 				parseInt(computed.paddingTop) -
 				parseInt(computed.paddingBottom) -
-				this.infoBox.offsetHeight
-			: 0;
-		this.moveInfoBox(x, y, fadeDuration);
-	}
+				this.infoBox.offsetHeight;
+			let host = "";
 
-	moveInfoBox(x, y, fadeDuration = null) {
-		this.lastMove = Date.now();
-		if (fadeDuration === null) {
-			fadeDuration = config.info_move_fade_duration;
+			if (config.style) {
+				if (config.style["wallpanel-shadow-host"]) {
+					for (const attr in config.style["wallpanel-shadow-host"]) {
+						host += `${attr}: ${config.style["wallpanel-shadow-host"][attr]};\n`;
+					}
+				}
+				for (const className in classStyles) {
+					if (config.style[className]) {
+						mergeConfig(classStyles[className], config.style[className]);
+					}
+				}
+			}
+
+			let classCss = "";
+			for (const className in classStyles) {
+				classCss += `.${className} {\n`;
+				for (const attr in classStyles[className]) {
+					classCss += `${attr}: ${classStyles[className][attr]};\n`;
+				}
+				classCss += `}\n`;
+			}
+
+			this.shadowStyle.innerHTML = `
+				:host {
+					${host}
+				}
+				@keyframes moveX {
+					100% {
+						transform: translate3d(${maxX}px, 0, 0);
+					}
+				}
+				@keyframes moveY {
+					100% {
+						transform: translate3d(0, ${maxY}px, 0);
+					}
+				}
+				@keyframes horizontalProgress {
+					0% {
+						width: 0%;
+					}
+					100% {
+						width: 100%;
+					}
+				}
+				@keyframes kenBurnsEffect {
+					0% {
+						transform-origin: bottom left;
+						transform: scale(1.0);
+					}
+					100% {
+						transform: scale(${config.image_animation_ken_burns_zoom});
+					}
+				}
+				${classCss}
+			`;
 		}
-		if (fadeDuration > 0) {
-			if (this.infoBox.animate) {
-				const keyframes = [{ opacity: 1 }, { opacity: 0, offset: 0.5 }, { opacity: 1 }];
-				this.infoBox.animate(keyframes, {
-					duration: Math.round(fadeDuration * 1000),
-					iterations: 1
-				});
+
+		randomMove() {
+			const computed = getComputedStyle(this.infoContainer);
+			const maxX =
+				this.infoContainer.offsetWidth -
+				parseInt(computed.paddingLeft) -
+				parseInt(computed.paddingRight) -
+				this.infoBox.offsetWidth;
+			const maxY =
+				this.infoContainer.offsetHeight -
+				parseInt(computed.paddingTop) -
+				parseInt(computed.paddingBottom) -
+				this.infoBox.offsetHeight;
+			const x = Math.floor(Math.random() * maxX);
+			const y = Math.floor(Math.random() * maxY);
+			this.moveInfoBox(x, y);
+		}
+
+		moveAroundCorners(correctPostion = false) {
+			let fadeDuration = null;
+			if (correctPostion) {
+				fadeDuration = 0;
 			} else {
-				logger.warn("This browser does not support the animate() method, please set info_move_fade_duration to 0");
+				this.lastCorner = (this.lastCorner + 1) % 4;
 			}
+			const computed = getComputedStyle(this.infoContainer);
+			const x = [2, 3].includes(this.lastCorner)
+				? this.infoContainer.offsetWidth -
+					parseInt(computed.paddingLeft) -
+					parseInt(computed.paddingRight) -
+					this.infoBox.offsetWidth
+				: 0;
+			const y = [1, 2].includes(this.lastCorner)
+				? this.infoContainer.offsetHeight -
+					parseInt(computed.paddingTop) -
+					parseInt(computed.paddingBottom) -
+					this.infoBox.offsetHeight
+				: 0;
+			this.moveInfoBox(x, y, fadeDuration);
 		}
-		const wp = this;
-		let ms = Math.round(fadeDuration * 500);
-		if (ms < 0) {
-			ms = 0;
-		}
-		if (wp.translateInterval) {
-			clearInterval(wp.translateInterval);
-		}
-		wp.translateInterval = setInterval(function () {
-			wp.infoBoxPosX.style.transform = `translate3d(${x}px, 0, 0)`;
-			wp.infoBoxPosY.style.transform = `translate3d(0, ${y}px, 0)`;
-		}, ms);
-	}
 
-	createInfoBoxContent() {
-		logger.debug("Creating info box content");
-		const haPanelLovelace = getHaPanelLovelace();
-		if (!haPanelLovelace) {
-			return;
-		}
-		this.lovelace = haPanelLovelace.__lovelace;
-		this.infoBoxContentCreatedDate = new Date();
-		this.infoBoxContent.innerHTML = "";
-		this.__badges = [];
-		this.__cards = [];
-		this.__views = [];
-		this.energyCollectionUpdateEnabled = false;
-
-		this.shadowRoot.querySelectorAll(".wp-card").forEach((card) => {
-			card.parentElement.removeChild(card);
-		});
-
-		if (config.badges && config.badges.length > 0) {
-			const div = document.createElement("div");
-			div.id = "wallpanel-screensaver-info-box-badges";
-			div.classList.add("wp-badges");
-			div.style.padding = "var(--wp-card-padding)";
-			div.style.margin = "var(--wp-card-margin)";
-			div.style.textAlign = "center";
-			div.style.display = "flex";
-			div.style.alignItems = "flex-start";
-			div.style.flexWrap = "wrap";
-			div.style.justifyContent = "center";
-			div.style.gap = "8px";
-			div.style.margin = "0px";
-			div.style.minWidth = "var(--wp-badges-minwidth)";
-			if (config.style[div.id]) {
-				for (const attr in config.style[div.id]) {
-					logger.debug(`Setting style attribute ${attr} to ${config.style[div.id][attr]}`);
-					div.style.setProperty(attr, config.style[div.id][attr]);
+		moveInfoBox(x, y, fadeDuration = null) {
+			this.lastMove = Date.now();
+			if (fadeDuration === null) {
+				fadeDuration = config.info_move_fade_duration;
+			}
+			if (fadeDuration > 0) {
+				if (this.infoBox.animate) {
+					const keyframes = [{ opacity: 1 }, { opacity: 0, offset: 0.5 }, { opacity: 1 }];
+					this.infoBox.animate(keyframes, {
+						duration: Math.round(fadeDuration * 1000),
+						iterations: 1
+					});
+				} else {
+					logger.warn("This browser does not support the animate() method, please set info_move_fade_duration to 0");
 				}
 			}
-			config.badges.forEach((badge) => {
-				const badgeConfig = JSON.parse(JSON.stringify(badge));
-				logger.debug("Creating badge:", badgeConfig);
-				let style = {};
-				if (badgeConfig.wp_style) {
-					style = badgeConfig.wp_style;
-					delete badgeConfig.wp_style;
-				}
-				const createBadgeElement = this._createBadgeElement ? this._createBadgeElement : this.createBadgeElement;
-				const badgeElement = createBadgeElement.bind(this)(badgeConfig);
-				badgeElement.hass = this.hass;
-				for (const attr in style) {
-					badgeElement.style.setProperty(attr, style[attr]);
-				}
-				this.__badges.push(badgeElement);
-				div.append(badgeElement);
+			const wp = this;
+			let ms = Math.round(fadeDuration * 500);
+			if (ms < 0) {
+				ms = 0;
+			}
+			if (wp.translateInterval) {
+				clearInterval(wp.translateInterval);
+			}
+			wp.translateInterval = setInterval(function () {
+				wp.infoBoxPosX.style.transform = `translate3d(${x}px, 0, 0)`;
+				wp.infoBoxPosY.style.transform = `translate3d(0, ${y}px, 0)`;
+			}, ms);
+		}
+
+		createInfoBoxContent() {
+			logger.debug("Creating info box content");
+			const haPanelLovelace = getHaPanelLovelace();
+			if (!haPanelLovelace) {
+				return;
+			}
+			this.lovelace = haPanelLovelace.__lovelace;
+			this.infoBoxContentCreatedDate = new Date();
+			this.infoBoxContent.innerHTML = "";
+			this.__badges = [];
+			this.__cards = [];
+			this.__views = [];
+			this.energyCollectionUpdateEnabled = false;
+
+			this.shadowRoot.querySelectorAll(".wp-card").forEach((card) => {
+				card.parentElement.removeChild(card);
 			});
-			this.infoBoxContent.appendChild(div);
+
+			if (config.badges && config.badges.length > 0) {
+				const div = document.createElement("div");
+				div.id = "wallpanel-screensaver-info-box-badges";
+				div.classList.add("wp-badges");
+				div.style.padding = "var(--wp-card-padding)";
+				div.style.margin = "var(--wp-card-margin)";
+				div.style.textAlign = "center";
+				div.style.display = "flex";
+				div.style.alignItems = "flex-start";
+				div.style.flexWrap = "wrap";
+				div.style.justifyContent = "center";
+				div.style.gap = "8px";
+				div.style.margin = "0px";
+				div.style.minWidth = "var(--wp-badges-minwidth)";
+				if (config.style[div.id]) {
+					for (const attr in config.style[div.id]) {
+						logger.debug(`Setting style attribute ${attr} to ${config.style[div.id][attr]}`);
+						div.style.setProperty(attr, config.style[div.id][attr]);
+					}
+				}
+				config.badges.forEach((badge) => {
+					const badgeConfig = JSON.parse(JSON.stringify(badge));
+					logger.debug("Creating badge:", badgeConfig);
+					let style = {};
+					if (badgeConfig.wp_style) {
+						style = badgeConfig.wp_style;
+						delete badgeConfig.wp_style;
+					}
+					const createBadgeElement = this._createBadgeElement ? this._createBadgeElement : this.createBadgeElement;
+					const badgeElement = createBadgeElement.bind(this)(badgeConfig);
+					badgeElement.hass = this.hass;
+					for (const attr in style) {
+						badgeElement.style.setProperty(attr, style[attr]);
+					}
+					this.__badges.push(badgeElement);
+					div.append(badgeElement);
+				});
+				this.infoBoxContent.appendChild(div);
+			}
+
+			if (config.views && config.views.length > 0) {
+				const div = document.createElement("div");
+				div.id = "wallpanel-screensaver-info-box-views";
+				div.classList.add("wp-views");
+				if (config.style[div.id]) {
+					for (const attr in config.style[div.id]) {
+						logger.debug(`Setting style attribute ${attr} to ${config.style[div.id][attr]}`);
+						div.style.setProperty(attr, config.style[div.id][attr]);
+					}
+				}
+
+				const viewConfigs = this.lovelace.config.views;
+				config.views.forEach((view) => {
+					let viewIndex = -1;
+					const viewConfig = JSON.parse(JSON.stringify(view));
+					for (var i = 0; i < viewConfigs.length; i++) {
+						if (
+							(viewConfigs[i].path && view.path && viewConfigs[i].path.toLowerCase() == view.path.toLowerCase()) ||
+							(viewConfigs[i].title && view.title && viewConfigs[i].title.toLowerCase() == view.title.toLowerCase())
+						) {
+							viewIndex = i;
+							viewConfig.title = viewConfigs[i].title;
+							viewConfig.path = viewConfigs[i].path;
+							break;
+						}
+					}
+					if (viewIndex == -1) {
+						logger.error(`View with path '${viewConfig.path}' / tile '${viewConfig.title}' not found`);
+						viewIndex = 0;
+					}
+
+					const viewElement = document.createElement("hui-view");
+					viewElement.route = { prefix: "/" + activePanel, path: "/" + view.path };
+					viewElement.lovelace = this.lovelace;
+					viewElement.panel = this.hass.panels[activePanel];
+					viewElement.hass = this.hass;
+					viewElement.index = viewIndex;
+					if (typeof viewConfig.narrow == "boolean") {
+						viewElement.narrow = viewConfig.narrow;
+					}
+					this.__views.push(viewElement);
+
+					const viewContainer = document.createElement("div");
+					if (config.card_interaction) {
+						viewElement.style.pointerEvents = "initial";
+					}
+					if (viewConfig.wp_style) {
+						for (const attr in viewConfig.wp_style) {
+							viewContainer.style.setProperty(attr, viewConfig.wp_style[attr]);
+						}
+					}
+
+					viewContainer.append(viewElement);
+					div.append(viewContainer);
+				});
+				this.infoBoxContent.appendChild(div);
+			}
+
+			if (config.cards && config.cards.length > 0) {
+				config.cards.forEach((card) => {
+					// Copy object
+					const cardConfig = JSON.parse(JSON.stringify(card));
+					logger.debug("Creating card:", cardConfig);
+					let style = {};
+					if (cardConfig.wp_style) {
+						style = cardConfig.wp_style;
+						delete cardConfig.wp_style;
+					}
+					if (cardConfig.type && cardConfig.type.includes("energy")) {
+						cardConfig.collection_key = "energy_wallpanel";
+						this.energyCollectionUpdateEnabled = true;
+					}
+
+					const createCardElement = this._createCardElement ? this._createCardElement : this.createCardElement;
+					const cardElement = createCardElement.bind(this)(cardConfig);
+					cardElement.hass = this.hass;
+					this.__cards.push(cardElement);
+
+					let parent = this.infoBoxContent;
+					const cardContainer = document.createElement("div");
+					cardContainer.classList.add("wp-card");
+					cardContainer.style.width = "var(--wp-card-width)";
+					cardContainer.style.padding = "var(--wp-card-padding)";
+					cardContainer.style.margin = "var(--wp-card-margin)";
+					cardContainer.style.backdropFilter = "var(--wp-card-backdrop-filter)";
+
+					if (config.card_interaction) {
+						cardContainer.style.pointerEvents = "initial";
+					}
+					for (const attr in style) {
+						if (attr == "parent") {
+							const pel = this.shadowRoot.getElementById(style[attr]);
+							if (pel) {
+								parent = pel;
+							}
+						} else {
+							cardContainer.style.setProperty(attr, style[attr]);
+						}
+					}
+
+					cardContainer.append(cardElement);
+					parent.appendChild(cardContainer);
+				});
+			}
+
+			setTimeout(this.updateShadowStyle.bind(this), 500);
 		}
 
-		if (config.views && config.views.length > 0) {
-			const div = document.createElement("div");
-			div.id = "wallpanel-screensaver-info-box-views";
-			div.classList.add("wp-views");
-			if (config.style[div.id]) {
-				for (const attr in config.style[div.id]) {
-					logger.debug(`Setting style attribute ${attr} to ${config.style[div.id][attr]}`);
-					div.style.setProperty(attr, config.style[div.id][attr]);
+		restartProgressBarAnimation() {
+			if (!this.progressBarContainer) {
+				return;
+			}
+			this.progressBar.style.animation = "none";
+			if (!config.show_progress_bar) {
+				return;
+			}
+			const wp = this;
+			setTimeout(function () {
+				// Restart CSS animation.
+				wp.progressBar.style.animation = `horizontalProgress ${config.display_time}s linear`;
+			}, 25);
+		}
+
+		restartKenBurnsEffect() {
+			if (!config.image_animation_ken_burns) {
+				return;
+			}
+			const activeImage = this.getActiveImageElement();
+			activeImage.style.animation = "none";
+			let delay = Math.floor(config.image_animation_ken_burns_delay * 1000);
+			if (delay < 50) {
+				delay = 50;
+			}
+			setTimeout(function () {
+				activeImage.style.animation = `kenBurnsEffect ${config.display_time + Math.ceil(config.crossfade_time * 2) + 1}s ease`;
+			}, delay);
+		}
+
+		getActiveImageElement() {
+			if (this.imageOneContainer.style.opacity == 1) {
+				return this.imageOne;
+			}
+			return this.imageTwo;
+		}
+
+		getInactiveImageElement() {
+			if (this.imageOneContainer.style.opacity == 1) {
+				return this.imageTwo;
+			}
+			return this.imageOne;
+		}
+
+		handleMediaError(medialElem, error) {
+			medialElem.setAttribute("data-loading", false);
+			logger.error("Error while loding image:", error);
+
+			if (medialElem.imageUrl) {
+				const idx = this.imageList.indexOf(medialElem.imageUrl);
+				if (idx > -1) {
+					logger.debug(`Removing media from list: ${medialElem.imageUrl}`);
+					this.imageList.splice(idx, 1);
+				}
+				this.updateImage(medialElem);
+			} else {
+				this.displayMessage(`Failed to load media: ${medialElem.src}`, 5000);
+			}
+		}
+
+		loadBackgroundImage(medialElem) {
+			const isVideo = medialElem.tagName === "VIDEO";
+			let srcImageUrl = medialElem.src;
+			if (isVideo) {
+				// Capture the current frame of the video as a background image
+				const canvas = document.createElement("canvas");
+				canvas.width = medialElem.videoWidth;
+				canvas.height = medialElem.videoHeight;
+
+				const ctx = canvas.getContext("2d");
+				ctx.drawImage(medialElem, 0, 0, canvas.width, canvas.height);
+				try {
+					srcImageUrl = canvas.toDataURL("image/png");
+				} catch (err) {
+					srcImageUrl = null;
+					logger.error("Error extracting canvas image:", err);
+				}
+			}
+			let cont = this.imageOneBackground;
+			if (medialElem == this.imageTwo) {
+				cont = this.imageTwoBackground;
+			}
+			cont.style.backgroundImage = srcImageUrl ? `url(${srcImageUrl})` : "";
+		}
+
+		handleMediaLoaded(medialElem) {
+			medialElem.setAttribute("data-loading", false);
+			const isVideo = medialElem.tagName === "VIDEO";
+			const wp = this;
+			if (config.image_background === "image") {
+				if (isVideo) {
+					if (medialElem.readyState >= medialElem.HAVE_CURRENT_DATA) {
+						wp.loadBackgroundImage(medialElem);
+					} else {
+						medialElem.addEventListener("canplay", function () {
+							wp.loadBackgroundImage(medialElem);
+						});
+					}
+				} else {
+					wp.loadBackgroundImage(medialElem);
+				}
+			}
+			if (!isVideo && config.show_image_info && /.*\.jpe?g$/i.test(medialElem.imageUrl)) {
+				wp.fetchEXIFInfo(medialElem);
+			}
+		}
+
+		connectedCallback() {
+			this.style.zIndex = config.z_index;
+			this.style.visibility = "hidden";
+			this.style.opacity = 0;
+			this.style.position = "fixed";
+
+			this.messageBox = document.createElement("div");
+			this.messageBox.id = "wallpanel-message-box";
+
+			this.debugBox = document.createElement("div");
+			this.debugBox.id = "wallpanel-debug-box";
+
+			this.screensaverContainer = document.createElement("div");
+			this.screensaverContainer.id = "wallpanel-screensaver-container";
+
+			this.imageOneContainer = document.createElement("div");
+			this.imageOneContainer.id = "wallpanel-screensaver-image-one-container";
+
+			this.imageOneBackground = document.createElement("div");
+			this.imageOneBackground.className = "wallpanel-screensaver-image-background";
+			this.imageOneBackground.id = "wallpanel-screensaver-image-one-background";
+
+			this.imageOne = document.createElement("img");
+			this.imageOne.id = "wallpanel-screensaver-image-one";
+			this.imageOne.setAttribute("data-loading", false);
+
+			this.imageOneInfoContainer = document.createElement("div");
+			this.imageOneInfoContainer.id = "wallpanel-screensaver-image-one-info-container";
+
+			this.imageOneInfo = document.createElement("div");
+			this.imageOneInfo.className = "wallpanel-screensaver-image-info";
+			this.imageOneInfo.id = "wallpanel-screensaver-image-one-info";
+
+			this.imageOneInfoContainer.appendChild(this.imageOneInfo);
+			this.imageOneContainer.appendChild(this.imageOneBackground);
+			this.imageOneContainer.appendChild(this.imageOne);
+			this.imageOneContainer.appendChild(this.imageOneInfoContainer);
+			this.screensaverContainer.appendChild(this.imageOneContainer);
+
+			this.imageTwoContainer = document.createElement("div");
+			this.imageTwoContainer.id = "wallpanel-screensaver-image-two-container";
+
+			this.imageTwoBackground = document.createElement("div");
+			this.imageTwoBackground.className = "wallpanel-screensaver-image-background";
+			this.imageTwoBackground.id = "wallpanel-screensaver-image-two-background";
+
+			this.imageTwo = document.createElement("img");
+			this.imageTwo.id = "wallpanel-screensaver-image-two";
+			this.imageTwo.setAttribute("data-loading", false);
+
+			this.imageTwoInfoContainer = document.createElement("div");
+			this.imageTwoInfoContainer.id = "wallpanel-screensaver-image-two-info-container";
+
+			this.imageTwoInfo = document.createElement("div");
+			this.imageTwoInfo.className = "wallpanel-screensaver-image-info";
+			this.imageTwoInfo.id = "wallpanel-screensaver-image-two-info";
+
+			this.imageTwoInfoContainer.appendChild(this.imageTwoInfo);
+			this.imageTwoContainer.appendChild(this.imageTwoBackground);
+			this.imageTwoContainer.appendChild(this.imageTwo);
+			this.imageTwoContainer.appendChild(this.imageTwoInfoContainer);
+			this.screensaverContainer.appendChild(this.imageTwoContainer);
+
+			this.screensaverImageOverlay = document.createElement("div");
+			this.screensaverImageOverlay.id = "wallpanel-screensaver-image-overlay";
+			this.screensaverContainer.appendChild(this.screensaverImageOverlay);
+
+			this.progressBarContainer = document.createElement("div");
+			this.progressBarContainer.className = "wallpanel-progress";
+			this.progressBar = document.createElement("div");
+			this.progressBar.className = "wallpanel-progress-inner";
+			this.progressBar.id = "wallpanel-progress-inner";
+			this.progressBarContainer.appendChild(this.progressBar);
+
+			if (config.show_progress_bar) {
+				this.screensaverContainer.appendChild(this.progressBarContainer);
+			}
+
+			this.infoContainer = document.createElement("div");
+			this.infoContainer.id = "wallpanel-screensaver-info-container";
+
+			this.fixedInfoContainer = document.createElement("div");
+			this.fixedInfoContainer.id = "wallpanel-screensaver-fixed-info-container";
+
+			this.fixedInfoBox = document.createElement("div");
+			this.fixedInfoBox.id = "wallpanel-screensaver-fixed-info-box";
+
+			this.fixedInfoBoxContent = document.createElement("div");
+			this.fixedInfoBoxContent.id = "wallpanel-screensaver-fixed-info-box-content";
+
+			this.screensaverContainer.appendChild(this.infoContainer);
+
+			this.infoBoxPosX = document.createElement("div");
+			this.infoBoxPosX.id = "wallpanel-screensaver-info-box-pos-x";
+			this.infoBoxPosX.x = "0";
+
+			this.infoBoxPosY = document.createElement("div");
+			this.infoBoxPosY.id = "wallpanel-screensaver-info-box-pos-y";
+			this.infoBoxPosX.y = "0";
+
+			this.infoBox = document.createElement("div");
+			this.infoBox.id = "wallpanel-screensaver-info-box";
+
+			this.infoBoxContent = document.createElement("div");
+			this.infoBoxContent.id = "wallpanel-screensaver-info-box-content";
+			this.infoBoxContent.style.display = "grid";
+
+			this.infoBox.appendChild(this.infoBoxContent);
+			this.infoBoxPosX.appendChild(this.infoBox);
+			this.infoBoxPosY.appendChild(this.infoBoxPosX);
+			this.infoContainer.appendChild(this.infoBoxPosY);
+
+			this.fixedInfoBox.appendChild(this.fixedInfoBoxContent);
+			this.fixedInfoContainer.appendChild(this.fixedInfoBox);
+			this.infoContainer.appendChild(this.fixedInfoContainer);
+
+			this.screensaverOverlay = document.createElement("div");
+			this.screensaverOverlay.id = "wallpanel-screensaver-overlay";
+			this.screensaverContainer.appendChild(this.screensaverOverlay);
+
+			this.shadowStyle = document.createElement("style");
+
+			const shadow = this.attachShadow({ mode: "open" });
+			shadow.appendChild(this.shadowStyle);
+			shadow.appendChild(this.screensaverContainer);
+			shadow.appendChild(this.messageBox);
+			shadow.appendChild(this.debugBox);
+
+			const wp = this;
+			const eventNames = ["click", "touchstart", "touchend", "wheel"];
+			if (config.stop_screensaver_on_key_down) {
+				eventNames.push("keydown");
+			}
+			if (config.stop_screensaver_on_mouse_move) {
+				eventNames.push("mousemove");
+			}
+			eventNames.forEach(function (eventName) {
+				window.addEventListener(
+					eventName,
+					(event) => {
+						wp.handleInteractionEvent(event);
+					},
+					{ capture: true }
+				);
+			});
+			window.addEventListener("resize", () => {
+				if (wp.screensaverRunning()) {
+					wp.updateShadowStyle();
+				}
+			});
+			window.addEventListener("hass-more-info", () => {
+				if (wp.screensaverRunning()) {
+					wp.moreInfoDialogToForeground();
+				}
+			});
+			const infoBoxResizeObserver = new ResizeObserver(() => {
+				if (config.info_move_pattern === "corners") {
+					// Correct position
+					this.moveAroundCorners(true);
+				}
+			});
+			infoBoxResizeObserver.observe(this.infoBoxContent);
+
+			this.reconfigure();
+			// Correct possibly incorrect entity state
+			this.setScreensaverEntityState();
+		}
+
+		reconfigure(oldConfig) {
+			this.setDefaultStyle();
+			this.updateStyle();
+			if (this.screensaverRunning()) {
+				this.createInfoBoxContent();
+			}
+
+			if (!config.info_move_interval && oldConfig && oldConfig.info_move_interval) {
+				wallpanel.moveInfoBox(0, 0);
+			}
+
+			if (config.show_images && (!oldConfig || !oldConfig.show_images || oldConfig.image_url != config.image_url)) {
+				let switchImages = false;
+				if (oldConfig && Object.keys(oldConfig).length) {
+					switchImages = true;
+				}
+
+				function preloadCallback(wp) {
+					if (switchImages) {
+						wp.switchActiveImage("init");
+					} else {
+						wp.startPlayingActiveMedia();
+					}
+				}
+				if (["immich-api", "unsplash-api", "media-source"].includes(imageSourceType())) {
+					this.updateImageList(true, preloadCallback);
+				} else {
+					this.imageList = [];
+					this.preloadImages(preloadCallback);
 				}
 			}
 
-			const viewConfigs = this.lovelace.config.views;
-			config.views.forEach((view) => {
-				let viewIndex = -1;
-				const viewConfig = JSON.parse(JSON.stringify(view));
-				for (var i = 0; i < viewConfigs.length; i++) {
-					if (
-						(viewConfigs[i].path && view.path && viewConfigs[i].path.toLowerCase() == view.path.toLowerCase()) ||
-						(viewConfigs[i].title && view.title && viewConfigs[i].title.toLowerCase() == view.title.toLowerCase())
-					) {
-						viewIndex = i;
-						viewConfig.title = viewConfigs[i].title;
-						viewConfig.path = viewConfigs[i].path;
+			if (config.disable_screensaver_on_browser_mod_popup_func) {
+				this.disable_screensaver_on_browser_mod_popup_function = new Function(
+					"bmp",
+					config.disable_screensaver_on_browser_mod_popup_func
+				);
+			}
+			if (isActive() && config.camera_motion_detection_enabled) {
+				this.cameraMotionDetection.start();
+			} else {
+				this.cameraMotionDetection.stop();
+			}
+		}
+
+		getMoreInfoDialog() {
+			const moreInfoDialog = elHass.shadowRoot.querySelector("ha-more-info-dialog");
+			if (!moreInfoDialog) {
+				return;
+			}
+			const dialog = moreInfoDialog.shadowRoot.querySelector("ha-dialog");
+			if (dialog) {
+				return dialog;
+			}
+		}
+
+		moreInfoDialogToForeground() {
+			const wp = this;
+			function showDialog(attempt = 1) {
+				const dialog = wp.getMoreInfoDialog();
+				if (dialog) {
+					dialog.style.position = "absolute";
+					dialog.style.zIndex = wp.style.zIndex + 1;
+					return;
+				}
+				if (attempt < 10) {
+					setTimeout(showDialog, 50, attempt + 1);
+				}
+			}
+			showDialog();
+		}
+
+		fetchEXIFInfo(img) {
+			const wp = this;
+			if (imageInfoCache[img.imageUrl]) {
+				return;
+			}
+			if (imageInfoCacheKeys.length >= imageInfoCacheMaxSize) {
+				const oldest = imageInfoCacheKeys.shift();
+				if (imageInfoCache[oldest]) {
+					delete imageInfoCache[oldest];
+				}
+			}
+
+			const tmpImg = document.createElement("img");
+			tmpImg.src = img.src;
+			tmpImg.imageUrl = img.imageUrl;
+			getImageData(tmpImg, function () {
+				logger.debug("EXIF data:", tmpImg.exifdata);
+				imageInfoCacheKeys.push(tmpImg.imageUrl);
+				imageInfoCache[tmpImg.imageUrl] = tmpImg.exifdata;
+				wp.setImageDataInfo(tmpImg);
+
+				const exifLong = tmpImg.exifdata["GPSLongitude"];
+				const exifLat = tmpImg.exifdata["GPSLatitude"];
+				if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
+					let m = tmpImg.exifdata["GPSLatitudeRef"] == "S" ? -1 : 1;
+					const latitude = exifLat[0] * m + (exifLat[1] * m * 60 + exifLat[2] * m) / 3600;
+					m = tmpImg.exifdata["GPSLongitudeRef"] == "W" ? -1 : 1;
+					const longitude = exifLong[0] * m + (exifLong[1] * m * 60 + exifLong[2] * m) / 3600;
+
+					const xhr = new XMLHttpRequest();
+					xhr.onload = function () {
+						if (this.status == 200 || this.status === 0) {
+							const info = JSON.parse(xhr.responseText);
+							logger.debug("nominatim data:", info);
+							if (info && info.address) {
+								imageInfoCache[tmpImg.imageUrl].address = info.address;
+								wp.setImageDataInfo(tmpImg);
+							}
+						} else {
+							logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
+							delete imageInfoCache[tmpImg.imageUrl];
+						}
+					};
+					xhr.onerror = function (event) {
+						logger.error("nominatim error:", event);
+						delete imageInfoCache[tmpImg.imageUrl];
+					};
+					xhr.ontimeout = function (event) {
+						logger.error("nominatim timeout:", event);
+						delete imageInfoCache[tmpImg.imageUrl];
+					};
+					xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+					xhr.timeout = 15000;
+					xhr.send();
+				}
+			});
+		}
+
+		setImageDataInfo(img) {
+			if (!img || !img.imageUrl) {
+				return;
+			}
+			const infoElements = [];
+			if (this.imageOne.imageUrl == img.imageUrl) {
+				infoElements.push(this.imageOneInfo);
+			} else if (this.imageTwo.imageUrl == img.imageUrl) {
+				infoElements.push(this.imageTwoInfo);
+			}
+			if (infoElements.length == 0) {
+				return;
+			}
+
+			if (!config.show_image_info || !config.image_info_template) {
+				infoElements.forEach((infoElement) => {
+					infoElement.innerHTML = "";
+					infoElement.style.display = "none";
+				});
+				return;
+			}
+
+			let imageInfo = imageInfoCache[img.imageUrl];
+			if (!imageInfo) {
+				imageInfo = {};
+			}
+			if (!imageInfo.image) {
+				imageInfo.image = {};
+			}
+			if (!imageInfo.image.url) {
+				imageInfo.image.url = img.imageUrl;
+			}
+			if (!imageInfo.image.path) {
+				imageInfo.image.path = img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, "");
+			}
+			if (!imageInfo.image.relativePath) {
+				imageInfo.image.relativePath = img.imageUrl.replace(config.image_url, "").replace(/^\/+/, "");
+			}
+			if (!imageInfo.image.filename) {
+				imageInfo.image.filename = img.imageUrl.replace(/^.*[\\/]/, "");
+			}
+			if (!imageInfo.image.folderName) {
+				imageInfo.image.folderName = "";
+				const parts = img.imageUrl.split("/");
+				if (parts.length >= 2) {
+					imageInfo.image.folderName = parts[parts.length - 2];
+				}
+			}
+			logger.debug("Image info:", imageInfo);
+
+			let html = config.image_info_template;
+			html = html.replace(/\${([^}]+)}/g, (match, tags) => {
+				let prefix = "";
+				let suffix = "";
+				let options = null;
+				if (tags.includes("!")) {
+					const tmp = tags.split("!");
+					tags = tmp[0];
+					for (let i = 1; i < tmp.length; i++) {
+						const argType = tmp[i].substring(0, tmp[i].indexOf("="));
+						const argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
+						if (argType == "prefix") {
+							prefix = argValue;
+						} else if (argType == "suffix") {
+							suffix = argValue;
+						} else if (argType == "options") {
+							options = {};
+							argValue.split(",").forEach((optVal) => {
+								const tmp2 = optVal.split(":", 2);
+								if (tmp2[0] && tmp2[1]) {
+									options[tmp2[0].replace(/\s/g, "")] = tmp2[1].replace(/\s/g, "");
+								}
+							});
+						}
+					}
+				}
+
+				let val = "";
+				const tagList = tags.split("|");
+				let tag = "";
+				for (let i = 0; i < tagList.length; i++) {
+					tag = tagList[i];
+					const keys = tag.replace(/\s/g, "").split(".");
+					val = imageInfo;
+					keys.forEach((key) => {
+						if (val) {
+							val = val[key];
+						}
+					});
+					if (val) {
 						break;
 					}
 				}
-				if (viewIndex == -1) {
-					logger.error(`View with path '${viewConfig.path}' / tile '${viewConfig.title}' not found`);
-					viewIndex = 0;
-				}
-
-				const viewElement = document.createElement("hui-view");
-				viewElement.route = { prefix: "/" + activePanel, path: "/" + view.path };
-				viewElement.lovelace = this.lovelace;
-				viewElement.panel = this.hass.panels[activePanel];
-				viewElement.hass = this.hass;
-				viewElement.index = viewIndex;
-				if (typeof viewConfig.narrow == "boolean") {
-					viewElement.narrow = viewConfig.narrow;
-				}
-				this.__views.push(viewElement);
-
-				const viewContainer = document.createElement("div");
-				if (config.card_interaction) {
-					viewElement.style.pointerEvents = "initial";
-				}
-				if (viewConfig.wp_style) {
-					for (const attr in viewConfig.wp_style) {
-						viewContainer.style.setProperty(attr, viewConfig.wp_style[attr]);
-					}
-				}
-
-				viewContainer.append(viewElement);
-				div.append(viewContainer);
-			});
-			this.infoBoxContent.appendChild(div);
-		}
-
-		if (config.cards && config.cards.length > 0) {
-			config.cards.forEach((card) => {
-				// Copy object
-				const cardConfig = JSON.parse(JSON.stringify(card));
-				logger.debug("Creating card:", cardConfig);
-				let style = {};
-				if (cardConfig.wp_style) {
-					style = cardConfig.wp_style;
-					delete cardConfig.wp_style;
-				}
-				if (cardConfig.type && cardConfig.type.includes("energy")) {
-					cardConfig.collection_key = "energy_wallpanel";
-					this.energyCollectionUpdateEnabled = true;
-				}
-
-				const createCardElement = this._createCardElement ? this._createCardElement : this.createCardElement;
-				const cardElement = createCardElement.bind(this)(cardConfig);
-				cardElement.hass = this.hass;
-				this.__cards.push(cardElement);
-
-				let parent = this.infoBoxContent;
-				const cardContainer = document.createElement("div");
-				cardContainer.classList.add("wp-card");
-				cardContainer.style.width = "var(--wp-card-width)";
-				cardContainer.style.padding = "var(--wp-card-padding)";
-				cardContainer.style.margin = "var(--wp-card-margin)";
-				cardContainer.style.backdropFilter = "var(--wp-card-backdrop-filter)";
-
-				if (config.card_interaction) {
-					cardContainer.style.pointerEvents = "initial";
-				}
-				for (const attr in style) {
-					if (attr == "parent") {
-						const pel = this.shadowRoot.getElementById(style[attr]);
-						if (pel) {
-							parent = pel;
-						}
-					} else {
-						cardContainer.style.setProperty(attr, style[attr]);
-					}
-				}
-
-				cardContainer.append(cardElement);
-				parent.appendChild(cardContainer);
-			});
-		}
-
-		setTimeout(this.updateShadowStyle.bind(this), 500);
-	}
-
-	restartProgressBarAnimation() {
-		if (!this.progressBarContainer) {
-			return;
-		}
-		this.progressBar.style.animation = "none";
-		if (!config.show_progress_bar) {
-			return;
-		}
-		const wp = this;
-		setTimeout(function () {
-			// Restart CSS animation.
-			wp.progressBar.style.animation = `horizontalProgress ${config.display_time}s linear`;
-		}, 25);
-	}
-
-	restartKenBurnsEffect() {
-		if (!config.image_animation_ken_burns) {
-			return;
-		}
-		const activeImage = this.getActiveImageElement();
-		activeImage.style.animation = "none";
-		let delay = Math.floor(config.image_animation_ken_burns_delay * 1000);
-		if (delay < 50) {
-			delay = 50;
-		}
-		setTimeout(function () {
-			activeImage.style.animation = `kenBurnsEffect ${config.display_time + Math.ceil(config.crossfade_time * 2) + 1}s ease`;
-		}, delay);
-	}
-
-	getActiveImageElement() {
-		if (this.imageOneContainer.style.opacity == 1) {
-			return this.imageOne;
-		}
-		return this.imageTwo;
-	}
-
-	getInactiveImageElement() {
-		if (this.imageOneContainer.style.opacity == 1) {
-			return this.imageTwo;
-		}
-		return this.imageOne;
-	}
-
-	handleMediaError(medialElem, error) {
-		medialElem.setAttribute("data-loading", false);
-		logger.error("Error while loding image:", error);
-
-		if (medialElem.imageUrl) {
-			const idx = this.imageList.indexOf(medialElem.imageUrl);
-			if (idx > -1) {
-				logger.debug(`Removing media from list: ${medialElem.imageUrl}`);
-				this.imageList.splice(idx, 1);
-			}
-			this.updateImage(medialElem);
-		} else {
-			this.displayMessage(`Failed to load media: ${medialElem.src}`, 5000);
-		}
-	}
-
-	loadBackgroundImage(medialElem) {
-		const isVideo = medialElem.tagName === "VIDEO";
-		let srcImageUrl = medialElem.src;
-		if (isVideo) {
-			// Capture the current frame of the video as a background image
-			const canvas = document.createElement("canvas");
-			canvas.width = medialElem.videoWidth;
-			canvas.height = medialElem.videoHeight;
-
-			const ctx = canvas.getContext("2d");
-			ctx.drawImage(medialElem, 0, 0, canvas.width, canvas.height);
-			try {
-				srcImageUrl = canvas.toDataURL("image/png");
-			} catch (err) {
-				srcImageUrl = null;
-				logger.error("Error extracting canvas image:", err);
-			}
-		}
-		let cont = this.imageOneBackground;
-		if (medialElem == this.imageTwo) {
-			cont = this.imageTwoBackground;
-		}
-		cont.style.backgroundImage = srcImageUrl ? `url(${srcImageUrl})` : "";
-	}
-
-	handleMediaLoaded(medialElem) {
-		medialElem.setAttribute("data-loading", false);
-		const isVideo = medialElem.tagName === "VIDEO";
-		const wp = this;
-		if (config.image_background === "image") {
-			if (isVideo) {
-				if (medialElem.readyState >= medialElem.HAVE_CURRENT_DATA) {
-					wp.loadBackgroundImage(medialElem);
-				} else {
-					medialElem.addEventListener("canplay", function () {
-						wp.loadBackgroundImage(medialElem);
-					});
-				}
-			} else {
-				wp.loadBackgroundImage(medialElem);
-			}
-		}
-		if (!isVideo && config.show_image_info && /.*\.jpe?g$/i.test(medialElem.imageUrl)) {
-			wp.fetchEXIFInfo(medialElem);
-		}
-	}
-
-	connectedCallback() {
-		this.style.zIndex = config.z_index;
-		this.style.visibility = "hidden";
-		this.style.opacity = 0;
-		this.style.position = "fixed";
-
-		this.messageBox = document.createElement("div");
-		this.messageBox.id = "wallpanel-message-box";
-
-		this.debugBox = document.createElement("div");
-		this.debugBox.id = "wallpanel-debug-box";
-
-		this.screensaverContainer = document.createElement("div");
-		this.screensaverContainer.id = "wallpanel-screensaver-container";
-
-		this.imageOneContainer = document.createElement("div");
-		this.imageOneContainer.id = "wallpanel-screensaver-image-one-container";
-
-		this.imageOneBackground = document.createElement("div");
-		this.imageOneBackground.className = "wallpanel-screensaver-image-background";
-		this.imageOneBackground.id = "wallpanel-screensaver-image-one-background";
-
-		this.imageOne = document.createElement("img");
-		this.imageOne.id = "wallpanel-screensaver-image-one";
-		this.imageOne.setAttribute("data-loading", false);
-
-		this.imageOneInfoContainer = document.createElement("div");
-		this.imageOneInfoContainer.id = "wallpanel-screensaver-image-one-info-container";
-
-		this.imageOneInfo = document.createElement("div");
-		this.imageOneInfo.className = "wallpanel-screensaver-image-info";
-		this.imageOneInfo.id = "wallpanel-screensaver-image-one-info";
-
-		this.imageOneInfoContainer.appendChild(this.imageOneInfo);
-		this.imageOneContainer.appendChild(this.imageOneBackground);
-		this.imageOneContainer.appendChild(this.imageOne);
-		this.imageOneContainer.appendChild(this.imageOneInfoContainer);
-		this.screensaverContainer.appendChild(this.imageOneContainer);
-
-		this.imageTwoContainer = document.createElement("div");
-		this.imageTwoContainer.id = "wallpanel-screensaver-image-two-container";
-
-		this.imageTwoBackground = document.createElement("div");
-		this.imageTwoBackground.className = "wallpanel-screensaver-image-background";
-		this.imageTwoBackground.id = "wallpanel-screensaver-image-two-background";
-
-		this.imageTwo = document.createElement("img");
-		this.imageTwo.id = "wallpanel-screensaver-image-two";
-		this.imageTwo.setAttribute("data-loading", false);
-
-		this.imageTwoInfoContainer = document.createElement("div");
-		this.imageTwoInfoContainer.id = "wallpanel-screensaver-image-two-info-container";
-
-		this.imageTwoInfo = document.createElement("div");
-		this.imageTwoInfo.className = "wallpanel-screensaver-image-info";
-		this.imageTwoInfo.id = "wallpanel-screensaver-image-two-info";
-
-		this.imageTwoInfoContainer.appendChild(this.imageTwoInfo);
-		this.imageTwoContainer.appendChild(this.imageTwoBackground);
-		this.imageTwoContainer.appendChild(this.imageTwo);
-		this.imageTwoContainer.appendChild(this.imageTwoInfoContainer);
-		this.screensaverContainer.appendChild(this.imageTwoContainer);
-
-		this.screensaverImageOverlay = document.createElement("div");
-		this.screensaverImageOverlay.id = "wallpanel-screensaver-image-overlay";
-		this.screensaverContainer.appendChild(this.screensaverImageOverlay);
-
-		this.progressBarContainer = document.createElement("div");
-		this.progressBarContainer.className = "wallpanel-progress";
-		this.progressBar = document.createElement("div");
-		this.progressBar.className = "wallpanel-progress-inner";
-		this.progressBar.id = "wallpanel-progress-inner";
-		this.progressBarContainer.appendChild(this.progressBar);
-
-		if (config.show_progress_bar) {
-			this.screensaverContainer.appendChild(this.progressBarContainer);
-		}
-
-		this.infoContainer = document.createElement("div");
-		this.infoContainer.id = "wallpanel-screensaver-info-container";
-
-		this.fixedInfoContainer = document.createElement("div");
-		this.fixedInfoContainer.id = "wallpanel-screensaver-fixed-info-container";
-
-		this.fixedInfoBox = document.createElement("div");
-		this.fixedInfoBox.id = "wallpanel-screensaver-fixed-info-box";
-
-		this.fixedInfoBoxContent = document.createElement("div");
-		this.fixedInfoBoxContent.id = "wallpanel-screensaver-fixed-info-box-content";
-
-		this.screensaverContainer.appendChild(this.infoContainer);
-
-		this.infoBoxPosX = document.createElement("div");
-		this.infoBoxPosX.id = "wallpanel-screensaver-info-box-pos-x";
-		this.infoBoxPosX.x = "0";
-
-		this.infoBoxPosY = document.createElement("div");
-		this.infoBoxPosY.id = "wallpanel-screensaver-info-box-pos-y";
-		this.infoBoxPosX.y = "0";
-
-		this.infoBox = document.createElement("div");
-		this.infoBox.id = "wallpanel-screensaver-info-box";
-
-		this.infoBoxContent = document.createElement("div");
-		this.infoBoxContent.id = "wallpanel-screensaver-info-box-content";
-		this.infoBoxContent.style.display = "grid";
-
-		this.infoBox.appendChild(this.infoBoxContent);
-		this.infoBoxPosX.appendChild(this.infoBox);
-		this.infoBoxPosY.appendChild(this.infoBoxPosX);
-		this.infoContainer.appendChild(this.infoBoxPosY);
-
-		this.fixedInfoBox.appendChild(this.fixedInfoBoxContent);
-		this.fixedInfoContainer.appendChild(this.fixedInfoBox);
-		this.infoContainer.appendChild(this.fixedInfoContainer);
-
-		this.screensaverOverlay = document.createElement("div");
-		this.screensaverOverlay.id = "wallpanel-screensaver-overlay";
-		this.screensaverContainer.appendChild(this.screensaverOverlay);
-
-		this.shadowStyle = document.createElement("style");
-
-		const shadow = this.attachShadow({ mode: "open" });
-		shadow.appendChild(this.shadowStyle);
-		shadow.appendChild(this.screensaverContainer);
-		shadow.appendChild(this.messageBox);
-		shadow.appendChild(this.debugBox);
-
-		const wp = this;
-		const eventNames = ["click", "touchstart", "touchend", "wheel"];
-		if (config.stop_screensaver_on_key_down) {
-			eventNames.push("keydown");
-		}
-		if (config.stop_screensaver_on_mouse_move) {
-			eventNames.push("mousemove");
-		}
-		eventNames.forEach(function (eventName) {
-			window.addEventListener(
-				eventName,
-				(event) => {
-					wp.handleInteractionEvent(event);
-				},
-				{ capture: true }
-			);
-		});
-		window.addEventListener("resize", () => {
-			if (wp.screensaverRunning()) {
-				wp.updateShadowStyle();
-			}
-		});
-		window.addEventListener("hass-more-info", () => {
-			if (wp.screensaverRunning()) {
-				wp.moreInfoDialogToForeground();
-			}
-		});
-		const infoBoxResizeObserver = new ResizeObserver(() => {
-			if (config.info_move_pattern === "corners") {
-				// Correct position
-				this.moveAroundCorners(true);
-			}
-		});
-		infoBoxResizeObserver.observe(this.infoBoxContent);
-
-		this.reconfigure();
-		// Correct possibly incorrect entity state
-		this.setScreensaverEntityState();
-	}
-
-	reconfigure(oldConfig) {
-		this.setDefaultStyle();
-		this.updateStyle();
-		if (this.screensaverRunning()) {
-			this.createInfoBoxContent();
-		}
-
-		if (!config.info_move_interval && oldConfig && oldConfig.info_move_interval) {
-			wallpanel.moveInfoBox(0, 0);
-		}
-
-		if (config.show_images && (!oldConfig || !oldConfig.show_images || oldConfig.image_url != config.image_url)) {
-			let switchImages = false;
-			if (oldConfig && Object.keys(oldConfig).length) {
-				switchImages = true;
-			}
-
-			function preloadCallback(wp) {
-				if (switchImages) {
-					wp.switchActiveImage("init");
-				} else {
-					wp.startPlayingActiveMedia();
-				}
-			}
-			if (["immich-api", "unsplash-api", "media-source"].includes(imageSourceType())) {
-				this.updateImageList(true, preloadCallback);
-			} else {
-				this.imageList = [];
-				this.preloadImages(preloadCallback);
-			}
-		}
-
-		if (config.disable_screensaver_on_browser_mod_popup_func) {
-			this.disable_screensaver_on_browser_mod_popup_function = new Function(
-				"bmp",
-				config.disable_screensaver_on_browser_mod_popup_func
-			);
-		}
-		if (isActive() && config.camera_motion_detection_enabled) {
-			this.cameraMotionDetection.start();
-		} else {
-			this.cameraMotionDetection.stop();
-		}
-	}
-
-	getMoreInfoDialog() {
-		const moreInfoDialog = elHass.shadowRoot.querySelector("ha-more-info-dialog");
-		if (!moreInfoDialog) {
-			return;
-		}
-		const dialog = moreInfoDialog.shadowRoot.querySelector("ha-dialog");
-		if (dialog) {
-			return dialog;
-		}
-	}
-
-	moreInfoDialogToForeground() {
-		const wp = this;
-		function showDialog(attempt = 1) {
-			const dialog = wp.getMoreInfoDialog();
-			if (dialog) {
-				dialog.style.position = "absolute";
-				dialog.style.zIndex = wp.style.zIndex + 1;
-				return;
-			}
-			if (attempt < 10) {
-				setTimeout(showDialog, 50, attempt + 1);
-			}
-		}
-		showDialog();
-	}
-
-	fetchEXIFInfo(img) {
-		const wp = this;
-		if (imageInfoCache[img.imageUrl]) {
-			return;
-		}
-		if (imageInfoCacheKeys.length >= imageInfoCacheMaxSize) {
-			const oldest = imageInfoCacheKeys.shift();
-			if (imageInfoCache[oldest]) {
-				delete imageInfoCache[oldest];
-			}
-		}
-
-		const tmpImg = document.createElement("img");
-		tmpImg.src = img.src;
-		tmpImg.imageUrl = img.imageUrl;
-		getImageData(tmpImg, function () {
-			logger.debug("EXIF data:", tmpImg.exifdata);
-			imageInfoCacheKeys.push(tmpImg.imageUrl);
-			imageInfoCache[tmpImg.imageUrl] = tmpImg.exifdata;
-			wp.setImageDataInfo(tmpImg);
-
-			const exifLong = tmpImg.exifdata["GPSLongitude"];
-			const exifLat = tmpImg.exifdata["GPSLatitude"];
-			if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
-				let m = tmpImg.exifdata["GPSLatitudeRef"] == "S" ? -1 : 1;
-				const latitude = exifLat[0] * m + (exifLat[1] * m * 60 + exifLat[2] * m) / 3600;
-				m = tmpImg.exifdata["GPSLongitudeRef"] == "W" ? -1 : 1;
-				const longitude = exifLong[0] * m + (exifLong[1] * m * 60 + exifLong[2] * m) / 3600;
-
-				const xhr = new XMLHttpRequest();
-				xhr.onload = function () {
-					if (this.status == 200 || this.status === 0) {
-						const info = JSON.parse(xhr.responseText);
-						logger.debug("nominatim data:", info);
-						if (info && info.address) {
-							imageInfoCache[tmpImg.imageUrl].address = info.address;
-							wp.setImageDataInfo(tmpImg);
-						}
-					} else {
-						logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
-						delete imageInfoCache[tmpImg.imageUrl];
-					}
-				};
-				xhr.onerror = function (event) {
-					logger.error("nominatim error:", event);
-					delete imageInfoCache[tmpImg.imageUrl];
-				};
-				xhr.ontimeout = function (event) {
-					logger.error("nominatim timeout:", event);
-					delete imageInfoCache[tmpImg.imageUrl];
-				};
-				xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-				xhr.timeout = 15000;
-				xhr.send();
-			}
-		});
-	}
-
-	setImageDataInfo(img) {
-		if (!img || !img.imageUrl) {
-			return;
-		}
-		const infoElements = [];
-		if (this.imageOne.imageUrl == img.imageUrl) {
-			infoElements.push(this.imageOneInfo);
-		} else if (this.imageTwo.imageUrl == img.imageUrl) {
-			infoElements.push(this.imageTwoInfo);
-		}
-		if (infoElements.length == 0) {
-			return;
-		}
-
-		if (!config.show_image_info || !config.image_info_template) {
-			infoElements.forEach((infoElement) => {
-				infoElement.innerHTML = "";
-				infoElement.style.display = "none";
-			});
-			return;
-		}
-
-		let imageInfo = imageInfoCache[img.imageUrl];
-		if (!imageInfo) {
-			imageInfo = {};
-		}
-		if (!imageInfo.image) {
-			imageInfo.image = {};
-		}
-		if (!imageInfo.image.url) {
-			imageInfo.image.url = img.imageUrl;
-		}
-		if (!imageInfo.image.path) {
-			imageInfo.image.path = img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, "");
-		}
-		if (!imageInfo.image.relativePath) {
-			imageInfo.image.relativePath = img.imageUrl.replace(config.image_url, "").replace(/^\/+/, "");
-		}
-		if (!imageInfo.image.filename) {
-			imageInfo.image.filename = img.imageUrl.replace(/^.*[\\/]/, "");
-		}
-		if (!imageInfo.image.folderName) {
-			imageInfo.image.folderName = "";
-			const parts = img.imageUrl.split("/");
-			if (parts.length >= 2) {
-				imageInfo.image.folderName = parts[parts.length - 2];
-			}
-		}
-		logger.debug("Image info:", imageInfo);
-
-		let html = config.image_info_template;
-		html = html.replace(/\${([^}]+)}/g, (match, tags) => {
-			let prefix = "";
-			let suffix = "";
-			let options = null;
-			if (tags.includes("!")) {
-				const tmp = tags.split("!");
-				tags = tmp[0];
-				for (let i = 1; i < tmp.length; i++) {
-					const argType = tmp[i].substring(0, tmp[i].indexOf("="));
-					const argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
-					if (argType == "prefix") {
-						prefix = argValue;
-					} else if (argType == "suffix") {
-						suffix = argValue;
-					} else if (argType == "options") {
-						options = {};
-						argValue.split(",").forEach((optVal) => {
-							const tmp2 = optVal.split(":", 2);
-							if (tmp2[0] && tmp2[1]) {
-								options[tmp2[0].replace(/\s/g, "")] = tmp2[1].replace(/\s/g, "");
-							}
-						});
-					}
-				}
-			}
-
-			let val = "";
-			const tagList = tags.split("|");
-			let tag = "";
-			for (let i = 0; i < tagList.length; i++) {
-				tag = tagList[i];
-				const keys = tag.replace(/\s/g, "").split(".");
-				val = imageInfo;
-				keys.forEach((key) => {
-					if (val) {
-						val = val[key];
-					}
-				});
-				if (val) {
-					break;
-				}
-			}
-			if (!val) {
-				return "";
-			}
-			if (/DateTime/i.test(tag)) {
-				const date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, "$1-$2-$3T$4:$5:$6"));
-				if (isNaN(date)) {
-					// Invalid date
+				if (!val) {
 					return "";
 				}
-				if (!options) {
-					options = { year: "numeric", month: "2-digit", day: "2-digit" };
-				}
-				val = date.toLocaleDateString(elHass.__hass.locale.language, options);
-			}
-			if (typeof val === "object") {
-				val = JSON.stringify(val);
-			}
-			return prefix + val + suffix;
-		});
-
-		infoElements.forEach((infoElement) => {
-			infoElement.innerHTML = html;
-			infoElement.style.display = "block";
-		});
-	}
-
-	updateImageList(preload = false, preloadCallback = null) {
-		if (!config.image_url) return;
-
-		let updateFunction = null;
-		if (imageSourceType() == "unsplash-api") {
-			updateFunction = this.updateImageListFromUnsplashAPI;
-		} else if (imageSourceType() == "immich-api") {
-			updateFunction = this.updateImageListFromImmichAPI;
-		} else if (imageSourceType() == "media-source") {
-			updateFunction = this.updateImageListFromMediaSource;
-		} else {
-			return;
-		}
-
-		const wp = this;
-		if (this.updatingImageList) {
-			this.cancelUpdatingImageList = true;
-			const start = Date.now();
-			function _checkUpdating() {
-				if (!this.updatingImageList || Date.now() - start >= 5000) {
-					this.cancelUpdatingImageList = false;
-					updateFunction.bind(wp)(preload, preloadCallback);
-				} else {
-					setTimeout(_checkUpdating, 50);
-				}
-			}
-			setTimeout(_checkUpdating, 1);
-		} else {
-			this.cancelUpdatingImageList = false;
-			updateFunction.bind(wp)(preload, preloadCallback);
-		}
-	}
-
-	findMedias(mediaContentId) {
-		const wp = this;
-		logger.debug(`findMedias: ${mediaContentId}`);
-		const excludeRegExp = [];
-		if (config.image_excludes) {
-			for (const imageExclude of config.image_excludes) {
-				excludeRegExp.push(new RegExp(imageExclude));
-			}
-		}
-
-		return new Promise(function (resolve, reject) {
-			wp.hass
-				.callWS({
-					type: "media_source/browse_media",
-					media_content_id: mediaContentId
-				})
-				.then(
-					(mediaEntry) => {
-						logger.debug("Found media entry", mediaEntry);
-						var promises = mediaEntry.children.map((child) => {
-							const filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, "");
-							for (const exclude of excludeRegExp) {
-								if (exclude.test(filename)) {
-									return;
-								}
-							}
-							if (["image", "video"].includes(child.media_class)) {
-								//logger.debug(child);
-								return child.media_content_id;
-							}
-							if (child.media_class == "directory") {
-								if (wp.cancelUpdatingImageList) {
-									return;
-								}
-								return wp.findMedias(child.media_content_id);
-							}
-						});
-						Promise.all(promises).then((results) => {
-							let result = [];
-							for (const res of results) {
-								if (res) {
-									result = result.concat(res);
-								}
-							}
-							resolve(result);
-						});
-					},
-					(error) => {
-						//logger.warn(error);
-						reject(error);
+				if (/DateTime/i.test(tag)) {
+					const date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, "$1-$2-$3T$4:$5:$6"));
+					if (isNaN(date)) {
+						// Invalid date
+						return "";
 					}
-				);
-		});
-	}
+					if (!options) {
+						options = { year: "numeric", month: "2-digit", day: "2-digit" };
+					}
+					val = date.toLocaleDateString(elHass.__hass.locale.language, options);
+				}
+				if (typeof val === "object") {
+					val = JSON.stringify(val);
+				}
+				return prefix + val + suffix;
+			});
 
-	updateImageListFromMediaSource(preload, preloadCallback = null) {
-		this.updatingImageList = true;
-		this.lastImageListUpdate = Date.now();
-		const mediaContentId = config.image_url;
-		const wp = this;
-		wp.findMedias(mediaContentId).then(
-			(result) => {
-				wp.updatingImageList = false;
-				if (!wp.cancelUpdatingImageList) {
-					if (config.image_order == "random") {
-						wp.imageList = result.sort(() => 0.5 - Math.random());
+			infoElements.forEach((infoElement) => {
+				infoElement.innerHTML = html;
+				infoElement.style.display = "block";
+			});
+		}
+
+		updateImageList(preload = false, preloadCallback = null) {
+			if (!config.image_url) return;
+
+			let updateFunction = null;
+			if (imageSourceType() == "unsplash-api") {
+				updateFunction = this.updateImageListFromUnsplashAPI;
+			} else if (imageSourceType() == "immich-api") {
+				updateFunction = this.updateImageListFromImmichAPI;
+			} else if (imageSourceType() == "media-source") {
+				updateFunction = this.updateImageListFromMediaSource;
+			} else {
+				return;
+			}
+
+			const wp = this;
+			if (this.updatingImageList) {
+				this.cancelUpdatingImageList = true;
+				const start = Date.now();
+				function _checkUpdating() {
+					if (!this.updatingImageList || Date.now() - start >= 5000) {
+						this.cancelUpdatingImageList = false;
+						updateFunction.bind(wp)(preload, preloadCallback);
 					} else {
-						wp.imageList = result.sort();
+						setTimeout(_checkUpdating, 50);
 					}
-					logger.debug("Image list from media-source is now:", wp.imageList);
+				}
+				setTimeout(_checkUpdating, 1);
+			} else {
+				this.cancelUpdatingImageList = false;
+				updateFunction.bind(wp)(preload, preloadCallback);
+			}
+		}
+
+		findMedias(mediaContentId) {
+			const wp = this;
+			logger.debug(`findMedias: ${mediaContentId}`);
+			const excludeRegExp = [];
+			if (config.image_excludes) {
+				for (const imageExclude of config.image_excludes) {
+					excludeRegExp.push(new RegExp(imageExclude));
+				}
+			}
+
+			return new Promise(function (resolve, reject) {
+				wp.hass
+					.callWS({
+						type: "media_source/browse_media",
+						media_content_id: mediaContentId
+					})
+					.then(
+						(mediaEntry) => {
+							logger.debug("Found media entry", mediaEntry);
+							var promises = mediaEntry.children.map((child) => {
+								const filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, "");
+								for (const exclude of excludeRegExp) {
+									if (exclude.test(filename)) {
+										return;
+									}
+								}
+								if (["image", "video"].includes(child.media_class)) {
+									//logger.debug(child);
+									return child.media_content_id;
+								}
+								if (child.media_class == "directory") {
+									if (wp.cancelUpdatingImageList) {
+										return;
+									}
+									return wp.findMedias(child.media_content_id);
+								}
+							});
+							Promise.all(promises).then((results) => {
+								let result = [];
+								for (const res of results) {
+									if (res) {
+										result = result.concat(res);
+									}
+								}
+								resolve(result);
+							});
+						},
+						(error) => {
+							//logger.warn(error);
+							reject(error);
+						}
+					);
+			});
+		}
+
+		updateImageListFromMediaSource(preload, preloadCallback = null) {
+			this.updatingImageList = true;
+			this.lastImageListUpdate = Date.now();
+			const mediaContentId = config.image_url;
+			const wp = this;
+			wp.findMedias(mediaContentId).then(
+				(result) => {
+					wp.updatingImageList = false;
+					if (!wp.cancelUpdatingImageList) {
+						if (config.image_order == "random") {
+							wp.imageList = result.sort(() => 0.5 - Math.random());
+						} else {
+							wp.imageList = result.sort();
+						}
+						logger.debug("Image list from media-source is now:", wp.imageList);
+						if (preload) {
+							wp.preloadImages(preloadCallback);
+						}
+					}
+				},
+				(error) => {
+					wp.updatingImageList = false;
+					error = `Failed to update image list from ${config.image_url}: ${JSON.stringify(error)}`;
+					logger.error(error);
+					wp.displayMessage(error, 10000);
+				}
+			);
+		}
+
+		updateImageListFromUnsplashAPI(preload, preloadCallback = null) {
+			this.updatingImageList = true;
+			this.lastImageListUpdate = Date.now();
+			const wp = this;
+			const urls = [];
+			const data = {};
+			const http = new XMLHttpRequest();
+			http.responseType = "json";
+			// count: The number of photos to return. (Default: 1; max: 30)
+			http.open("GET", `${config.image_url}&count=30`, true);
+			http.onload = function () {
+				if (http.status == 200 || http.status === 0) {
+					logger.debug(`Got unsplash API response`);
+					http.response.forEach((entry) => {
+						logger.debug(entry);
+						const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
+						urls.push(url);
+						data[url] = entry;
+					});
+				} else {
+					logger.warn("Unsplash API error, get random images", http);
+					urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
+				}
+				if (!wp.cancelUpdatingImageList) {
+					wp.imageList = urls;
+					imageInfoCache = data;
+					logger.debug("Image list from unsplash is now:", wp.imageList);
 					if (preload) {
+						wp.updatingImageList = false;
 						wp.preloadImages(preloadCallback);
 					}
 				}
-			},
-			(error) => {
 				wp.updatingImageList = false;
-				error = `Failed to update image list from ${config.image_url}: ${JSON.stringify(error)}`;
-				logger.error(error);
-				wp.displayMessage(error, 10000);
-			}
-		);
-	}
-
-	updateImageListFromUnsplashAPI(preload, preloadCallback = null) {
-		this.updatingImageList = true;
-		this.lastImageListUpdate = Date.now();
-		const wp = this;
-		const urls = [];
-		const data = {};
-		const http = new XMLHttpRequest();
-		http.responseType = "json";
-		// count: The number of photos to return. (Default: 1; max: 30)
-		http.open("GET", `${config.image_url}&count=30`, true);
-		http.onload = function () {
-			if (http.status == 200 || http.status === 0) {
-				logger.debug(`Got unsplash API response`);
-				http.response.forEach((entry) => {
-					logger.debug(entry);
-					const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
-					urls.push(url);
-					data[url] = entry;
-				});
-			} else {
-				logger.warn("Unsplash API error, get random images", http);
-				urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
-			}
-			if (!wp.cancelUpdatingImageList) {
-				wp.imageList = urls;
-				imageInfoCache = data;
-				logger.debug("Image list from unsplash is now:", wp.imageList);
-				if (preload) {
-					wp.updatingImageList = false;
-					wp.preloadImages(preloadCallback);
-				}
-			}
-			wp.updatingImageList = false;
-		};
-		logger.debug(`Unsplash API request: ${config.image_url}`);
-		http.send();
-	}
-
-	updateImageListFromImmichAPI(preload, preloadCallback = null) {
-		if (!config.immich_api_key) {
-			logger.error("immich_api_key not configured");
-			return;
-		}
-		const wp = this;
-		wp.updatingImageList = true;
-		wp.imageList = [];
-		wp.lastImageListUpdate = Date.now();
-		const urls = [];
-		const data = {};
-		const apiUrl = config.image_url.replace(/^immich\+/, "");
-
-		function processAssets(assets, folderName = null) {
-			assets.forEach((asset) => {
-				logger.debug(asset);
-				if (["IMAGE", "VIDEO"].includes(asset.type)) {
-					const resolution =
-						asset.type == "VIDEO" || config.immich_resolution == "original" ? "original" : "thumbnail?size=preview";
-					const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
-					data[url] = asset.exifInfo;
-					data[url]["mediaType"] = asset.type;
-					data[url]["image"] = {
-						filename: asset.originalFileName,
-						folderName: folderName
-					};
-					urls.push(url);
-				}
-			});
-		}
-
-		function processUrls() {
-			if (!wp.cancelUpdatingImageList) {
-				if (config.image_order == "random") {
-					wp.imageList = urls.sort(() => 0.5 - Math.random());
-				} else {
-					wp.imageList = urls;
-				}
-				imageInfoCache = data;
-				logger.debug("Image list from immich is now:", wp.imageList);
-				if (preload) {
-					wp.updatingImageList = false;
-					wp.preloadImages(preloadCallback);
-				}
-			}
-			wp.updatingImageList = false;
-		}
-
-		const http = new XMLHttpRequest();
-		http.responseType = "json";
-		if (config.immich_tag_names && config.immich_tag_names.length) {
-			const tagNames = config.immich_tag_names.map((v) => v.toLowerCase());
-			http.open("GET", `${apiUrl}/tags`, true);
-			http.setRequestHeader("x-api-key", config.immich_api_key);
-			http.onload = function () {
-				const tagIds = [];
-				if (http.status == 200 || http.status === 0) {
-					const allTags = http.response;
-					logger.debug(`Got immich API response`, allTags);
-					allTags.forEach((tag) => {
-						logger.debug(tag);
-						if (!tagNames.includes(tag.name.toLowerCase())) {
-							logger.debug("Skipping tag: ", tag.name);
-						} else {
-							logger.debug("Adding tag: ", tag.name);
-							tagIds.push(tag.id);
-						}
-					});
-					if (tagIds.length > 0) {
-						const http2 = new XMLHttpRequest();
-						http2.responseType = "json";
-						http2.open("POST", `${apiUrl}/search/metadata`, true);
-						http2.setRequestHeader("x-api-key", config.immich_api_key);
-						http2.setRequestHeader("Content-Type", "application/json");
-						logger.debug("Searching asset metdata for tags: ", tagIds);
-						http2.onload = function () {
-							if (http2.status == 200 || http2.status === 0) {
-								const searchResults = http2.response;
-								logger.debug(`Got immich API response`, searchResults);
-								processAssets(searchResults.assets.items);
-								processUrls();
-							} else {
-								logger.error("Immich API error", http2);
-							}
-						};
-						http2.send(JSON.stringify({ tagIds: tagIds, withExif: true, size: 1000 }));
-					} else {
-						logger.error("No immich tags selected");
-						wp.updatingImageList = false;
-					}
-				} else {
-					logger.error("Immich API error", http);
-					wp.updatingImageList = false;
-				}
 			};
-			http.send({});
-		} else {
-			http.open("GET", `${apiUrl}/albums?shared=${config.immich_shared_albums}`, true);
-			http.setRequestHeader("x-api-key", config.immich_api_key);
-			http.onload = function () {
-				const albumIds = [];
-				const albumNames = (config.immich_album_names || []).map((v) => v.toLowerCase());
-				if (http.status == 200 || http.status === 0) {
-					const allAlbums = http.response;
-					logger.debug(`Got immich API response`, allAlbums);
-					allAlbums.forEach((album) => {
-						logger.debug(album);
-						if (albumNames.length && !albumNames.includes(album.albumName.toLowerCase())) {
-							logger.debug("Skipping album: ", album.albumName);
-						} else {
-							logger.debug("Adding album: ", album.albumName);
-							albumIds.push(album.id);
-						}
-					});
-					if (albumIds) {
-						albumIds.forEach((albumId) => {
-							logger.debug("Fetching album metdata: ", albumId);
+			logger.debug(`Unsplash API request: ${config.image_url}`);
+			http.send();
+		}
+
+		updateImageListFromImmichAPI(preload, preloadCallback = null) {
+			if (!config.immich_api_key) {
+				logger.error("immich_api_key not configured");
+				return;
+			}
+			const wp = this;
+			wp.updatingImageList = true;
+			wp.imageList = [];
+			wp.lastImageListUpdate = Date.now();
+			const urls = [];
+			const data = {};
+			const apiUrl = config.image_url.replace(/^immich\+/, "");
+
+			function processAssets(assets, folderName = null) {
+				assets.forEach((asset) => {
+					logger.debug(asset);
+					if (["IMAGE", "VIDEO"].includes(asset.type)) {
+						const resolution =
+							asset.type == "VIDEO" || config.immich_resolution == "original" ? "original" : "thumbnail?size=preview";
+						const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+						data[url] = asset.exifInfo;
+						data[url]["mediaType"] = asset.type;
+						data[url]["image"] = {
+							filename: asset.originalFileName,
+							folderName: folderName
+						};
+						urls.push(url);
+					}
+				});
+			}
+
+			function processUrls() {
+				if (!wp.cancelUpdatingImageList) {
+					if (config.image_order == "random") {
+						wp.imageList = urls.sort(() => 0.5 - Math.random());
+					} else {
+						wp.imageList = urls;
+					}
+					imageInfoCache = data;
+					logger.debug("Image list from immich is now:", wp.imageList);
+					if (preload) {
+						wp.updatingImageList = false;
+						wp.preloadImages(preloadCallback);
+					}
+				}
+				wp.updatingImageList = false;
+			}
+
+			const http = new XMLHttpRequest();
+			http.responseType = "json";
+			if (config.immich_tag_names && config.immich_tag_names.length) {
+				const tagNames = config.immich_tag_names.map((v) => v.toLowerCase());
+				http.open("GET", `${apiUrl}/tags`, true);
+				http.setRequestHeader("x-api-key", config.immich_api_key);
+				http.onload = function () {
+					const tagIds = [];
+					if (http.status == 200 || http.status === 0) {
+						const allTags = http.response;
+						logger.debug(`Got immich API response`, allTags);
+						allTags.forEach((tag) => {
+							logger.debug(tag);
+							if (!tagNames.includes(tag.name.toLowerCase())) {
+								logger.debug("Skipping tag: ", tag.name);
+							} else {
+								logger.debug("Adding tag: ", tag.name);
+								tagIds.push(tag.id);
+							}
+						});
+						if (tagIds.length > 0) {
 							const http2 = new XMLHttpRequest();
 							http2.responseType = "json";
-							http2.open("GET", `${apiUrl}/albums/${albumId}`, true);
+							http2.open("POST", `${apiUrl}/search/metadata`, true);
 							http2.setRequestHeader("x-api-key", config.immich_api_key);
+							http2.setRequestHeader("Content-Type", "application/json");
+							logger.debug("Searching asset metdata for tags: ", tagIds);
 							http2.onload = function () {
 								if (http2.status == 200 || http2.status === 0) {
-									const albumDetails = http2.response;
-									logger.debug(`Got immich API response`, albumDetails);
-									processAssets(albumDetails.assets, albumDetails.albumName);
+									const searchResults = http2.response;
+									logger.debug(`Got immich API response`, searchResults);
+									processAssets(searchResults.assets.items);
+									processUrls();
 								} else {
 									logger.error("Immich API error", http2);
 								}
-								albumIds.pop(albumId);
-								if (albumIds.length == 0) {
-									// All processed
-									processUrls();
-								}
 							};
-							http2.send();
-						});
+							http2.send(JSON.stringify({ tagIds: tagIds, withExif: true, size: 1000 }));
+						} else {
+							logger.error("No immich tags selected");
+							wp.updatingImageList = false;
+						}
 					} else {
-						logger.error("No immich albums selected");
+						logger.error("Immich API error", http);
 						wp.updatingImageList = false;
 					}
+				};
+				http.send({});
+			} else {
+				http.open("GET", `${apiUrl}/albums?shared=${config.immich_shared_albums}`, true);
+				http.setRequestHeader("x-api-key", config.immich_api_key);
+				http.onload = function () {
+					const albumIds = [];
+					const albumNames = (config.immich_album_names || []).map((v) => v.toLowerCase());
+					if (http.status == 200 || http.status === 0) {
+						const allAlbums = http.response;
+						logger.debug(`Got immich API response`, allAlbums);
+						allAlbums.forEach((album) => {
+							logger.debug(album);
+							if (albumNames.length && !albumNames.includes(album.albumName.toLowerCase())) {
+								logger.debug("Skipping album: ", album.albumName);
+							} else {
+								logger.debug("Adding album: ", album.albumName);
+								albumIds.push(album.id);
+							}
+						});
+						if (albumIds) {
+							albumIds.forEach((albumId) => {
+								logger.debug("Fetching album metdata: ", albumId);
+								const http2 = new XMLHttpRequest();
+								http2.responseType = "json";
+								http2.open("GET", `${apiUrl}/albums/${albumId}`, true);
+								http2.setRequestHeader("x-api-key", config.immich_api_key);
+								http2.onload = function () {
+									if (http2.status == 200 || http2.status === 0) {
+										const albumDetails = http2.response;
+										logger.debug(`Got immich API response`, albumDetails);
+										processAssets(albumDetails.assets, albumDetails.albumName);
+									} else {
+										logger.error("Immich API error", http2);
+									}
+									albumIds.pop(albumId);
+									if (albumIds.length == 0) {
+										// All processed
+										processUrls();
+									}
+								};
+								http2.send();
+							});
+						} else {
+							logger.error("No immich albums selected");
+							wp.updatingImageList = false;
+						}
+					} else {
+						logger.error("Immich API error", http);
+						wp.updatingImageList = false;
+					}
+				};
+				http.send();
+			}
+		}
+
+		fillPlaceholders(url) {
+			const width = this.screensaverContainer.clientWidth;
+			const height = this.screensaverContainer.clientHeight;
+			const timestamp_ms = Date.now();
+			const timestamp = Math.floor(timestamp_ms / 1000);
+			url = url.replace(/\${width}/g, width);
+			url = url.replace(/\${height}/g, height);
+			url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
+			url = url.replace(/\${timestamp}/g, timestamp);
+			return url;
+		}
+
+		async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = null, useFetch = false) {
+			const loadMediaWithElement = async (elem, url) => {
+				if (useFetch) {
+					const response = await fetch(url, { headers: headers || {} });
+					if (!response.ok) {
+						logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
+						return;
+					}
+					const blob = await response.blob();
+					elem.src = window.URL.createObjectURL(blob);
 				} else {
-					logger.error("Immich API error", http);
-					wp.updatingImageList = false;
+					// Setting the src attribute on an img works better because cross-origin requests aren't blocked
+					const loadEventName = { IMG: "load", VIDEO: "loadeddata", IFRAME: "load" }[elem.tagName];
+					if (!loadEventName) {
+						logger.error(`Unsupported element tag "${elem.tagName}"`);
+						return;
+					}
+					return new Promise((resolve, reject) => {
+						const cleanup = () => {
+							elem.onerror = null;
+							elem.removeEventListener(loadEventName, onLoad);
+						};
+
+						const onLoad = () => {
+							cleanup();
+							resolve();
+						};
+
+						const onError = () => {
+							cleanup();
+							reject(new Error(`Failed to load ${elem.tagName} "${url}", ${elem.error?.message | "unknown"}`));
+						};
+
+						elem.addEventListener(loadEventName, onLoad);
+						elem.onerror = onError;
+						elem.src = url;
+					});
 				}
 			};
-			http.send();
-		}
-	}
 
-	fillPlaceholders(url) {
-		const width = this.screensaverContainer.clientWidth;
-		const height = this.screensaverContainer.clientHeight;
-		const timestamp_ms = Date.now();
-		const timestamp = Math.floor(timestamp_ms / 1000);
-		url = url.replace(/\${width}/g, width);
-		url = url.replace(/\${height}/g, height);
-		url = url.replace(/\${timestamp_ms}/g, timestamp_ms);
-		url = url.replace(/\${timestamp}/g, timestamp);
-		return url;
-	}
-
-	async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = null, useFetch = false) {
-		const loadMediaWithElement = async (elem, url) => {
-			if (useFetch) {
-				const response = await fetch(url, { headers: headers || {} });
-				if (!response.ok) {
-					logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
-					return;
+			const createFallbackElement = (currentElem, tagName = null) => {
+				if (!tagName) {
+					tagName = currentElem.tagName === "IMG" ? "VIDEO" : "IMG";
 				}
-				const blob = await response.blob();
-				elem.src = window.URL.createObjectURL(blob);
-			} else {
-				// Setting the src attribute on an img works better because cross-origin requests aren't blocked
-				const loadEventName = { IMG: "load", VIDEO: "loadeddata", IFRAME: "load" }[elem.tagName];
-				if (!loadEventName) {
-					logger.error(`Unsupported element tag "${elem.tagName}"`);
-					return;
+				const fallbackElem = document.createElement(tagName);
+
+				// Clone all custom and HTML attributes except 'src', it will be set later.
+				Object.entries(currentElem)
+					.filter(([key]) => !(key in HTMLElement.prototype))
+					.forEach(([key, value]) => (fallbackElem[key] = value));
+
+				[...currentElem.attributes]
+					.filter((attr) => attr.name !== "src")
+					.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
+
+				if (tagName === "VIDEO") {
+					Object.assign(fallbackElem, { preload: "auto", muted: true });
 				}
-				return new Promise((resolve, reject) => {
-					const cleanup = () => {
-						elem.onerror = null;
-						elem.removeEventListener(loadEventName, onLoad);
-					};
+				return fallbackElem;
+			};
 
-					const onLoad = () => {
-						cleanup();
-						resolve();
-					};
-
-					const onError = () => {
-						cleanup();
-						reject(new Error(`Failed to load ${elem.tagName} "${url}", ${elem.error?.message | "unknown"}`));
-					};
-
-					elem.addEventListener(loadEventName, onLoad);
-					elem.onerror = onError;
-					elem.src = url;
-				});
-			}
-		};
-
-		const createFallbackElement = (currentElem, tagName = null) => {
-			if (!tagName) {
-				tagName = currentElem.tagName === "IMG" ? "VIDEO" : "IMG";
-			}
-			const fallbackElem = document.createElement(tagName);
-
-			// Clone all custom and HTML attributes except 'src', it will be set later.
-			Object.entries(currentElem)
-				.filter(([key]) => !(key in HTMLElement.prototype))
-				.forEach(([key, value]) => (fallbackElem[key] = value));
-
-			[...currentElem.attributes]
-				.filter((attr) => attr.name !== "src")
-				.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
-
-			if (tagName === "VIDEO") {
-				Object.assign(fallbackElem, { preload: "auto", muted: true });
-			}
-			return fallbackElem;
-		};
-
-		const replaceElementWith = (currentElem, newElem) => {
-			if (currentElem === this.imageOne) {
-				this.imageOne = newElem;
-			} else {
-				this.imageTwo = newElem;
-			}
-			currentElem.replaceWith(newElem);
-		};
-
-		const handleFallback = async (currentElem, url, mediaType = null, originalError = null) => {
-			let fallbackSuccessful = false;
-			const fallbackElem = createFallbackElement(currentElem, mediaType);
-			replaceElementWith(currentElem, fallbackElem);
-			try {
-				await loadMediaWithElement(fallbackElem, url);
-				fallbackSuccessful = true;
-			} catch (e) {
-				this.handleMediaError(currentElem, originalError || e);
-			}
-			if (fallbackSuccessful) {
-				this.handleMediaLoaded(fallbackElem);
-			}
-		};
-
-		const loadOrFallback = async (currentElem, url, withFallback) => {
-			let loadSuccessful = false;
-			try {
-				await loadMediaWithElement(currentElem, url);
-				loadSuccessful = true;
-			} catch (e) {
-				if (withFallback) {
-					await handleFallback(currentElem, url, null, e);
+			const replaceElementWith = (currentElem, newElem) => {
+				if (currentElem === this.imageOne) {
+					this.imageOne = newElem;
 				} else {
-					this.handleMediaError(currentElem, e);
+					this.imageTwo = newElem;
 				}
-			}
-			if (loadSuccessful) {
-				this.handleMediaLoaded(currentElem);
-			}
-		};
+				currentElem.replaceWith(newElem);
+			};
 
-		if (!mediaType) {
-			await loadOrFallback(curElem, sourceUrl, true);
-		} else if (mediaType === curElem.tagName) {
-			await loadOrFallback(curElem, sourceUrl, false);
-		} else {
-			await handleFallback(curElem, sourceUrl, mediaType);
-		}
-	}
+			const handleFallback = async (currentElem, url, mediaType = null, originalError = null) => {
+				let fallbackSuccessful = false;
+				const fallbackElem = createFallbackElement(currentElem, mediaType);
+				replaceElementWith(currentElem, fallbackElem);
+				try {
+					await loadMediaWithElement(fallbackElem, url);
+					fallbackSuccessful = true;
+				} catch (e) {
+					this.handleMediaError(currentElem, originalError || e);
+				}
+				if (fallbackSuccessful) {
+					this.handleMediaLoaded(fallbackElem);
+				}
+			};
 
-	updateImageFromUrl(img, url, mediaType = null, headers = null, useFetch = false) {
-		const realUrl = this.fillPlaceholders(url);
-		if (realUrl != url && imageInfoCache[url]) {
-			imageInfoCache[realUrl] = imageInfoCache[url];
-		}
-		img.imageUrl = realUrl;
-		logger.debug(`Updating image '${img.id}' from '${realUrl}'`);
-
-		this.loadMediaFromUrl(img, realUrl, mediaType, headers, useFetch);
-	}
-
-	updateImageIndex() {
-		if (this.imageListDirection == "forwards") {
-			this.imageIndex++;
-		} else {
-			this.imageIndex--;
-		}
-		if (this.imageIndex >= this.imageList.length) {
-			this.imageIndex = 0;
-		} else if (this.imageIndex < 0) {
-			this.imageIndex = this.imageList.length - 1;
-		}
-	}
-
-	updateImageFromMediaSource(img) {
-		if (this.imageList.length == 0) {
-			return;
-		}
-		this.updateImageIndex();
-		img.imageUrl = this.imageList[this.imageIndex];
-		this.hass
-			.callWS({
-				type: "media_source/resolve_media",
-				media_content_id: img.imageUrl
-			})
-			.then(
-				(result) => {
-					let src = result.url;
-					if (!src.startsWith("http://") && !src.startsWith("https://")) {
-						src = `${document.location.origin}${src}`;
+			const loadOrFallback = async (currentElem, url, withFallback) => {
+				let loadSuccessful = false;
+				try {
+					await loadMediaWithElement(currentElem, url);
+					loadSuccessful = true;
+				} catch (e) {
+					if (withFallback) {
+						await handleFallback(currentElem, url, null, e);
+					} else {
+						this.handleMediaError(currentElem, e);
 					}
-					logger.debug(`Setting image src: ${src}`);
-
-					const matchedType = result.mime_type?.match(/^(image|video)\//);
-					const mediaType = { image: "IMG", video: "VIDEO" }[matchedType?.[1]] || null;
-					this.loadMediaFromUrl(img, src, mediaType);
-				},
-				(error) => {
-					logger.error(`media_source/resolve_media error for ${img.imageUrl}:`, error);
 				}
-			);
-	}
+				if (loadSuccessful) {
+					this.handleMediaLoaded(currentElem);
+				}
+			};
 
-	updateImageFromUnsplashAPI(img) {
-		if (this.imageList.length == 0) {
-			return;
-		}
-		this.updateImageIndex();
-		this.updateImageFromUrl(img, this.imageList[this.imageIndex], "IMG");
-	}
-
-	updateImageFromImmichAPI(img) {
-		if (this.imageList.length == 0) {
-			return;
-		}
-		this.updateImageIndex();
-		const url = this.imageList[this.imageIndex];
-		const imageInfo = imageInfoCache[url] || {};
-		const mediaType = imageInfo["mediaType"] == "VIDEO" ? "VIDEO" : "IMG";
-		this.updateImageFromUrl(img, url, mediaType, { "x-api-key": config.immich_api_key }, true);
-	}
-
-	updateImageFromMediaEntity(img) {
-		const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
-		const entity = this.hass.states[imageEntity];
-		if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
-			return;
-		}
-		const entityPicture = entity.attributes.entity_picture;
-		let querySuffix = entityPicture.indexOf("?") > 0 ? "&" : "?";
-		querySuffix += "width=${width}&height=${height}";
-		const url = entityPicture + querySuffix;
-		if ("media_exif" in entity.attributes) {
-			// immich-home-assistant provides media_exif
-			imageInfoCache[url] = entity.attributes["media_exif"];
-		} else {
-			imageInfoCache[url] = entity.attributes;
-		}
-		mediaEntityState = entity.state;
-		this.updateImageFromUrl(img, url, "IMG", null, true);
-	}
-
-	updateImage(img, callback = null) {
-		if (!config.show_images) {
-			return;
-		}
-		img.setAttribute("data-loading", true);
-
-		if (imageSourceType() == "media-source") {
-			this.updateImageFromMediaSource(img);
-		} else if (imageSourceType() == "unsplash-api") {
-			this.updateImageFromUnsplashAPI(img);
-		} else if (imageSourceType() == "immich-api") {
-			this.updateImageFromImmichAPI(img);
-		} else if (imageSourceType() == "media-entity") {
-			this.updateImageFromMediaEntity(img);
-		} else if (imageSourceType() == "iframe") {
-			this.updateImageFromUrl(img, config.image_url.replace(/^iframe\+/, ""), "IFRAME");
-		} else {
-			this.updateImageFromUrl(img, config.image_url);
+			if (!mediaType) {
+				await loadOrFallback(curElem, sourceUrl, true);
+			} else if (mediaType === curElem.tagName) {
+				await loadOrFallback(curElem, sourceUrl, false);
+			} else {
+				await handleFallback(curElem, sourceUrl, mediaType);
+			}
 		}
 
-		if (callback) {
+		updateImageFromUrl(img, url, mediaType = null, headers = null, useFetch = false) {
+			const realUrl = this.fillPlaceholders(url);
+			if (realUrl != url && imageInfoCache[url]) {
+				imageInfoCache[realUrl] = imageInfoCache[url];
+			}
+			img.imageUrl = realUrl;
+			logger.debug(`Updating image '${img.id}' from '${realUrl}'`);
+
+			this.loadMediaFromUrl(img, realUrl, mediaType, headers, useFetch);
+		}
+
+		updateImageIndex() {
+			if (this.imageListDirection == "forwards") {
+				this.imageIndex++;
+			} else {
+				this.imageIndex--;
+			}
+			if (this.imageIndex >= this.imageList.length) {
+				this.imageIndex = 0;
+			} else if (this.imageIndex < 0) {
+				this.imageIndex = this.imageList.length - 1;
+			}
+		}
+
+		updateImageFromMediaSource(img) {
+			if (this.imageList.length == 0) {
+				return;
+			}
+			this.updateImageIndex();
+			img.imageUrl = this.imageList[this.imageIndex];
+			this.hass
+				.callWS({
+					type: "media_source/resolve_media",
+					media_content_id: img.imageUrl
+				})
+				.then(
+					(result) => {
+						let src = result.url;
+						if (!src.startsWith("http://") && !src.startsWith("https://")) {
+							src = `${document.location.origin}${src}`;
+						}
+						logger.debug(`Setting image src: ${src}`);
+
+						const matchedType = result.mime_type?.match(/^(image|video)\//);
+						const mediaType = { image: "IMG", video: "VIDEO" }[matchedType?.[1]] || null;
+						this.loadMediaFromUrl(img, src, mediaType);
+					},
+					(error) => {
+						logger.error(`media_source/resolve_media error for ${img.imageUrl}:`, error);
+					}
+				);
+		}
+
+		updateImageFromUnsplashAPI(img) {
+			if (this.imageList.length == 0) {
+				return;
+			}
+			this.updateImageIndex();
+			this.updateImageFromUrl(img, this.imageList[this.imageIndex], "IMG");
+		}
+
+		updateImageFromImmichAPI(img) {
+			if (this.imageList.length == 0) {
+				return;
+			}
+			this.updateImageIndex();
+			const url = this.imageList[this.imageIndex];
+			const imageInfo = imageInfoCache[url] || {};
+			const mediaType = imageInfo["mediaType"] == "VIDEO" ? "VIDEO" : "IMG";
+			this.updateImageFromUrl(img, url, mediaType, { "x-api-key": config.immich_api_key }, true);
+		}
+
+		updateImageFromMediaEntity(img) {
+			const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
+			const entity = this.hass.states[imageEntity];
+			if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
+				return;
+			}
+			const entityPicture = entity.attributes.entity_picture;
+			let querySuffix = entityPicture.indexOf("?") > 0 ? "&" : "?";
+			querySuffix += "width=${width}&height=${height}";
+			const url = entityPicture + querySuffix;
+			if ("media_exif" in entity.attributes) {
+				// immich-home-assistant provides media_exif
+				imageInfoCache[url] = entity.attributes["media_exif"];
+			} else {
+				imageInfoCache[url] = entity.attributes;
+			}
+			mediaEntityState = entity.state;
+			this.updateImageFromUrl(img, url, "IMG", null, true);
+		}
+
+		updateImage(img, callback = null) {
+			if (!config.show_images) {
+				return;
+			}
+			img.setAttribute("data-loading", true);
+
+			if (imageSourceType() == "media-source") {
+				this.updateImageFromMediaSource(img);
+			} else if (imageSourceType() == "unsplash-api") {
+				this.updateImageFromUnsplashAPI(img);
+			} else if (imageSourceType() == "immich-api") {
+				this.updateImageFromImmichAPI(img);
+			} else if (imageSourceType() == "media-entity") {
+				this.updateImageFromMediaEntity(img);
+			} else if (imageSourceType() == "iframe") {
+				this.updateImageFromUrl(img, config.image_url.replace(/^iframe\+/, ""), "IFRAME");
+			} else {
+				this.updateImageFromUrl(img, config.image_url);
+			}
+
+			if (callback) {
+				const wp = this;
+				const start = Date.now();
+
+				function _checkLoading() {
+					if (img.getAttribute("data-loading") == "false" || Date.now() - start >= 2000) {
+						callback(wp, img);
+					} else {
+						setTimeout(_checkLoading, 50);
+					}
+				}
+				setTimeout(_checkLoading, 1);
+			}
+		}
+
+		preloadImage(img, callback = null) {
 			const wp = this;
-			const start = Date.now();
-
-			function _checkLoading() {
-				if (img.getAttribute("data-loading") == "false" || Date.now() - start >= 2000) {
-					callback(wp, img);
-				} else {
-					setTimeout(_checkLoading, 50);
-				}
-			}
-			setTimeout(_checkLoading, 1);
-		}
-	}
-
-	preloadImage(img, callback = null) {
-		const wp = this;
-		if (
-			this.updatingImageList ||
-			img.getAttribute("data-loading") == "true" ||
-			(this.screensaverRunning() && img.parentNode.style.opacity == 1)
-		) {
-			if (callback) {
-				callback(wp, img);
-			}
-			return;
-		}
-		this.updateImage(img, function (wp, updatedImg) {
-			wp.setImageDataInfo(updatedImg);
-			if (callback) {
-				callback(wp, updatedImg);
-			}
-		});
-	}
-
-	preloadImages(callback = null) {
-		logger.debug("Preloading images");
-		if (["media-entity", "iframe"].includes(imageSourceType())) {
-			this.preloadImage(this.imageOne, function (wp) {
+			if (
+				this.updatingImageList ||
+				img.getAttribute("data-loading") == "true" ||
+				(this.screensaverRunning() && img.parentNode.style.opacity == 1)
+			) {
 				if (callback) {
-					callback(wp);
+					callback(wp, img);
+				}
+				return;
+			}
+			this.updateImage(img, function (wp, updatedImg) {
+				wp.setImageDataInfo(updatedImg);
+				if (callback) {
+					callback(wp, updatedImg);
 				}
 			});
-		} else {
-			this.preloadImage(this.imageOne, function (wp) {
-				wp.preloadImage(wp.imageTwo, function (wp) {
+		}
+
+		preloadImages(callback = null) {
+			logger.debug("Preloading images");
+			if (["media-entity", "iframe"].includes(imageSourceType())) {
+				this.preloadImage(this.imageOne, function (wp) {
 					if (callback) {
 						callback(wp);
 					}
 				});
-			});
-		}
-	}
-
-	startPlayingActiveMedia() {
-		const activeElem = this.getActiveImageElement();
-		if (typeof activeElem.play !== "function") {
-			return; // Not playable element.
-		}
-
-		let playbackListeners;
-		const cleanupListeners = () => {
-			if (playbackListeners) {
-				Object.entries(playbackListeners).forEach(([event, handler]) => {
-					activeElem.removeEventListener(event, handler);
-				});
-				playbackListeners == null;
-			}
-		};
-
-		activeElem.loop = config.video_loop;
-		if (!config.video_loop) {
-			// Immediately switch to next image at the end of the playback.
-			const onTimeUpdate = () => {
-				if (this.getActiveImageElement() !== activeElem) {
-					cleanupListeners();
-					return;
-				}
-				// If the media has played enough and is near the end.
-				if (activeElem.currentTime > config.crossfade_time) {
-					const remainingTime = activeElem.duration - activeElem.currentTime;
-					if (remainingTime <= config.crossfade_time) {
-						this.switchActiveImage("display_time_elapsed");
-						cleanupListeners();
-					}
-				}
-			};
-			const onMediaEnded = () => {
-				if (this.getActiveImageElement() === activeElem) {
-					this.switchActiveImage("media_end");
-				}
-				cleanupListeners();
-			};
-			const onMediaPause = () => {
-				cleanupListeners();
-			};
-
-			playbackListeners = {
-				timeupdate: onTimeUpdate,
-				ended: onMediaEnded,
-				pause: onMediaPause
-			};
-			Object.entries(playbackListeners).forEach(([event, handler]) => {
-				activeElem.addEventListener(event, handler);
-			});
-		}
-
-		// Start playing the media.
-		activeElem.play().catch((e) => {
-			cleanupListeners();
-			logger.error(`Failed to play media "${activeElem.src}":`, e);
-		});
-	}
-
-	switchActiveImage(eventType) {
-		const sourceType = imageSourceType();
-
-		if (sourceType === "media-entity") {
-			const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
-			const entity = this.hass.states[imageEntity];
-			if (!entity) {
-				return;
-			}
-
-			if (mediaEntityState != entity.state) {
-				logger.debug(`Media entity ${imageEntity} state has changed`);
-			} else if (eventType == "entity_update") {
-				return;
-			} else if (config.media_entity_load_unchanged) {
-				logger.debug(`Media entity ${imageEntity} state unchanged, but media_entity_load_unchanged = true`);
 			} else {
-				this.lastImageUpdate = Date.now();
-				this.restartProgressBarAnimation();
-				return;
+				this.preloadImage(this.imageOne, function (wp) {
+					wp.preloadImage(wp.imageTwo, function (wp) {
+						if (callback) {
+							callback(wp);
+						}
+					});
+				});
 			}
-			mediaEntityState = entity.state;
 		}
 
-		this.lastImageUpdate = Date.now();
+		startPlayingActiveMedia() {
+			const activeElem = this.getActiveImageElement();
+			if (typeof activeElem.play !== "function") {
+				return; // Not playable element.
+			}
 
-		const crossfadeMillis = eventType == "user_action" ? 250 : null;
-		if (["media-entity", "iframe"].includes(sourceType)) {
-			const nextImg = this.imageTwoContainer.style.opacity == 1 ? this.imageOne : this.imageTwo;
-			const wp = this;
-			wp.updateImage(nextImg, () => {
-				wp._switchActiveImage(crossfadeMillis);
-			});
-		} else {
-			this._switchActiveImage(crossfadeMillis);
-		}
-	}
-
-	_switchActiveImage(crossfadeMillis = null) {
-		if (this.afterFadeoutTimer) {
-			clearTimeout(this.afterFadeoutTimer);
-		}
-		this.lastImageUpdate = Date.now();
-
-		if (crossfadeMillis === null) {
-			crossfadeMillis = Math.round(config.crossfade_time * 1000);
-		}
-
-		this.imageOneContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
-		this.imageTwoContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
-
-		let curActive = this.imageOneContainer;
-		let newActive = this.imageTwoContainer;
-		let curImg = this.imageOne;
-		let newImg = this.imageTwo;
-		if (this.imageTwoContainer.style.opacity == 1) {
-			curActive = this.imageTwoContainer;
-			newActive = this.imageOneContainer;
-			curImg = this.imageTwo;
-			newImg = this.imageOne;
-		}
-		logger.debug(`Switching active image to '${newActive.id}'`);
-
-		this.setImageURLEntityState();
-		this.setImageDataInfo(newImg);
-
-		if (newActive.style.opacity != 1) {
-			newActive.style.opacity = 1;
-		}
-		if (curActive.style.opacity != 0) {
-			curActive.style.opacity = 0;
-		}
-
-		this.startPlayingActiveMedia();
-		this.restartProgressBarAnimation();
-		this.restartKenBurnsEffect();
-
-		// Load next image after fade out
-		// only if not media-entity, which will not yet have changed already
-		// iframe will be loaded when switching images
-		// TODO: Refactor, always load new media right before switch
-		if (!["media-entity", "iframe"].includes(imageSourceType())) {
-			const wp = this;
-			this.afterFadeoutTimer = setTimeout(function () {
-				if (typeof curImg.pause === "function") {
-					curImg.pause();
+			let playbackListeners;
+			const cleanupListeners = () => {
+				if (playbackListeners) {
+					Object.entries(playbackListeners).forEach(([event, handler]) => {
+						activeElem.removeEventListener(event, handler);
+					});
+					playbackListeners == null;
 				}
-				wp.updateImage(curImg);
-			}, crossfadeMillis);
-		}
-	}
+			};
 
-	displayMessage(message, timeout = 15000) {
-		this.hideMessage();
-		this.messageBox.innerHTML = message;
-		this.messageBox.style.visibility = "visible";
-		const wp = this;
-		this.messageBoxTimeout = setTimeout(function () {
-			wp.hideMessage();
-		}, timeout);
-	}
-
-	hideMessage() {
-		if (!this.messageBoxTimeout) {
-			return;
-		}
-		clearTimeout(this.messageBoxTimeout);
-		this.messageBoxTimeout = null;
-		this.messageBox.style.visibility = "hidden";
-		this.messageBox.innerHTML = "";
-	}
-
-	setupScreensaver() {
-		logger.debug("Setup screensaver");
-		if (config.keep_screen_on_time > 0 && !this.screenWakeLock.enabled) {
-			this.screenWakeLock.enable();
-		}
-		if (config.fullscreen && !fullscreen) {
-			enterFullscreen();
-		}
-	}
-
-	startScreensaver() {
-		updateConfig();
-		logger.debug("Start screensaver");
-		if (!isActive()) {
-			logger.debug("Wallpanel not active, not starting screensaver");
-			return;
-		}
-
-		this.updateStyle();
-		this.setupScreensaver();
-		this.setImageURLEntityState();
-		this.startPlayingActiveMedia();
-		this.restartProgressBarAnimation();
-		this.restartKenBurnsEffect();
-
-		if (config.keep_screen_on_time > 0) {
-			const wp = this;
-			setTimeout(function () {
-				if (wp.screensaverRunning() && !wp.screenWakeLock.enabled) {
-					logger.error(
-						"Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD"
-					);
-					wp.displayMessage("Please interact with the screen for a moment to request wake lock.", 15000);
-				}
-			}, 2000);
-		}
-
-		this.lastMove = Date.now();
-		this.lastImageUpdate = Date.now();
-		this.screensaverStartedAt = Date.now();
-		this.screensaverStoppedAt = null;
-		document.documentElement.style.overflow = "hidden";
-
-		this.createInfoBoxContent();
-
-		this.style.visibility = "visible";
-		this.style.opacity = 1;
-		if (config.debug) {
-			this.debugBox.style.pointerEvents = "auto";
-		}
-
-		this.setScreensaverEntityState();
-
-		if (config.screensaver_stop_navigation_path || config.screensaver_stop_close_browser_mod_popup) {
-			this.screensaverStopNavigationPathTimeout = setTimeout(
-				() => {
-					if (config.screensaver_stop_navigation_path) {
-						skipDisableScreensaverOnLocationChanged = true;
-						navigate(config.screensaver_stop_navigation_path);
-						setTimeout(() => {
-							skipDisableScreensaverOnLocationChanged = false;
-						}, 5000);
+			activeElem.loop = config.video_loop;
+			if (!config.video_loop) {
+				// Immediately switch to next image at the end of the playback.
+				const onTimeUpdate = () => {
+					if (this.getActiveImageElement() !== activeElem) {
+						cleanupListeners();
+						return;
 					}
-					if (config.screensaver_stop_close_browser_mod_popup) {
-						const bmp = getActiveBrowserModPopup();
-						if (bmp) {
-							bmp.closeDialog();
+					// If the media has played enough and is near the end.
+					if (activeElem.currentTime > config.crossfade_time) {
+						const remainingTime = activeElem.duration - activeElem.currentTime;
+						if (remainingTime <= config.crossfade_time) {
+							this.switchActiveImage("display_time_elapsed");
+							cleanupListeners();
 						}
 					}
-				},
-				(config.fade_in_time + 1) * 1000
-			);
-		}
-	}
+				};
+				const onMediaEnded = () => {
+					if (this.getActiveImageElement() === activeElem) {
+						this.switchActiveImage("media_end");
+					}
+					cleanupListeners();
+				};
+				const onMediaPause = () => {
+					cleanupListeners();
+				};
 
-	screensaverRunning() {
-		return Boolean(this.screensaverStartedAt) && this.screensaverStartedAt > 0;
-	}
-
-	stopScreensaver(fadeOutTime = 0.0) {
-		logger.debug("Stop screensaver");
-
-		this.screensaverStartedAt = null;
-		this.screensaverStoppedAt = Date.now();
-
-		document.documentElement.style.removeProperty("overflow");
-
-		if (this.screensaverStopNavigationPathTimeout) {
-			clearTimeout(this.screensaverStopNavigationPathTimeout);
-		}
-		this.hideMessage();
-
-		this.debugBox.style.pointerEvents = "none";
-		if (fadeOutTime > 0) {
-			this.style.transition = `opacity ${Math.round(fadeOutTime * 1000)}ms ease-in-out`;
-		} else {
-			this.style.transition = "";
-		}
-		this.style.opacity = 0;
-		this.style.visibility = "hidden";
-		this.infoBoxPosX.style.animation = "";
-		this.infoBoxPosY.style.animation = "";
-
-		this.idleSince = Date.now();
-		if (this.screenWakeLock.enabled) {
-			this.screenWakeLock.disable();
-		}
-
-		setTimeout(this.setScreensaverEntityState.bind(this), 25);
-	}
-
-	updateScreensaver() {
-		const currentDate = new Date();
-		const now = currentDate.getTime();
-
-		if (
-			this.energyCollectionUpdateEnabled &&
-			now - this.lastEnergyCollectionUpdate >= this.energyCollectionUpdateInterval * 1000
-		) {
-			if (this.hass.connection._energy_wallpanel) {
-				this.hass.connection._energy_wallpanel.refresh();
-			}
-			this.lastEnergyCollectionUpdate = now;
-		}
-		if (this.infoBoxContentCreatedDate && this.infoBoxContentCreatedDate.getDate() != currentDate.getDate()) {
-			// Day changed since creation of info box content.
-			// Recreate to update energy cards / energy collection start / end date.
-			this.createInfoBoxContent();
-		}
-
-		if (config.info_move_interval > 0 && now - this.lastMove >= config.info_move_interval * 1000) {
-			if (config.info_move_pattern === "random") {
-				this.randomMove();
-			} else if (config.info_move_pattern === "corners") {
-				this.moveAroundCorners();
-			} else {
-				logger.error(`Unknown info move type ${config.info_move_pattern}`);
-			}
-		}
-
-		if (
-			config.black_screen_after_time > 0 &&
-			now - this.screensaverStartedAt >= config.black_screen_after_time * 1000
-		) {
-			logger.debug("Setting screen to black");
-			this.screensaverOverlay.style.background = "#000000";
-		} else if (config.show_images) {
-			if (now - this.lastImageUpdate >= config.display_time * 1000) {
-				this.switchActiveImage("display_time_elapsed");
-			}
-			if (now - this.lastImageListUpdate >= config.image_list_update_interval * 1000) {
-				this.updateImageList();
-			}
-			if (this.imageOneContainer.style.visibility != "visible") {
-				this.imageOneContainer.style.visibility = "visible";
-			}
-			if (this.imageTwoContainer.style.visibility != "visible") {
-				this.imageTwoContainer.style.visibility = "visible";
-			}
-		} else {
-			if (this.imageOneContainer.style.visibility != "hidden") {
-				this.imageOneContainer.style.visibility = "hidden";
-			}
-			if (this.imageTwoContainer.style.visibility != "hidden") {
-				this.imageTwoContainer.style.visibility = "hidden";
-			}
-		}
-
-		if (config.debug) {
-			let html = "";
-			const conf = {};
-			for (const key in config) {
-				if (["profiles"].includes(key)) {
-					conf[key] = "...";
-				} else {
-					conf[key] = config[key];
-				}
+				playbackListeners = {
+					timeupdate: onTimeUpdate,
+					ended: onMediaEnded,
+					pause: onMediaPause
+				};
+				Object.entries(playbackListeners).forEach(([event, handler]) => {
+					activeElem.addEventListener(event, handler);
+				});
 			}
 
-			html += '<a id="download_log" href="">Download log</a><br />';
-			html += `<b>Version:</b> ${version}<br/>`;
-			html += `<b>Config:</b> ${JSON.stringify(conf)}<br/>`;
-			html += `<b>Fullscreen:</b> ${fullscreen}<br/>`;
-			html += `<b>Screensaver started at:</b> ${wallpanel.screensaverStartedAt}<br/>`;
-			html += `<b>Screen wake lock:</b> enabled=${this.screenWakeLock.enabled} native=${this.screenWakeLock.nativeWakeLockSupported} lock=${this.screenWakeLock._lock} player=${this.screenWakeLock._player} error=${this.screenWakeLock.error}<br/>`;
-			if (this.screenWakeLock._player) {
-				const p = this.screenWakeLock._player;
-				html += `<b>Screen wake lock video</b>: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
-			}
-			const activeImage = this.getActiveImageElement();
-			if (activeImage) {
-				html += `<b>Current image:</b> ${activeImage.imageUrl}<br/>`;
-				const imgInfo = imageInfoCache[activeImage.imageUrl];
-				if (imgInfo) {
-					html += `<b>Image info:</b> ${JSON.stringify(imgInfo)}<br/>`;
-				}
-			}
-			this.debugBox.innerHTML = html;
-			this.debugBox.querySelector("#download_log").addEventListener("click", function (event) {
-				logger.downloadMessages();
-				event.preventDefault();
+			// Start playing the media.
+			activeElem.play().catch((e) => {
+				cleanupListeners();
+				logger.error(`Failed to play media "${activeElem.src}":`, e);
 			});
-			this.debugBox.scrollTop = this.debugBox.scrollHeight;
-		}
-		if (this.screenWakeLock.enabled && now - this.screensaverStartedAt >= config.keep_screen_on_time * 1000) {
-			logger.info(`Disable wake lock after ${config.keep_screen_on_time} seconds`);
-			this.screenWakeLock.disable();
-		}
-	}
-
-	switchImageDirection(direction) {
-		this.imageListDirection = direction;
-		if (this.afterFadeoutTimer) {
-			clearTimeout(this.afterFadeoutTimer);
-		}
-		this.updateImageIndex();
-		const inactiveImage = this.getInactiveImageElement();
-		this.updateImage(inactiveImage, function (wp) {
-			wp.switchActiveImage("user_action");
-		});
-	}
-
-	motionDetected() {
-		this.stopScreensaver(config.fade_out_time_motion_detected);
-	}
-
-	handleInteractionEvent(evt) {
-		const isClick = ["click", "touchend"].includes(evt.type);
-		const now = Date.now();
-		this.idleSince = now;
-		
-		let swipe = "";
-		if (evt.type == "touchstart") {
-			if (evt.touches && evt.touches[0]) {
-				this.touchStartX = evt.touches[0].clientX;
-			}
-			return;
-		}
-		else if (evt.type == "touchend" && this.touchStartX >= 0 && evt.changedTouches && evt.changedTouches[0]) {
-			const diffX = evt.changedTouches[0].clientX - this.touchStartX;
-			if (diffX >= 5) { 
-				swipe = "right";
-			} else if (diffX <= -5) { 
-				swipe = "left";
-			}
-			this.touchStartX = -1;
 		}
 
-		if (!this.screensaverRunning()) {
-			if (this.blockEventsUntil > now) {
-				if (isClick) {
-					evt.preventDefault();
+		switchActiveImage(eventType) {
+			const sourceType = imageSourceType();
+
+			if (sourceType === "media-entity") {
+				const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
+				const entity = this.hass.states[imageEntity];
+				if (!entity) {
+					return;
 				}
-				evt.stopImmediatePropagation();
+
+				if (mediaEntityState != entity.state) {
+					logger.debug(`Media entity ${imageEntity} state has changed`);
+				} else if (eventType == "entity_update") {
+					return;
+				} else if (config.media_entity_load_unchanged) {
+					logger.debug(`Media entity ${imageEntity} state unchanged, but media_entity_load_unchanged = true`);
+				} else {
+					this.lastImageUpdate = Date.now();
+					this.restartProgressBarAnimation();
+					return;
+				}
+				mediaEntityState = entity.state;
 			}
-			if (isClick) {
-				this.setupScreensaver();
+
+			this.lastImageUpdate = Date.now();
+
+			const crossfadeMillis = eventType == "user_action" ? 250 : null;
+			if (["media-entity", "iframe"].includes(sourceType)) {
+				const nextImg = this.imageTwoContainer.style.opacity == 1 ? this.imageOne : this.imageTwo;
+				const wp = this;
+				wp.updateImage(nextImg, () => {
+					wp._switchActiveImage(crossfadeMillis);
+				});
+			} else {
+				this._switchActiveImage(crossfadeMillis);
 			}
-			return;
 		}
 
-		// Screensaver is active
-		if (this.messageBoxTimeout) {
-			// Message on screen
-			if (isClick) {
-				this.blockEventsUntil = now + 1000;
-				this.hideMessage();
+		_switchActiveImage(crossfadeMillis = null) {
+			if (this.afterFadeoutTimer) {
+				clearTimeout(this.afterFadeoutTimer);
+			}
+			this.lastImageUpdate = Date.now();
+
+			if (crossfadeMillis === null) {
+				crossfadeMillis = Math.round(config.crossfade_time * 1000);
+			}
+
+			this.imageOneContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
+			this.imageTwoContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
+
+			let curActive = this.imageOneContainer;
+			let newActive = this.imageTwoContainer;
+			let curImg = this.imageOne;
+			let newImg = this.imageTwo;
+			if (this.imageTwoContainer.style.opacity == 1) {
+				curActive = this.imageTwoContainer;
+				newActive = this.imageOneContainer;
+				curImg = this.imageTwo;
+				newImg = this.imageOne;
+			}
+			logger.debug(`Switching active image to '${newActive.id}'`);
+
+			this.setImageURLEntityState();
+			this.setImageDataInfo(newImg);
+
+			if (newActive.style.opacity != 1) {
+				newActive.style.opacity = 1;
+			}
+			if (curActive.style.opacity != 0) {
+				curActive.style.opacity = 0;
+			}
+
+			this.startPlayingActiveMedia();
+			this.restartProgressBarAnimation();
+			this.restartKenBurnsEffect();
+
+			// Load next image after fade out
+			// only if not media-entity, which will not yet have changed already
+			// iframe will be loaded when switching images
+			// TODO: Refactor, always load new media right before switch
+			if (!["media-entity", "iframe"].includes(imageSourceType())) {
+				const wp = this;
+				this.afterFadeoutTimer = setTimeout(function () {
+					if (typeof curImg.pause === "function") {
+						curImg.pause();
+					}
+					wp.updateImage(curImg);
+				}, crossfadeMillis);
+			}
+		}
+
+		displayMessage(message, timeout = 15000) {
+			this.hideMessage();
+			this.messageBox.innerHTML = message;
+			this.messageBox.style.visibility = "visible";
+			const wp = this;
+			this.messageBoxTimeout = setTimeout(function () {
+				wp.hideMessage();
+			}, timeout);
+		}
+
+		hideMessage() {
+			if (!this.messageBoxTimeout) {
 				return;
 			}
+			clearTimeout(this.messageBoxTimeout);
+			this.messageBoxTimeout = null;
+			this.messageBox.style.visibility = "hidden";
+			this.messageBox.innerHTML = "";
 		}
 
-		let x = evt.clientX;
-		let y = evt.clientY;
-		if (!x && evt.changedTouches && evt.changedTouches[0]) {
-			x = evt.changedTouches[0].clientX;
-		}
-		if (!y && evt.changedTouches && evt.changedTouches[0]) {
-			y = evt.changedTouches[0].clientY;
-		}
-
-		if (config.debug && x && x < 100 && y && y < 100) {
-			// Download link
-			return;
+		setupScreensaver() {
+			logger.debug("Setup screensaver");
+			if (config.keep_screen_on_time > 0 && !this.screenWakeLock.enabled) {
+				this.screenWakeLock.enable();
+			}
+			if (config.fullscreen && !fullscreen) {
+				enterFullscreen();
+			}
 		}
 
-		const bmp = getActiveBrowserModPopup();
-		if (bmp) {
-			const bm_elements = [bmp.shadowRoot.querySelector(".content"), bmp.shadowRoot.querySelector("ha-dialog-header")];
-			for (let i = 0; i < bm_elements.length; i++) {
-				if (bm_elements[i]) {
-					const pos = bm_elements[i].getBoundingClientRect();
-					logger.debug("Event position:", bm_elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
+		startScreensaver() {
+			updateConfig();
+			logger.debug("Start screensaver");
+			if (!isActive()) {
+				logger.debug("Wallpanel not active, not starting screensaver");
+				return;
+			}
+
+			this.updateStyle();
+			this.setupScreensaver();
+			this.setImageURLEntityState();
+			this.startPlayingActiveMedia();
+			this.restartProgressBarAnimation();
+			this.restartKenBurnsEffect();
+
+			if (config.keep_screen_on_time > 0) {
+				const wp = this;
+				setTimeout(function () {
+					if (wp.screensaverRunning() && !wp.screenWakeLock.enabled) {
+						logger.error(
+							"Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD"
+						);
+						wp.displayMessage("Please interact with the screen for a moment to request wake lock.", 15000);
+					}
+				}, 2000);
+			}
+
+			this.lastMove = Date.now();
+			this.lastImageUpdate = Date.now();
+			this.screensaverStartedAt = Date.now();
+			this.screensaverStoppedAt = null;
+			document.documentElement.style.overflow = "hidden";
+
+			this.createInfoBoxContent();
+
+			this.style.visibility = "visible";
+			this.style.opacity = 1;
+			if (config.debug) {
+				this.debugBox.style.pointerEvents = "auto";
+			}
+
+			this.setScreensaverEntityState();
+
+			if (config.screensaver_stop_navigation_path || config.screensaver_stop_close_browser_mod_popup) {
+				this.screensaverStopNavigationPathTimeout = setTimeout(
+					() => {
+						if (config.screensaver_stop_navigation_path) {
+							skipDisableScreensaverOnLocationChanged = true;
+							navigate(config.screensaver_stop_navigation_path);
+							setTimeout(() => {
+								skipDisableScreensaverOnLocationChanged = false;
+							}, 5000);
+						}
+						if (config.screensaver_stop_close_browser_mod_popup) {
+							const bmp = getActiveBrowserModPopup();
+							if (bmp) {
+								bmp.closeDialog();
+							}
+						}
+					},
+					(config.fade_in_time + 1) * 1000
+				);
+			}
+		}
+
+		screensaverRunning() {
+			return Boolean(this.screensaverStartedAt) && this.screensaverStartedAt > 0;
+		}
+
+		stopScreensaver(fadeOutTime = 0.0) {
+			logger.debug("Stop screensaver");
+
+			this.screensaverStartedAt = null;
+			this.screensaverStoppedAt = Date.now();
+
+			document.documentElement.style.removeProperty("overflow");
+
+			if (this.screensaverStopNavigationPathTimeout) {
+				clearTimeout(this.screensaverStopNavigationPathTimeout);
+			}
+			this.hideMessage();
+
+			this.debugBox.style.pointerEvents = "none";
+			if (fadeOutTime > 0) {
+				this.style.transition = `opacity ${Math.round(fadeOutTime * 1000)}ms ease-in-out`;
+			} else {
+				this.style.transition = "";
+			}
+			this.style.opacity = 0;
+			this.style.visibility = "hidden";
+			this.infoBoxPosX.style.animation = "";
+			this.infoBoxPosY.style.animation = "";
+
+			this.idleSince = Date.now();
+			if (this.screenWakeLock.enabled) {
+				this.screenWakeLock.disable();
+			}
+
+			setTimeout(this.setScreensaverEntityState.bind(this), 25);
+		}
+
+		updateScreensaver() {
+			const currentDate = new Date();
+			const now = currentDate.getTime();
+
+			if (
+				this.energyCollectionUpdateEnabled &&
+				now - this.lastEnergyCollectionUpdate >= this.energyCollectionUpdateInterval * 1000
+			) {
+				if (this.hass.connection._energy_wallpanel) {
+					this.hass.connection._energy_wallpanel.refresh();
+				}
+				this.lastEnergyCollectionUpdate = now;
+			}
+			if (this.infoBoxContentCreatedDate && this.infoBoxContentCreatedDate.getDate() != currentDate.getDate()) {
+				// Day changed since creation of info box content.
+				// Recreate to update energy cards / energy collection start / end date.
+				this.createInfoBoxContent();
+			}
+
+			if (config.info_move_interval > 0 && now - this.lastMove >= config.info_move_interval * 1000) {
+				if (config.info_move_pattern === "random") {
+					this.randomMove();
+				} else if (config.info_move_pattern === "corners") {
+					this.moveAroundCorners();
+				} else {
+					logger.error(`Unknown info move type ${config.info_move_pattern}`);
+				}
+			}
+
+			if (
+				config.black_screen_after_time > 0 &&
+				now - this.screensaverStartedAt >= config.black_screen_after_time * 1000
+			) {
+				logger.debug("Setting screen to black");
+				this.screensaverOverlay.style.background = "#000000";
+			} else if (config.show_images) {
+				if (now - this.lastImageUpdate >= config.display_time * 1000) {
+					this.switchActiveImage("display_time_elapsed");
+				}
+				if (now - this.lastImageListUpdate >= config.image_list_update_interval * 1000) {
+					this.updateImageList();
+				}
+				if (this.imageOneContainer.style.visibility != "visible") {
+					this.imageOneContainer.style.visibility = "visible";
+				}
+				if (this.imageTwoContainer.style.visibility != "visible") {
+					this.imageTwoContainer.style.visibility = "visible";
+				}
+			} else {
+				if (this.imageOneContainer.style.visibility != "hidden") {
+					this.imageOneContainer.style.visibility = "hidden";
+				}
+				if (this.imageTwoContainer.style.visibility != "hidden") {
+					this.imageTwoContainer.style.visibility = "hidden";
+				}
+			}
+
+			if (config.debug) {
+				let html = "";
+				const conf = {};
+				for (const key in config) {
+					if (["profiles"].includes(key)) {
+						conf[key] = "...";
+					} else {
+						conf[key] = config[key];
+					}
+				}
+
+				html += '<a id="download_log" href="">Download log</a><br />';
+				html += `<b>Version:</b> ${version}<br/>`;
+				html += `<b>Config:</b> ${JSON.stringify(conf)}<br/>`;
+				html += `<b>Fullscreen:</b> ${fullscreen}<br/>`;
+				html += `<b>Screensaver started at:</b> ${wallpanel.screensaverStartedAt}<br/>`;
+				html += `<b>Screen wake lock:</b> enabled=${this.screenWakeLock.enabled} native=${this.screenWakeLock.nativeWakeLockSupported} lock=${this.screenWakeLock._lock} player=${this.screenWakeLock._player} error=${this.screenWakeLock.error}<br/>`;
+				if (this.screenWakeLock._player) {
+					const p = this.screenWakeLock._player;
+					html += `<b>Screen wake lock video</b>: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
+				}
+				const activeImage = this.getActiveImageElement();
+				if (activeImage) {
+					html += `<b>Current image:</b> ${activeImage.imageUrl}<br/>`;
+					const imgInfo = imageInfoCache[activeImage.imageUrl];
+					if (imgInfo) {
+						html += `<b>Image info:</b> ${JSON.stringify(imgInfo)}<br/>`;
+					}
+				}
+				this.debugBox.innerHTML = html;
+				this.debugBox.querySelector("#download_log").addEventListener("click", function (event) {
+					logger.downloadMessages();
+					event.preventDefault();
+				});
+				this.debugBox.scrollTop = this.debugBox.scrollHeight;
+			}
+			if (this.screenWakeLock.enabled && now - this.screensaverStartedAt >= config.keep_screen_on_time * 1000) {
+				logger.info(`Disable wake lock after ${config.keep_screen_on_time} seconds`);
+				this.screenWakeLock.disable();
+			}
+		}
+
+		switchImageDirection(direction) {
+			this.imageListDirection = direction;
+			if (this.afterFadeoutTimer) {
+				clearTimeout(this.afterFadeoutTimer);
+			}
+			this.updateImageIndex();
+			const inactiveImage = this.getInactiveImageElement();
+			this.updateImage(inactiveImage, function (wp) {
+				wp.switchActiveImage("user_action");
+			});
+		}
+
+		motionDetected() {
+			this.stopScreensaver(config.fade_out_time_motion_detected);
+		}
+
+		handleInteractionEvent(evt) {
+			const isClick = ["click", "touchend"].includes(evt.type);
+			const now = Date.now();
+			this.idleSince = now;
+			
+			let swipe = "";
+			if (evt.type == "touchstart") {
+				if (evt.touches && evt.touches[0]) {
+					this.touchStartX = evt.touches[0].clientX;
+				}
+				return;
+			}
+			else if (evt.type == "touchend" && this.touchStartX >= 0 && evt.changedTouches && evt.changedTouches[0]) {
+				const diffX = evt.changedTouches[0].clientX - this.touchStartX;
+				if (diffX >= 5) { 
+					swipe = "right";
+				} else if (diffX <= -5) { 
+					swipe = "left";
+				}
+				this.touchStartX = -1;
+			}
+
+			if (!this.screensaverRunning()) {
+				if (this.blockEventsUntil > now) {
+					if (isClick) {
+						evt.preventDefault();
+					}
+					evt.stopImmediatePropagation();
+				}
+				if (isClick) {
+					this.setupScreensaver();
+				}
+				return;
+			}
+
+			// Screensaver is active
+			if (this.messageBoxTimeout) {
+				// Message on screen
+				if (isClick) {
+					this.blockEventsUntil = now + 1000;
+					this.hideMessage();
+					return;
+				}
+			}
+
+			let x = evt.clientX;
+			let y = evt.clientY;
+			if (!x && evt.changedTouches && evt.changedTouches[0]) {
+				x = evt.changedTouches[0].clientX;
+			}
+			if (!y && evt.changedTouches && evt.changedTouches[0]) {
+				y = evt.changedTouches[0].clientY;
+			}
+
+			if (config.debug && x && x < 100 && y && y < 100) {
+				// Download link
+				return;
+			}
+
+			const bmp = getActiveBrowserModPopup();
+			if (bmp) {
+				const bm_elements = [bmp.shadowRoot.querySelector(".content"), bmp.shadowRoot.querySelector("ha-dialog-header")];
+				for (let i = 0; i < bm_elements.length; i++) {
+					if (bm_elements[i]) {
+						const pos = bm_elements[i].getBoundingClientRect();
+						logger.debug("Event position:", bm_elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
+						if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
+							logger.debug("Event on browser mod popup:", bm_elements[i]);
+							return;
+						}
+					}
+				}
+			}
+
+			if (config.card_interaction) {
+				if (this.getMoreInfoDialog()) {
+					return;
+				}
+				let elements = [];
+				elements = elements.concat(this.__cards);
+				elements = elements.concat(this.__badges);
+				elements = elements.concat(this.__views);
+				elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-info-box-content"));
+				elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-fixed-info-box-content"));
+				for (let i = 0; i < elements.length; i++) {
+					const pos = elements[i].getBoundingClientRect();
+					logger.debug("Event position:", elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
 					if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
-						logger.debug("Event on browser mod popup:", bm_elements[i]);
+						logger.debug("Event on:", elements[i]);
 						return;
 					}
 				}
 			}
-		}
 
-		if (config.card_interaction) {
-			if (this.getMoreInfoDialog()) {
-				return;
+			if (isClick) {
+				evt.preventDefault();
 			}
-			let elements = [];
-			elements = elements.concat(this.__cards);
-			elements = elements.concat(this.__badges);
-			elements = elements.concat(this.__views);
-			elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-info-box-content"));
-			elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-fixed-info-box-content"));
-			for (let i = 0; i < elements.length; i++) {
-				const pos = elements[i].getBoundingClientRect();
-				logger.debug("Event position:", elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
-				if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
-					logger.debug("Event on:", elements[i]);
-					return;
-				}
-			}
-		}
+			evt.stopImmediatePropagation();
 
-		if (isClick) {
-			evt.preventDefault();
-		}
-		evt.stopImmediatePropagation();
-
-		let switchImageDirection = "";
-		if (swipe) {
-			switchImageDirection = swipe == "left" ? "backwards" : "forwards";
-		}
-		else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
-			let right = 0.0;
-			let bottom = 0.0;
-			if (x) {
-				right = (this.screensaverContainer.clientWidth - x) / this.screensaverContainer.clientWidth;
+			let switchImageDirection = "";
+			if (swipe) {
+				switchImageDirection = swipe == "left" ? "backwards" : "forwards";
 			}
-			if (y) {
-				bottom = (this.screensaverContainer.clientHeight - y) / this.screensaverContainer.clientHeight;
-			}
-			if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
-				if (isClick) {
-					switchImageDirection = "forwards";
+			else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
+				let right = 0.0;
+				let bottom = 0.0;
+				if (x) {
+					right = (this.screensaverContainer.clientWidth - x) / this.screensaverContainer.clientWidth;
 				}
-				else {
-					return;
+				if (y) {
+					bottom = (this.screensaverContainer.clientHeight - y) / this.screensaverContainer.clientHeight;
 				}
-			} else if (
-				config.touch_zone_size_previous_image > 0 &&
-				right >= (100 - config.touch_zone_size_previous_image) / 100
-			) {
-				if (isClick) {
-					switchImageDirection = "backwards";
-				}
-				else {
-					return;
-				}
-			} else if (right >= 0.4 && right <= 0.6 && bottom <= 0.1) {
-				const now = new Date();
-				if (isClick && now - this.lastClickTime < 500) {
-					this.clickCount += 1;
-					if (this.clickCount == 3) {
-						logger.purgeMessages();
-						config.debug = !config.debug;
-						this.debugBox.style.visibility = config.debug ? "visible" : "hidden";
-						this.debugBox.style.pointerEvents = config.debug ? "auto" : "none";
+				if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
+					if (isClick) {
+						switchImageDirection = "forwards";
 					}
-				} else {
-					this.clickCount = 1;
+					else {
+						return;
+					}
+				} else if (
+					config.touch_zone_size_previous_image > 0 &&
+					right >= (100 - config.touch_zone_size_previous_image) / 100
+				) {
+					if (isClick) {
+						switchImageDirection = "backwards";
+					}
+					else {
+						return;
+					}
+				} else if (right >= 0.4 && right <= 0.6 && bottom <= 0.1) {
+					const now = new Date();
+					if (isClick && now - this.lastClickTime < 500) {
+						this.clickCount += 1;
+						if (this.clickCount == 3) {
+							logger.purgeMessages();
+							config.debug = !config.debug;
+							this.debugBox.style.visibility = config.debug ? "visible" : "hidden";
+							this.debugBox.style.pointerEvents = config.debug ? "auto" : "none";
+						}
+					} else {
+						this.clickCount = 1;
+					}
+					this.lastClickTime = now;
+					return;
 				}
-				this.lastClickTime = now;
+			}
+
+			if (switchImageDirection) {
+				if (this.imageListDirection != switchImageDirection) {
+					this.switchImageDirection(switchImageDirection);
+				} else if (
+					this.imageOne.getAttribute("data-loading") == "false" &&
+					this.imageTwo.getAttribute("data-loading") == "false"
+				) {
+					this.switchActiveImage("user_action");
+				}
 				return;
 			}
-		}
-
-		if (switchImageDirection) {
-			if (this.imageListDirection != switchImageDirection) {
-				this.switchImageDirection(switchImageDirection);
-			} else if (
-				this.imageOne.getAttribute("data-loading") == "false" &&
-				this.imageTwo.getAttribute("data-loading") == "false"
-			) {
-				this.switchActiveImage("user_action");
+			
+			if (!isClick || config.stop_screensaver_on_mouse_click) {
+				// Prevent interaction with the dashboards after screensaver was stopped
+				this.blockEventsUntil = now + config.control_reactivation_time * 1000;
+				this.stopScreensaver(config.fade_out_time_interaction);
 			}
-			return;
-		}
-		
-		if (!isClick || config.stop_screensaver_on_mouse_click) {
-			// Prevent interaction with the dashboards after screensaver was stopped
-			this.blockEventsUntil = now + config.control_reactivation_time * 1000;
-			this.stopScreensaver(config.fade_out_time_interaction);
 		}
 	}
+
+	if (!customElements.get("wallpanel-view")) {
+		customElements.define("wallpanel-view", WallpanelView);
+	}
+	wallpanel = document.createElement("wallpanel-view");
+	elHaMain.shadowRoot.appendChild(wallpanel);
 }
 
 function activateWallpanel() {
@@ -3344,6 +3352,15 @@ function waitForEnv(callback, startTime = null) {
 		return;
 	}
 
+	if (!customElements.get("hui-view")) {
+		if (startupSeconds >= 5.0) {
+			logger.error(`Wallpanel startup failed after ${startupSeconds} seconds, hui-view not found.`);
+			return;
+		}
+		setTimeout(waitForEnv, 100, callback, startTime);
+		return;
+	}
+
 	if (!window.browser_mod) {
 		let waitTime = getDashboardWallpanelConfig(["wait_for_browser_mod_time"])["wait_for_browser_mod_time"];
 		if (waitTime === undefined) {
@@ -3373,12 +3390,8 @@ function startup() {
 	logger.debug(`userId: ${userId}, userName: ${userName}, userDisplayname: ${userDisplayname}`);
 
 	updateConfig();
-
-	if (!customElements.get("wallpanel-view")) {
-		customElements.define("wallpanel-view", WallpanelView);
-	}
-	wallpanel = document.createElement("wallpanel-view");
-	elHaMain.shadowRoot.appendChild(wallpanel);
+	initWallpanel();
+	
 	window.addEventListener("location-changed", (event) => {
 		let url = null;
 		try {
