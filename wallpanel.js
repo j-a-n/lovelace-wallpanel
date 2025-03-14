@@ -3261,7 +3261,7 @@ function activateWallpanel() {
 			for (let i = 0; i < pl.lovelace.rawConfig.views.length; i++) {
 				if (pl.lovelace.rawConfig.views[i].path == activeTab) {
 					if (pl.lovelace.rawConfig.views[i].subview) {
-						// Current tab is a subview
+						logger.debug(`Current tab '${activeTab}' is a subview, not hiding toolbar`);
 						hideToolbar = false;
 						hideActionItems = false;
 					}
