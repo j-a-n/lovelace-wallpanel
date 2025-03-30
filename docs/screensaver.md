@@ -35,5 +35,5 @@ wallpanel:
 
 ## Tracking the current displayed media in an entity
 You can create an input_text helper in HA and set the configuration option `image_url_entity` to this entity id.
-Make sure that the maximum length is not too short so that the image URL fits in.
+Make sure that the maximum length is not too short so that the image URL fits in (note that the default maximum length for input_text helpers created from the HA web interface is 100 characters, but you can create your own input_text in `configuration.yaml` of maximum length 255). In case the image path is too long for the helper, you will get a warning in HA logs (sounding like `Invalid value: ... (length range 0 - 100)`) and the entity will not get updated.
 When the screensaver changes the active image, the URL of the new image is stored in this entity.
