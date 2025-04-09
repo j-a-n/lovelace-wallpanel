@@ -43,10 +43,11 @@ const defaultConfig = {
 	image_url_entity: "",
 	media_entity_load_unchanged: true,
 	immich_api_key: "",
-	immich_album_names: [],
+  	immich_album_names: [],
 	immich_shared_albums: true,
 	immich_tag_names: [],
 	immich_resolution: "preview",
+	immich_memory: true,
 	image_fit: "cover", // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: "sorted", // sorted / random
@@ -2243,7 +2244,8 @@ function initWallpanel() {
 						} else if (config.immich_resolution == "preview") {
 							url = `${apiUrl}/assets/${asset.id}/thumbnail?size=preview`;
 						}
-						data[url] = asset.exifInfo;
+						data[url] = asset.exifInfo || {};
+						
 						data[url]["mediaType"] = assetType;
 						data[url]["image"] = {
 							filename: asset.originalFileName,
@@ -2273,7 +2275,34 @@ function initWallpanel() {
 
 			const http = new XMLHttpRequest();
 			http.responseType = "json";
-			if (config.immich_tag_names && config.immich_tag_names.length) {
+			if(config.immich_memory){
+				http.open("GET", `${apiUrl}/memories?type=on_this_day`, true);
+				http.setRequestHeader("x-api-key", config.immich_api_key);
+				http.setRequestHeader("Content-Type", "application/json");
+				http.onload = function () {
+					if (http.status == 200 || http.status === 0) {
+						const allMemories = http.response;
+						logger.debug(`Got immich API response`, allMemories);
+
+						const now = new Date();
+						
+						allMemories.filter(function(memory){
+							const showAt = new Date(memory.showAt);
+							const hideAt = new Date(memory.hideAt);
+							return now >= showAt && now <= hideAt;
+						}).forEach((memory) => {
+							logger.debug(memory);
+							processAssets(memory.assets);
+							processUrls();
+						});
+					} else {
+						logger.error("Immich API error", http);
+						wp.updatingImageList = false;
+					}
+				};
+				http.send({});
+			}
+			else if (config.immich_tag_names && config.immich_tag_names.length) {
 				const tagNames = config.immich_tag_names.map((v) => v.toLowerCase());
 				http.open("GET", `${apiUrl}/tags`, true);
 				http.setRequestHeader("x-api-key", config.immich_api_key);
