@@ -1065,7 +1065,7 @@ function initWallpanel() {
 			this.imageOne.style.pointerEvents = "none";
 			this.imageOne.style.width = "100%";
 			this.imageOne.style.height = "100%";
-			this.imageOne.style.objectFit = "contain";
+			this.imageOne.style.objectFit = "cover";
 			this.imageOne.style.border = "none";
 
 			this.imageOneInfoContainer.removeAttribute("style");
@@ -1104,7 +1104,7 @@ function initWallpanel() {
 			this.imageTwo.style.pointerEvents = "none";
 			this.imageTwo.style.width = "100%";
 			this.imageTwo.style.height = "100%";
-			this.imageTwo.style.objectFit = "contain";
+			this.imageTwo.style.objectFit = "cover";
 			this.imageTwo.style.border = "none";
 
 			this.imageTwoInfoContainer.removeAttribute("style");
