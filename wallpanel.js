@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.42.0";
+const version = "4.43.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -47,8 +47,8 @@ const defaultConfig = {
 	immich_shared_albums: true,
 	immich_tag_names: [],
 	immich_persons: [],
+	immich_memory: false,
 	immich_resolution: "preview",
-	immich_memory: true,
 	image_fit: "cover", // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: "sorted", // sorted / random
@@ -2239,12 +2239,15 @@ function initWallpanel() {
 					logger.debug(asset);
 					const assetType = asset.type.toLowerCase();
 					if (["image", "video"].includes(assetType)) {
-						let url = `${apiUrl}/assets/${asset.id}/original`;
-						if (assetType == "video") {
-							url = `${apiUrl}/assets/${asset.id}/video/playback`;
-						} else if (config.immich_resolution == "preview") {
-							url = `${apiUrl}/assets/${asset.id}/thumbnail?size=preview`;
+						let resolution = "original";
+						if (config.immich_resolution == "preview") {
+							if (assetType == "video") {
+								resolution = "video/playback";
+							} else {
+								resolution = "thumbnail?size=preview";
+							}
 						}
+						const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
 						data[url] = asset.exifInfo || {};
 
 						data[url]["mediaType"] = assetType;
