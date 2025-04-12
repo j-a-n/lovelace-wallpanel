@@ -2277,52 +2277,91 @@ function initWallpanel() {
 				wp.updatingImageList = false;
 			}
 
-			const http = new XMLHttpRequest();
-			http.responseType = "json";
-
 			if (config.immich_persons && config.immich_persons.length) {
-				const personNames = config.immich_persons.map((v) => v.toLowerCase());
-				http.open("GET", `${apiUrl}/people`, true);
-				http.setRequestHeader("x-api-key", config.immich_api_key);
-				http.onload = function () {
+				const orPersonNames = [];
+				config.immich_persons.forEach((entry) => {
+					let andPersonNames = Array.isArray(entry) ? entry : [entry];
+					andPersonNames = andPersonNames.map((v) => v.toLowerCase());
+					orPersonNames.push(andPersonNames);
+				});
+				logger.debug(orPersonNames);
+				let immichPeople = [];
+				const personNameToId = {};
+
+				function fetchAssets(index = 0) {
+					const personNames = orPersonNames[index];
 					const personIds = [];
-					if (http.status == 200 || http.status === 0) {
-						const allPersons = http.response;
-						logger.debug(`Got immich API response`, allPersons);
-						allPersons.people.forEach((person) => {
-							logger.debug(person);
-							if (!personNames.includes(person.name.toLowerCase())) {
-								logger.debug("Skipping person: ", person.name);
-							} else {
-								logger.debug("Adding person: ", person.name);
-								personIds.push(person.id);
-							}
-						});
-						if (personIds.length > 0) {
-							const http2 = new XMLHttpRequest();
-							http2.responseType = "json";
-							http2.open("POST", `${apiUrl}/search/metadata`, true);
-							http2.setRequestHeader("x-api-key", config.immich_api_key);
-							http2.setRequestHeader("Content-Type", "application/json");
-							logger.debug("Searching asset metdata for person: ", personIds);
-							http2.onload = function () {
-								if (http2.status == 200 || http2.status === 0) {
-									const searchResults = http2.response;
-									logger.debug(`Got immich API response`, searchResults);
-									processAssets(searchResults.assets.items);
-									processUrls();
-								} else {
-									logger.error("Immich API error", http2);
-								}
-							};
-							http2.send(JSON.stringify({ personIds: personIds, withExif: true, size: 1000 }));
+					personNames.forEach((personName) => {
+						const personId = personNameToId[personName];
+						if (personId) {
+							personIds.push(personId);
 						} else {
-							logger.error("No immich person selected");
-							wp.updatingImageList = false;
+							logger.error(`Person not found in immich: ${personName}`);
+						}
+					});
+
+					function afterFetchAssets() {
+						if (index + 1 < orPersonNames.length) {
+							fetchAssets(index + 1);
+						} else {
+							processUrls();
 						}
 					}
-				};
+
+					if (personIds.length > 0) {
+						const http = new XMLHttpRequest();
+						http.responseType = "json";
+						http.open("POST", `${apiUrl}/search/metadata`, true);
+						http.setRequestHeader("x-api-key", config.immich_api_key);
+						http.setRequestHeader("Content-Type", "application/json");
+						logger.debug("Searching asset metdata for persons: ", personIds);
+						http.onload = function () {
+							if (http.status == 200 || http.status === 0) {
+								const searchResults = http.response;
+								logger.debug(`Got immich API response`, searchResults);
+								if (!searchResults.assets.count) {
+									logger.error(`No media items found in immich that contain all these people: ${personNames}`);
+								} else {
+									processAssets(searchResults.assets.items);
+								}
+							} else {
+								logger.error("Immich API error", http);
+							}
+							afterFetchAssets();
+						};
+						http.send(JSON.stringify({ personIds: personIds, withExif: true, size: 1000 }));
+					} else {
+						afterFetchAssets();
+					}
+				}
+
+				function fetchPeople(page = 1) {
+					const http = new XMLHttpRequest();
+					http.responseType = "json";
+					http.open("GET", `${apiUrl}/people?size=1000&page=${page}`, true);
+					http.setRequestHeader("x-api-key", config.immich_api_key);
+					http.onload = function () {
+						if (http.status == 200 || http.status === 0) {
+							logger.debug(`Got immich API response`, http.response);
+							immichPeople = immichPeople.concat(http.response.people);
+							if (http.response.hasNextPage) {
+								return fetchPeople(page + 1);
+							}
+							immichPeople.forEach((person) => {
+								personNameToId[person.name.toLowerCase()] = person.id;
+							});
+							fetchAssets();
+						} else {
+							logger.error("Immich API error", http);
+							wp.updatingImageList = false;
+						}
+					};
+					http.send();
+				}
+				fetchPeople();
 			} else if (config.immich_memory) {
+				const http = new XMLHttpRequest();
+				http.responseType = "json";
 				http.open("GET", `${apiUrl}/memories?type=on_this_day`, true);
 				http.setRequestHeader("x-api-key", config.immich_api_key);
 				http.setRequestHeader("Content-Type", "application/json");
@@ -2349,9 +2388,11 @@ function initWallpanel() {
 						wp.updatingImageList = false;
 					}
 				};
-				http.send({});
+				http.send();
 			} else if (config.immich_tag_names && config.immich_tag_names.length) {
 				const tagNames = config.immich_tag_names.map((v) => v.toLowerCase());
+				const http = new XMLHttpRequest();
+				http.responseType = "json";
 				http.open("GET", `${apiUrl}/tags`, true);
 				http.setRequestHeader("x-api-key", config.immich_api_key);
 				http.onload = function () {
@@ -2395,8 +2436,10 @@ function initWallpanel() {
 						wp.updatingImageList = false;
 					}
 				};
-				http.send({});
+				http.send();
 			} else {
+				const http = new XMLHttpRequest();
+				http.responseType = "json";
 				http.open("GET", `${apiUrl}/albums?shared=${config.immich_shared_albums}`, true);
 				http.setRequestHeader("x-api-key", config.immich_api_key);
 				http.onload = function () {
