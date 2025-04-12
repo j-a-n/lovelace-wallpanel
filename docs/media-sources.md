@@ -152,8 +152,10 @@ To access the Immich API, first generate an [API key](https://immich.app/docs/fe
 Then you can configure WallPanel to use the Immich API.
 You need to set the `image_url` to `immich+<your api url>` and enter the API key in `immich_api_key`.
 With the config option `immich_shared_albums` (`true` / `false`) you can include or exclude shared albums.
-To restrict the images to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
+To restrict the media items to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
 Alternatively you can configure a list of tag names in `immich_tag_names`.
+You can select media elements that contain certain people with the configuration option `immich_persons`.
+Or show immich memories by setting `immich_memories` to `true`.
 With the config option `immich_resolution` (`preview` / `original`) you can select the resolution of the images. 
 
 Example using album names:
@@ -175,6 +177,24 @@ immich_tag_names:
   - Family
   - Friends
 immich_resolution: original
+```
+
+Example of media elements that contain certain persons:
+```yaml
+image_url: immich+https://immich.your.domain/api
+immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_persons:
+  - Alice
+  - Bob
+  - [John, Jane]
+```
+This will show media items containing either Alice, Bob or John and Jane.
+
+Example showing immich memories:
+```yaml
+image_url: immich+https://immich.your.domain/api
+immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_memories: true
 ```
 
 ## Website as iframe

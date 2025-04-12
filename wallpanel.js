@@ -47,7 +47,7 @@ const defaultConfig = {
 	immich_shared_albums: true,
 	immich_tag_names: [],
 	immich_persons: [],
-	immich_memory: false,
+	immich_memories: false,
 	immich_resolution: "preview",
 	image_fit: "cover", // cover / contain / fill
 	image_list_update_interval: 3600,
@@ -2359,7 +2359,7 @@ function initWallpanel() {
 					http.send();
 				}
 				fetchPeople();
-			} else if (config.immich_memory) {
+			} else if (config.immich_memories) {
 				const http = new XMLHttpRequest();
 				http.responseType = "json";
 				http.open("GET", `${apiUrl}/memories?type=on_this_day`, true);

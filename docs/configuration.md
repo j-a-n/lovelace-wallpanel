@@ -40,12 +40,12 @@ You can set the following configuration parameters for every individual Home Ass
 | image_url                        | Fetch screensaver images from this URL. See [Media Sources](media-sources.md) for details.                                         | See [Media Sources](media-sources.md) |
 | image_url_entity                 | An entity of type 'input_text' in which the URL of the current screen saver image is stored. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |        |
 | media_entity_load_unchanged      | Should a new image be loaded from the entity after the display time has expired, even if the entity state has not changed? | true      |
-| immich_api_key                   | API key that is used for authentication at the immich API.                                             |           |
+| immich_api_key                   | API key that is used for authentication at the [immich API](media-sources.md#immich-api)               |           |
 | immich_shared_albums             | Show images of shared immich albums?                                                                   | true      |
 | immich_album_names               | Only show images from these immich albums.                                                             | []        |
 | immich_tag_names                 | Only show images with this tags.                                                                       | []        |
 | immich_persons                   | Only show images with this persons.                                                                    | []        |
-| immich_memory                    | Only show today memories                                                                               | false     |
+| immich_memories                  | Only show today memories.                                                                              | false     |
 | immich_resolution                | The resolution to use for loading images from immich (possible values are: preview / original).        | preview   |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
