@@ -2643,8 +2643,8 @@ function initWallpanel() {
 		}
 
 		updateImageFromMediaEntity(img) {
-			const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
-			const entity = this.hass.states[imageEntity];
+			const mediaEntity = config.image_url.replace(/^media-entity:\/\//, "");
+			const entity = this.hass.states[mediaEntity];
 			if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
 				return;
 			}
@@ -2802,18 +2802,18 @@ function initWallpanel() {
 			const sourceType = imageSourceType();
 
 			if (sourceType === "media-entity") {
-				const imageEntity = config.image_url.replace(/^media-entity:\/\//, "");
-				const entity = this.hass.states[imageEntity];
+				const mediaEntity = config.image_url.replace(/^media-entity:\/\//, "");
+				const entity = this.hass.states[mediaEntity];
 				if (!entity) {
 					return;
 				}
 
 				if (mediaEntityState != entity.state) {
-					logger.debug(`Media entity ${imageEntity} state has changed`);
+					logger.debug(`Media entity ${mediaEntity} state has changed`);
 				} else if (eventType == "entity_update") {
 					return;
 				} else if (config.media_entity_load_unchanged) {
-					logger.debug(`Media entity ${imageEntity} state unchanged, but media_entity_load_unchanged = true`);
+					logger.debug(`Media entity ${mediaEntity} state unchanged, but media_entity_load_unchanged = true`);
 				} else {
 					this.lastImageUpdate = Date.now();
 					this.restartProgressBarAnimation();
