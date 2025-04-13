@@ -47,6 +47,7 @@ You can set the following configuration parameters for every individual Home Ass
 | immich_persons                   | Only show images with this persons.                                                                    | []        |
 | immich_memories                  | Only show today memories.                                                                              | false     |
 | immich_resolution                | The resolution to use for loading images from immich (possible values are: preview / original).        | preview   |
+| immich_skip_videos               | Do not show videos.                                                                                    | false     |
 | image_excludes                   | List of regular expressions for excluding files and directories from local media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
 | image_background                 | If set to `image`, the current image is also displayed as the background over the entire screen. Use the `wallpanel-screensaver-image-background` class to style the background. | color |

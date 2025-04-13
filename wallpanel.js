@@ -49,6 +49,7 @@ const defaultConfig = {
 	immich_persons: [],
 	immich_memories: false,
 	immich_resolution: "preview",
+	immich_skip_videos: false,
 	image_fit: "cover", // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: "sorted", // sorted / random
@@ -2235,7 +2236,12 @@ function initWallpanel() {
 			const apiUrl = config.image_url.replace(/^immich\+/, "");
 
 			function processAssets(assets, folderName = null) {
-				assets.forEach((asset) => {
+				assets.filter((asset) => {
+					if(asset.type.toLowerCase() === 'video'){
+						return !config.immich_skip_videos
+					}
+					return true
+				}).forEach((asset) => {
 					logger.debug(asset);
 					const assetType = asset.type.toLowerCase();
 					if (["image", "video"].includes(assetType)) {
