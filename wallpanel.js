@@ -2094,7 +2094,7 @@ function initWallpanel() {
 				try {
 					updateFunction.bind(wp)(preload, preloadCallback);
 				} catch (e) {
-					logger.warning("Failed to update image list, will retry in 3 seconds", e);
+					logger.warn("Failed to update image list, will retry in 3 seconds", e);
 					setTimeout(doUpdateImageList, 3000);
 				}
 			}
