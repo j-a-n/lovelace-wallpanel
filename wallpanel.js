@@ -2069,33 +2069,41 @@ function initWallpanel() {
 		updateImageList(preload = false, preloadCallback = null) {
 			if (!config.image_url) return;
 
+			const wp = this;
 			let updateFunction = null;
 			if (imageSourceType() == "unsplash-api") {
-				updateFunction = this.updateImageListFromUnsplashAPI;
+				updateFunction = wp.updateImageListFromUnsplashAPI;
 			} else if (imageSourceType() == "immich-api") {
-				updateFunction = this.updateImageListFromImmichAPI;
+				updateFunction = wp.updateImageListFromImmichAPI;
 			} else if (imageSourceType() == "media-source") {
-				updateFunction = this.updateImageListFromMediaSource;
+				updateFunction = wp.updateImageListFromMediaSource;
 			} else {
 				return;
 			}
-
-			const wp = this;
-			if (this.updatingImageList) {
-				this.cancelUpdatingImageList = true;
+			
+			function doUpdateImageList() {
+				wp.cancelUpdatingImageList = false;
+				try {
+					updateFunction.bind(wp)(preload, preloadCallback);
+				} catch (e) {
+					logger.warning("Failed to update image list, will retry in 3 seconds", e);
+					setTimeout(doUpdateImageList, 3000);
+				}
+			}
+			
+			if (wp.updatingImageList) {
+				wp.cancelUpdatingImageList = true;
 				const start = Date.now();
 				function _checkUpdating() {
-					if (!this.updatingImageList || Date.now() - start >= 5000) {
-						this.cancelUpdatingImageList = false;
-						updateFunction.bind(wp)(preload, preloadCallback);
+					if (!wp.updatingImageList || Date.now() - start >= 5000) {
+						doUpdateImageList()
 					} else {
 						setTimeout(_checkUpdating, 50);
 					}
 				}
 				setTimeout(_checkUpdating, 1);
 			} else {
-				this.cancelUpdatingImageList = false;
-				updateFunction.bind(wp)(preload, preloadCallback);
+				doUpdateImageList();
 			}
 		}
 
