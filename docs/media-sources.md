@@ -60,14 +60,22 @@ For example:
 `media-source://synology_dsm/18C0PEN253705/19`
 
 ### Exclude files
-To exclude files and directories from a local media source, the configuration option `image_excludes` can be used.
-A list of regular expressions is specified here.
+To exclude files and directories from a local media source, use the `exclude_filenames` configuration option.
+This option accepts a list of regular expressions.
+It was previously named `image_excludes`.
 
 **Example**
 ```yaml
 image_excludes:
-  - '\.tif$'
+  - '\\.tif$'
   - '/@eaDir'
+```
+
+You can also exclude specific media types (currently image and video) using the `exclude_media_types` option.
+**Example**
+```yaml
+exclude_media_types:
+  - video
 ```
 
 ## Entity with entity_picture attribute
