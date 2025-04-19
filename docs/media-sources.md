@@ -66,7 +66,7 @@ It was previously named `image_excludes`.
 
 **Example**
 ```yaml
-image_excludes:
+exclude_filenames:
   - '\\.tif$'
   - '/@eaDir'
 ```
