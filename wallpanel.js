@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.44.0";
+const version = "4.44.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -463,7 +463,7 @@ function mergeConfig(target, ...sources) {
 				function replacer(match, entityId) {
 					if (!(entityId in configEntityStates)) {
 						configEntityStates[entityId] = "";
-						const entity = elHass.__hass.states[entityId];
+						const entity = (elHass.hass || elHass.__hass).states[entityId];
 						if (entity) {
 							configEntityStates[entityId] = entity.state;
 						} else {
@@ -551,10 +551,10 @@ function updateConfig() {
 	if (
 		config.profiles &&
 		profile_entity &&
-		elHass.__hass.states[profile_entity] &&
-		config.profiles[elHass.__hass.states[profile_entity].state]
+		(elHass.hass || elHass.__hass).states[profile_entity] &&
+		config.profiles[(elHass.hass || elHass.__hass).states[profile_entity].state]
 	) {
-		const profile = elHass.__hass.states[profile_entity].state;
+		const profile = (elHass.hass || elHass.__hass).states[profile_entity].state;
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from entity state: ${profile}`);
 	}
@@ -859,7 +859,7 @@ function initWallpanel() {
 			this.cameraMotionDetection = new CameraMotionDetection();
 
 			this.lovelace = null;
-			this.__hass = elHass.__hass;
+			this.__hass = elHass.hass || elHass.__hass;
 			this.__cards = [];
 			this.__badges = [];
 			this.__views = [];
@@ -1390,7 +1390,7 @@ function initWallpanel() {
 			if (!haPanelLovelace) {
 				return;
 			}
-			this.lovelace = haPanelLovelace.__lovelace;
+			this.lovelace = haPanelLovelace.lovelace || haPanelLovelace.__lovelace;
 			this.infoBoxContentCreatedDate = new Date();
 			this.infoBoxContent.innerHTML = "";
 			this.__badges = [];
@@ -2060,7 +2060,7 @@ function initWallpanel() {
 					if (!options) {
 						options = { year: "numeric", month: "2-digit", day: "2-digit" };
 					}
-					val = date.toLocaleDateString(elHass.__hass.locale.language, options);
+					val = date.toLocaleDateString((elHass.hass || elHass.__hass).locale.language, options);
 				}
 				if (typeof val === "object") {
 					val = JSON.stringify(val);
@@ -3567,8 +3567,8 @@ function waitForEnv(callback, startTime = null) {
 }
 
 function startup() {
-	userId = elHass.__hass.user.id;
-	userDisplayname = elHass.__hass.user.name;
+	userId = (elHass.hass || elHass.__hass).user.id;
+	userDisplayname = (elHass.hass || elHass.__hass).user.name;
 	logger.debug(`userId: ${userId}, userName: ${userName}, userDisplayname: ${userDisplayname}`);
 
 	updateConfig();
@@ -3597,11 +3597,11 @@ function startup() {
 			setTimeout(locationChanged, 30);
 		});
 	}
-	elHass.__hass.connection.subscribeEvents(function (event) {
+	(elHass.hass || elHass.__hass).connection.subscribeEvents(function (event) {
 		logger.debug("lovelace_updated", event);
 		const dashboard = event.data.url_path ? event.data.url_path : "lovelace";
 		if (dashboard == activePanel) {
-			elHass.__hass.connection
+			(elHass.hass || elHass.__hass).connection
 				.sendMessagePromise({
 					type: "lovelace/config",
 					url_path: event.data.url_path
