@@ -50,6 +50,7 @@ const defaultConfig = {
 	immich_memories: false,
 	immich_resolution: "preview",
 	image_fit: "cover", // cover / contain / fill
+	image_fit_portrait: "contain", // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: "sorted", // sorted / random
 	exclude_filenames: [], // Excluded filenames (regex)
@@ -2919,6 +2920,15 @@ function initWallpanel() {
 			}
 		}
 
+		getImageFit(width, height) {
+			if (width >= height) {
+				return config.image_fit;
+			}
+			else {
+				return config.image_fit_portrait;
+			}
+		}
+
 		_switchActiveImage(crossfadeMillis = null) {
 			if (this.afterFadeoutTimer) {
 				clearTimeout(this.afterFadeoutTimer);
@@ -2944,6 +2954,9 @@ function initWallpanel() {
 			}
 			logger.debug(`Switching active image to '${newActive.id}'`);
 
+			// Determine if the new image is portrait, and set the appropriate image_fit
+			newImg.style.objectFit = this.getImageFit(newImg.naturalWidth, newImg.naturalHeight);
+			
 			this.setImageURLEntityState();
 			this.setImageDataInfo(newImg);
 
@@ -4314,7 +4327,7 @@ function readThumbnailImage(dataView, tiffStart, firstIFDOffset, bigEnd) {
 		// logger.log('******** IFD1Offset is outside the bounds of the DataView ********');
 		return {};
 	}
-	// logger.log('*******  thumbnail IFD offset (IFD1) is: %s', IFD1OffsetPointer);
+	// logger.log('*******	thumbnail IFD offset (IFD1) is: %s', IFD1OffsetPointer);
 
 	var thumbTags = readTags(dataView, tiffStart, tiffStart + IFD1OffsetPointer, IFD1Tags, bigEnd);
 
@@ -4371,7 +4384,7 @@ function getStringFromDB(buffer, start, length) {
 }
 
 // adopted from:
-//   http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
+//	 http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
 
 /* utf.js - UTF-8 <=> UTF-16 convertion
  *
