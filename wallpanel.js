@@ -3039,6 +3039,11 @@ function initWallpanel() {
 			this.setupScreensaver();
 			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
+			
+			//set the correct objectFit for the first picture
+			var firstImage = this.getActiveImageElement();
+			firstImage.style.objectFit = this.getImageFit(firstImage.naturalWidth, firstImage.naturalHeight); 
+
 			this.restartProgressBarAnimation();
 			this.restartKenBurnsEffect();
 
