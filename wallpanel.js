@@ -633,9 +633,12 @@ function isActive() {
 		logger.debug(`Wallpanel not enabled on current tab ${activeTab}`);
 		return false;
 	}
-	if (config.disable_screensaver_when_assist_active && elHass.shadowRoot.querySelector("ha-voice-command-dialog")) {
-		logger.debug("Assist is active, wallpanel disabled");
-		return false;
+	if (config.disable_screensaver_when_assist_active) {
+		const voiceCommandDialog = elHass.shadowRoot.querySelector("ha-voice-command-dialog");
+		if (voiceCommandDialog && voiceCommandDialog.shadowRoot && voiceCommandDialog.shadowRoot.querySelector("ha-dialog")) {
+			logger.debug("Assist is active, wallpanel disabled");
+			return false;
+		}
 	}
 	if (
 		wallpanel &&
