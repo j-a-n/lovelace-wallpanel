@@ -50,7 +50,8 @@ You can set the following configuration parameters for every individual Home Ass
 | immich_resolution                | The resolution to use for loading images from immich (possible values are: preview / original).        | preview   |
 | exclude_filenames                | List of regular expressions for excluding files and directories from media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_types              | List of media types to exlcude media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
-| image_fit                        | Value to be used for the CSS-property 'object-fit' of the images (possible values are: cover / contain / fill / ...). | cover |
+| image_fit_landscape              | Value to be used for the CSS-property 'object-fit' for landscape images (possible values are: cover / contain / fill / ...). | cover |
+| image_fit_portrait               | Value to be used for the CSS-property 'object-fit' for portrait images (possible values are: cover / contain / fill / ...). | contain |
 | image_background                 | If set to `image`, the current image is also displayed as the background over the entire screen. Use the `wallpanel-screensaver-image-background` class to style the background. | color |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.                           | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
@@ -120,7 +121,7 @@ wallpanel:
   control_reactivation_time: 1.0
   screensaver_stop_navigation_path: /lovelace/default_view
   image_url: 'http://picsum.photos/${width}/${height}?random=${timestamp}'
-  image_fit: cover
+  image_fit_landscape: cover
   image_list_update_interval: 3600
   image_order: 'sorted'
   image_excludes: []

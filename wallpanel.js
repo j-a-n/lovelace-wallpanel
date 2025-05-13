@@ -50,7 +50,7 @@ const defaultConfig = {
 	immich_persons: [],
 	immich_memories: false,
 	immich_resolution: "preview",
-	image_fit: "cover", // cover / contain / fill
+	image_fit_landscape: "cover", // cover / contain / fill
 	image_fit_portrait: "contain", // cover / contain / fill
 	image_list_update_interval: 3600,
 	image_order: "sorted", // sorted / random
@@ -457,6 +457,12 @@ function mergeConfig(target, ...sources) {
 				);
 				key = "exclude_filenames";
 			}
+			if (key == "image_fit") {
+				logger.warn(
+					"The configuration option 'image_fit' has been renamed to 'image_fit_landscape'. Please update your wallpanel configuration accordingly."
+				);
+				key = "image_fit_landscape";
+			}
 
 			if (isObject(val)) {
 				if (!target[key]) Object.assign(target, { [key]: {} });
@@ -636,7 +642,11 @@ function isActive() {
 	}
 	if (config.disable_screensaver_when_assist_active) {
 		const voiceCommandDialog = elHass.shadowRoot.querySelector("ha-voice-command-dialog");
-		if (voiceCommandDialog && voiceCommandDialog.shadowRoot && voiceCommandDialog.shadowRoot.querySelector("ha-dialog")) {
+		if (
+			voiceCommandDialog &&
+			voiceCommandDialog.shadowRoot &&
+			voiceCommandDialog.shadowRoot.querySelector("ha-dialog")
+		) {
 			logger.debug("Assist is active, wallpanel disabled");
 			return false;
 		}
@@ -1208,8 +1218,8 @@ function initWallpanel() {
 			this.style.transition = `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out`;
 			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
 			this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
-			this.imageOne.style.objectFit = config.image_fit;
-			this.imageTwo.style.objectFit = config.image_fit;
+			this.imageOne.style.objectFit = config.image_fit_landscape;
+			this.imageTwo.style.objectFit = config.image_fit_landscape;
 
 			if (config.info_animation_duration_x) {
 				this.infoBoxPosX.style.animation = `moveX ${config.info_animation_duration_x}s ${config.info_animation_timing_function_x} infinite alternate`;
@@ -2930,11 +2940,9 @@ function initWallpanel() {
 
 		getImageFit(width, height) {
 			if (width >= height) {
-				return config.image_fit;
+				return config.image_fit_landscape;
 			}
-			else {
-				return config.image_fit_portrait;
-			}
+			return config.image_fit_portrait;
 		}
 
 		_switchActiveImage(crossfadeMillis = null) {
@@ -2962,9 +2970,6 @@ function initWallpanel() {
 			}
 			logger.debug(`Switching active image to '${newActive.id}'`);
 
-			// Determine if the new image is portrait, and set the appropriate image_fit
-			newImg.style.objectFit = this.getImageFit(newImg.naturalWidth, newImg.naturalHeight);
-			
 			this.setImageURLEntityState();
 			this.setImageDataInfo(newImg);
 
@@ -2974,6 +2979,8 @@ function initWallpanel() {
 			if (curActive.style.opacity != 0) {
 				curActive.style.opacity = 0;
 			}
+			// Determine if the new image is landscape or portrait, and set the appropriate image_fit
+			newImg.style.objectFit = this.getImageFit(newImg.naturalWidth, newImg.naturalHeight);
 
 			this.startPlayingActiveMedia();
 			this.restartProgressBarAnimation();
@@ -3047,10 +3054,10 @@ function initWallpanel() {
 			this.setupScreensaver();
 			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
-			
-			//set the correct objectFit for the first picture
-			var firstImage = this.getActiveImageElement();
-			firstImage.style.objectFit = this.getImageFit(firstImage.naturalWidth, firstImage.naturalHeight); 
+
+			// Set the correct objectFit for the active image
+			const activeImage = this.getActiveImageElement();
+			activeImage.style.objectFit = this.getImageFit(activeImage.naturalWith, activeImage.naturalHeight);
 
 			this.restartProgressBarAnimation();
 			this.restartKenBurnsEffect();
