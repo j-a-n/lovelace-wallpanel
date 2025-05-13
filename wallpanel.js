@@ -3510,10 +3510,10 @@ function waitForEnv(callback, startTime = null) {
 	const startupSeconds = (now - startTime) / 1000;
 
 	elHass = document.querySelector("body > home-assistant");
-	if (elHass) {
+	if (elHass && elHass.shadowRoot) {
 		elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 	}
-	if (!elHass || !elHaMain) {
+	if (!elHass || !elHass.shadowRoot || !elHaMain) {
 		if (startupSeconds >= 5.0) {
 			logger.error(
 				`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`
