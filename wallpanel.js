@@ -38,6 +38,7 @@ const defaultConfig = {
 	stop_screensaver_on_location_change: true,
 	disable_screensaver_on_browser_mod_popup: false,
 	disable_screensaver_on_browser_mod_popup_func: "",
+	disable_screensaver_when_assist_active: true,
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_url_entity: "",
@@ -630,6 +631,10 @@ function isActive() {
 		!config.enabled_on_tabs.includes(activeTab)
 	) {
 		logger.debug(`Wallpanel not enabled on current tab ${activeTab}`);
+		return false;
+	}
+	if (config.disable_screensaver_when_assist_active && elHass.shadowRoot.querySelector("ha-voice-command-dialog")) {
+		logger.debug("Assist is active, wallpanel disabled");
 		return false;
 	}
 	if (
