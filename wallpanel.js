@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.45.0";
+const version = "4.46.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -127,9 +127,9 @@ const classStyles = {
 		"background-color": "white"
 	}
 };
-const imageInfoCacheMaxSize = 1000;
-let imageInfoCache = {};
-const imageInfoCacheKeys = [];
+const mediaInfoCacheMaxSize = 1000;
+let mediaInfoCache = {};
+const mediaInfoCacheKeys = [];
 const configEntityStates = {};
 let mediaEntityState = null;
 let elHass = null;
@@ -575,10 +575,10 @@ function updateConfig() {
 		if (config.image_url.startsWith("/")) {
 			config.image_url = `media-source://media_source${config.image_url}`;
 		}
-		if (imageSourceType() == "media-source") {
+		if (mediaSourceType() == "media-source") {
 			config.image_url = config.image_url.replace(/\/+$/, "");
 		}
-		if (imageSourceType() == "unsplash-api" && config.image_list_update_interval < 90) {
+		if (mediaSourceType() == "unsplash-api" && config.image_list_update_interval < 90) {
 			// Unsplash API currently places a limit of 50 requests per hour
 			config.image_list_update_interval = 90;
 		}
@@ -667,7 +667,7 @@ function isActive() {
 	return true;
 }
 
-function imageSourceType() {
+function mediaSourceType() {
 	if (!config.show_images || !config.image_url) {
 		return "";
 	}
@@ -848,13 +848,13 @@ function initWallpanel() {
 		constructor() {
 			super();
 
-			this.imageList = [];
-			this.imageIndex = -1;
-			this.imageListDirection = "forwards"; // forwards, backwards
-			this.lastImageListUpdate;
-			this.updatingImageList = false;
-			this.cancelUpdatingImageList = false;
-			this.lastImageUpdate = 0;
+			this.mediaList = [];
+			this.mediaIndex = -1;
+			this.mediaListDirection = "forwards"; // forwards, backwards
+			this.lastMediaListUpdate;
+			this.updatingMediaList = false;
+			this.updatingMedia = false;
+			this.lastMediaUpdate = 0;
 			this.messageBoxTimeout = null;
 			this.blockEventsUntil = 0;
 			this.screensaverStartedAt;
@@ -936,8 +936,8 @@ function initWallpanel() {
 					view.hass = this.hass;
 				});
 
-				if (imageSourceType() == "media-entity") {
-					this.switchActiveImage("entity_update");
+				if (mediaSourceType() == "media-entity") {
+					this.switchActiveMedia("entity_update");
 				}
 			}
 		}
@@ -971,14 +971,14 @@ function initWallpanel() {
 		setImageURLEntityState() {
 			const image_url_entity = config.image_url_entity;
 			if (!image_url_entity || !this.__hass.states[image_url_entity]) return;
-			const activeImage = this.getActiveImageElement();
-			if (!activeImage || !activeImage.imageUrl) return;
+			const activeElement = this.getActiveMediaElement();
+			if (!activeElement || !activeElement.mediaUrl) return;
 
-			logger.debug("Updating image_url_entity", image_url_entity, activeImage.imageUrl);
+			logger.debug("Updating image_url_entity", image_url_entity, activeElement.mediaUrl);
 			this.__hass
 				.callService("input_text", "set_value", {
 					entity_id: image_url_entity,
-					value: activeImage.imageUrl
+					value: activeElement.mediaUrl
 				})
 				.then(
 					(result) => {
@@ -1588,92 +1588,63 @@ function initWallpanel() {
 			if (!config.image_animation_ken_burns) {
 				return;
 			}
-			const activeImage = this.getActiveImageElement();
-			activeImage.style.animation = "none";
+			const activeElement = this.getActiveMediaElement();
+			activeElement.style.animation = "none";
 			let delay = Math.floor(config.image_animation_ken_burns_delay * 1000);
 			if (delay < 50) {
 				delay = 50;
 			}
 			setTimeout(function () {
-				activeImage.style.animation = `kenBurnsEffect ${config.display_time + Math.ceil(config.crossfade_time * 2) + 1}s ease`;
+				activeElement.style.animation = `kenBurnsEffect ${config.display_time + Math.ceil(config.crossfade_time * 2) + 1}s ease`;
 			}, delay);
 		}
 
-		getActiveImageElement() {
+		getActiveMediaElement() {
 			if (this.imageOneContainer.style.opacity == 1) {
 				return this.imageOne;
 			}
 			return this.imageTwo;
 		}
 
-		getInactiveImageElement() {
+		getInactiveMediaElement() {
 			if (this.imageOneContainer.style.opacity == 1) {
 				return this.imageTwo;
 			}
 			return this.imageOne;
 		}
 
-		handleMediaError(medialElem, error) {
-			medialElem.setAttribute("data-loading", false);
-			logger.error("Error while loding image:", error);
-
-			if (medialElem.imageUrl) {
-				const idx = this.imageList.indexOf(medialElem.imageUrl);
-				if (idx > -1) {
-					logger.debug(`Removing media from list: ${medialElem.imageUrl}`);
-					this.imageList.splice(idx, 1);
-				}
-				this.updateImage(medialElem);
-			} else {
-				this.displayMessage(`Failed to load media: ${medialElem.src}`, 5000);
-			}
+		handleMediaError(element, error) {
+			// Example: "TypeError: Failed to fetch"
+			// This is most likely due to a network error.
+			// The network error can be caused by power-saving settings on mobile devices.
+			// Make sure the "Keep WiFi on during sleep" option is enabled.
+			// Set your WiFi connection to "not metered".
+			logger.error(`Failed to load media: ${element.mediaUrl}:`, error);
+			this.displayMessage(`Failed to load media: ${element.mediaUrl}: ${error}`, 5000);
 		}
 
-		loadBackgroundImage(medialElem) {
-			const isVideo = medialElem.tagName.toLowerCase() === "video";
-			let srcImageUrl = medialElem.src;
-			if (isVideo) {
+		loadBackgroundImage(element) {
+			let srcMediaUrl = element.src;
+			if (element.tagName.toLowerCase() === "video") {
 				// Capture the current frame of the video as a background image
 				const canvas = document.createElement("canvas");
-				canvas.width = medialElem.videoWidth;
-				canvas.height = medialElem.videoHeight;
+				canvas.width = element.videoWidth;
+				canvas.height = element.videoHeight;
 
 				const ctx = canvas.getContext("2d");
-				ctx.drawImage(medialElem, 0, 0, canvas.width, canvas.height);
+				ctx.drawImage(element, 0, 0, canvas.width, canvas.height);
 				try {
-					srcImageUrl = canvas.toDataURL("image/png");
+					srcMediaUrl = canvas.toDataURL("image/png");
 				} catch (err) {
-					srcImageUrl = null;
+					srcMediaUrl = null;
 					logger.error("Error extracting canvas image:", err);
 				}
 			}
 			let cont = this.imageOneBackground;
-			if (medialElem == this.imageTwo) {
+			if (element == this.imageTwo) {
 				cont = this.imageTwoBackground;
 			}
-			cont.style.backgroundImage = srcImageUrl ? `url(${srcImageUrl})` : "";
-		}
-
-		handleMediaLoaded(medialElem) {
-			medialElem.setAttribute("data-loading", false);
-			const isVideo = medialElem.tagName.toLowerCase() === "video";
-			const wp = this;
-			if (config.image_background === "image") {
-				if (isVideo) {
-					if (medialElem.readyState >= medialElem.HAVE_CURRENT_DATA) {
-						wp.loadBackgroundImage(medialElem);
-					} else {
-						medialElem.addEventListener("canplay", function () {
-							wp.loadBackgroundImage(medialElem);
-						});
-					}
-				} else {
-					wp.loadBackgroundImage(medialElem);
-				}
-			}
-			if (!isVideo && config.show_image_info && /.*\.jpe?g$/i.test(medialElem.imageUrl)) {
-				wp.fetchEXIFInfo(medialElem);
-			}
+			cont.style.backgroundImage = srcMediaUrl ? `url(${srcMediaUrl})` : "";
 		}
 
 		connectedCallback() {
@@ -1700,7 +1671,6 @@ function initWallpanel() {
 
 			this.imageOne = document.createElement("img");
 			this.imageOne.id = "wallpanel-screensaver-image-one";
-			this.imageOne.setAttribute("data-loading", false);
 
 			this.imageOneInfoContainer = document.createElement("div");
 			this.imageOneInfoContainer.id = "wallpanel-screensaver-image-one-info-container";
@@ -1724,7 +1694,6 @@ function initWallpanel() {
 
 			this.imageTwo = document.createElement("img");
 			this.imageTwo.id = "wallpanel-screensaver-image-two";
-			this.imageTwo.setAttribute("data-loading", false);
 
 			this.imageTwoInfoContainer = document.createElement("div");
 			this.imageTwoInfoContainer.id = "wallpanel-screensaver-image-two-info-container";
@@ -1839,41 +1808,50 @@ function initWallpanel() {
 			});
 			infoBoxResizeObserver.observe(this.infoBoxContent);
 
-			this.reconfigure();
+			//////////////////this.reconfigure();
 			// Correct possibly incorrect entity state
 			this.setScreensaverEntityState();
 		}
 
 		reconfigure(oldConfig) {
+			const oldConfigAvailable = oldConfig && Object.keys(oldConfig).length > 0;
+
 			this.setDefaultStyle();
 			this.updateStyle();
 			if (this.screensaverRunning()) {
 				this.createInfoBoxContent();
 			}
 
-			if (!config.info_move_interval && oldConfig && oldConfig.info_move_interval) {
+			if (!config.info_move_interval && oldConfigAvailable && oldConfig.info_move_interval) {
 				wallpanel.moveInfoBox(0, 0);
 			}
 
-			if (config.show_images && (!oldConfig || !oldConfig.show_images || oldConfig.image_url != config.image_url)) {
-				let switchImages = false;
-				if (oldConfig && Object.keys(oldConfig).length) {
-					switchImages = true;
+			if (
+				config.show_images &&
+				(!this.mediaList ||
+					!this.mediaList.length ||
+					!oldConfigAvailable ||
+					!oldConfig.show_images ||
+					oldConfig.image_url != config.image_url)
+			) {
+				const wp = this;
+
+				let switchMedia = false;
+				if (oldConfigAvailable) {
+					switchMedia = true;
 				}
 
-				function preloadCallback(wp) {
-					if (switchImages) {
-						wp.switchActiveImage("init");
-					} else {
-						wp.startPlayingActiveMedia();
+				const imgUrlChanged = oldConfig.image_url != config.image_url;
+				if (imgUrlChanged) {
+					this.mediaList = [];
+					this.mediaIndex = -1;
+				}
+
+				this.updateMediaList(function () {
+					if (switchMedia) {
+						wp.switchActiveMedia("reconfigure");
 					}
-				}
-				if (["immich-api", "unsplash-api", "media-source"].includes(imageSourceType())) {
-					this.updateImageList(true, preloadCallback);
-				} else {
-					this.imageList = [];
-					this.preloadImages(preloadCallback);
-				}
+				}, imgUrlChanged);
 			}
 
 			if (config.disable_screensaver_on_browser_mod_popup_func) {
@@ -1918,23 +1896,23 @@ function initWallpanel() {
 
 		fetchEXIFInfo(img) {
 			const wp = this;
-			if (imageInfoCache[img.imageUrl]) {
+			if (mediaInfoCache[img.mediaUrl]) {
 				return;
 			}
-			if (imageInfoCacheKeys.length >= imageInfoCacheMaxSize) {
-				const oldest = imageInfoCacheKeys.shift();
-				if (imageInfoCache[oldest]) {
-					delete imageInfoCache[oldest];
+			if (mediaInfoCacheKeys.length >= mediaInfoCacheMaxSize) {
+				const oldest = mediaInfoCacheKeys.shift();
+				if (mediaInfoCache[oldest]) {
+					delete mediaInfoCache[oldest];
 				}
 			}
 
 			const tmpImg = document.createElement("img");
 			tmpImg.src = img.src;
-			tmpImg.imageUrl = img.imageUrl;
+			tmpImg.mediaUrl = img.mediaUrl;
 			getImageData(tmpImg, function () {
 				logger.debug("EXIF data:", tmpImg.exifdata);
-				imageInfoCacheKeys.push(tmpImg.imageUrl);
-				imageInfoCache[tmpImg.imageUrl] = tmpImg.exifdata;
+				mediaInfoCacheKeys.push(tmpImg.mediaUrl);
+				mediaInfoCache[tmpImg.mediaUrl] = tmpImg.exifdata;
 				wp.setImageDataInfo(tmpImg);
 
 				const exifLong = tmpImg.exifdata["GPSLongitude"];
@@ -1951,21 +1929,21 @@ function initWallpanel() {
 							const info = JSON.parse(xhr.responseText);
 							logger.debug("nominatim data:", info);
 							if (info && info.address) {
-								imageInfoCache[tmpImg.imageUrl].address = info.address;
+								mediaInfoCache[tmpImg.mediaUrl].address = info.address;
 								wp.setImageDataInfo(tmpImg);
 							}
 						} else {
 							logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
-							delete imageInfoCache[tmpImg.imageUrl];
+							delete mediaInfoCache[tmpImg.mediaUrl];
 						}
 					};
 					xhr.onerror = function (event) {
 						logger.error("nominatim error:", event);
-						delete imageInfoCache[tmpImg.imageUrl];
+						delete mediaInfoCache[tmpImg.mediaUrl];
 					};
 					xhr.ontimeout = function (event) {
 						logger.error("nominatim timeout:", event);
-						delete imageInfoCache[tmpImg.imageUrl];
+						delete mediaInfoCache[tmpImg.mediaUrl];
 					};
 					xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
 					xhr.timeout = 15000;
@@ -1975,13 +1953,13 @@ function initWallpanel() {
 		}
 
 		setImageDataInfo(img) {
-			if (!img || !img.imageUrl) {
+			if (!img || !img.mediaUrl) {
 				return;
 			}
 			const infoElements = [];
-			if (this.imageOne.imageUrl == img.imageUrl) {
+			if (this.imageOne.mediaUrl == img.mediaUrl) {
 				infoElements.push(this.imageOneInfo);
-			} else if (this.imageTwo.imageUrl == img.imageUrl) {
+			} else if (this.imageTwo.mediaUrl == img.mediaUrl) {
 				infoElements.push(this.imageTwoInfo);
 			}
 			if (infoElements.length == 0) {
@@ -1996,33 +1974,33 @@ function initWallpanel() {
 				return;
 			}
 
-			let imageInfo = imageInfoCache[img.imageUrl];
-			if (!imageInfo) {
-				imageInfo = {};
+			let mediaInfo = mediaInfoCache[img.mediaUrl];
+			if (!mediaInfo) {
+				mediaInfo = {};
 			}
-			if (!imageInfo.image) {
-				imageInfo.image = {};
+			if (!mediaInfo.image) {
+				mediaInfo.image = {};
 			}
-			if (!imageInfo.image.url) {
-				imageInfo.image.url = img.imageUrl;
+			if (!mediaInfo.image.url) {
+				mediaInfo.image.url = img.mediaUrl;
 			}
-			if (!imageInfo.image.path) {
-				imageInfo.image.path = img.imageUrl.replace(/^[^:]+:\/\/[^/]+/, "");
+			if (!mediaInfo.image.path) {
+				mediaInfo.image.path = img.mediaUrl.replace(/^[^:]+:\/\/[^/]+/, "");
 			}
-			if (!imageInfo.image.relativePath) {
-				imageInfo.image.relativePath = img.imageUrl.replace(config.image_url, "").replace(/^\/+/, "");
+			if (!mediaInfo.image.relativePath) {
+				mediaInfo.image.relativePath = img.mediaUrl.replace(config.image_url, "").replace(/^\/+/, "");
 			}
-			if (!imageInfo.image.filename) {
-				imageInfo.image.filename = img.imageUrl.replace(/^.*[\\/]/, "");
+			if (!mediaInfo.image.filename) {
+				mediaInfo.image.filename = img.mediaUrl.replace(/^.*[\\/]/, "");
 			}
-			if (!imageInfo.image.folderName) {
-				imageInfo.image.folderName = "";
-				const parts = img.imageUrl.split("/");
+			if (!mediaInfo.image.folderName) {
+				mediaInfo.image.folderName = "";
+				const parts = img.mediaUrl.split("/");
 				if (parts.length >= 2) {
-					imageInfo.image.folderName = parts[parts.length - 2];
+					mediaInfo.image.folderName = parts[parts.length - 2];
 				}
 			}
-			logger.debug("Image info:", imageInfo);
+			logger.debug("Image info:", mediaInfo);
 
 			let html = config.image_info_template;
 			html = html.replace(/\${([^}]+)}/g, (match, tags) => {
@@ -2057,7 +2035,7 @@ function initWallpanel() {
 				for (let i = 0; i < tagList.length; i++) {
 					tag = tagList[i];
 					const keys = tag.replace(/\s/g, "").split(".");
-					val = imageInfo;
+					val = mediaInfo;
 					keys.forEach((key) => {
 						if (val) {
 							val = val[key];
@@ -2093,48 +2071,65 @@ function initWallpanel() {
 			});
 		}
 
-		updateImageList(preload = false, preloadCallback = null) {
+		async updateMediaList(callback = null, force = false, retryCount = 0) {
 			if (!config.image_url) return;
+
+			if (!force) {
+				if (new Date().getTime() - this.lastMediaListUpdate < config.image_list_update_interval * 1000) {
+					/*
+					if (callback) {
+						callback();
+					}
+					*/
+					return;
+				}
+			}
 
 			const wp = this;
 			let updateFunction = null;
-			if (imageSourceType() == "unsplash-api") {
-				updateFunction = wp.updateImageListFromUnsplashAPI;
-			} else if (imageSourceType() == "immich-api") {
-				updateFunction = wp.updateImageListFromImmichAPI;
-			} else if (imageSourceType() == "media-source") {
-				updateFunction = wp.updateImageListFromMediaSource;
+			const sourceType = mediaSourceType();
+
+			if (sourceType == "unsplash-api") {
+				updateFunction = wp.updateMediaListFromUnsplashAPI;
+			} else if (sourceType == "immich-api") {
+				updateFunction = wp.updateMediaListFromImmichAPI;
+			} else if (sourceType == "media-source") {
+				updateFunction = wp.updateMediaListFromMediaSource;
 			} else {
+				this.mediaList = [];
+				if (callback) {
+					callback();
+				}
 				return;
 			}
 
-			function doUpdateImageList() {
-				wp.cancelUpdatingImageList = false;
-				try {
-					updateFunction.bind(wp)(preload, preloadCallback);
-				} catch (e) {
-					logger.warn("Failed to update image list, will retry in 3 seconds", e);
-					setTimeout(doUpdateImageList, 3000);
+			this.updatingMediaList = true;
+			this.lastMediaListUpdate = Date.now();
+			try {
+				await updateFunction.bind(wp)();
+				logger.debug(`Image list from ${sourceType} is now:`, wp.mediaList);
+				if (callback) {
+					callback();
+				}
+			} catch (error) {
+				const maxRetries = 3;
+				const retryDelay = 3000; // 3 seconds
+				logger.warn(`Failed to update image list from ${sourceType}:`, error);
+				if (retryCount < maxRetries) {
+					logger.warn(
+						`Retrying image list update in ${retryDelay / 1000} seconds (attempt ${retryCount + 1}/${maxRetries})...`
+					);
+					setTimeout(() => wp.updateMediaList(callback, true, retryCount + 1), retryDelay);
+				} else {
+					const errorMsg = `Failed to update image list from ${config.image_url} after ${maxRetries} retries: ${error.message || stringify(error)}`;
+					logger.error(errorMsg);
+					wp.displayMessage(errorMsg, 10000);
 				}
 			}
-
-			if (wp.updatingImageList) {
-				wp.cancelUpdatingImageList = true;
-				const start = Date.now();
-				function _checkUpdating() {
-					if (!wp.updatingImageList || Date.now() - start >= 5000) {
-						doUpdateImageList();
-					} else {
-						setTimeout(_checkUpdating, 50);
-					}
-				}
-				setTimeout(_checkUpdating, 1);
-			} else {
-				doUpdateImageList();
-			}
+			this.updatingMediaList = false;
 		}
 
-		findMedias(mediaContentId) {
+		async findMedias(mediaContentId) {
 			const wp = this;
 			logger.debug(`findMedias: ${mediaContentId}`);
 			const excludeRegExp = [];
@@ -2144,132 +2139,141 @@ function initWallpanel() {
 				}
 			}
 
-			return new Promise(function (resolve, reject) {
-				wp.hass
-					.callWS({
-						type: "media_source/browse_media",
-						media_content_id: mediaContentId
-					})
-					.then(
-						(mediaEntry) => {
-							logger.debug("Found media entry", mediaEntry);
-							var promises = mediaEntry.children.map((child) => {
-								const filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, "");
-								for (const exclude of excludeRegExp) {
-									if (exclude.test(filename)) {
-										return;
-									}
-								}
-								if (["image", "video"].includes(child.media_class)) {
-									if (config.exclude_media_types && config.exclude_media_types.includes(child.media_class)) {
-										// Media type excluded
-										return;
-									}
+			try {
+				const mediaEntry = await wp.hass.callWS({
+					type: "media_source/browse_media",
+					media_content_id: mediaContentId
+				});
 
-									//logger.debug(child);
-									return child.media_content_id;
-								}
-								if (child.media_class == "directory") {
-									if (wp.cancelUpdatingImageList) {
-										return;
-									}
-									return wp.findMedias(child.media_content_id);
-								}
-							});
-							Promise.all(promises).then((results) => {
-								let result = [];
-								for (const res of results) {
-									if (res) {
-										result = result.concat(res);
-									}
-								}
-								resolve(result);
-							});
-						},
-						(error) => {
-							//logger.warn(error);
-							reject(error);
+				logger.debug("Found media entry", mediaEntry);
+				const promises = mediaEntry.children.map(async (child) => {
+					const filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, "");
+					for (const exclude of excludeRegExp) {
+						if (exclude.test(filename)) {
+							return null; // Excluded by filename
 						}
-					);
-			});
+					}
+					if (["image", "video"].includes(child.media_class)) {
+						if (config.exclude_media_types && config.exclude_media_types.includes(child.media_class)) {
+							return null; // Excluded by media type
+						}
+						return child.media_content_id;
+					}
+					if (child.media_class == "directory") {
+						// Recursively find medias in subdirectory
+						return await wp.findMedias(child.media_content_id);
+					}
+					return null; // Not an image, video, or directory
+				});
+
+				const results = await Promise.all(promises);
+				// Flatten the results and filter out null values
+				return results.flat().filter((res) => res !== null);
+			} catch (error) {
+				logger.warn(`Error browsing media ${mediaContentId}:`, error);
+				throw error; // Re-throw the error to be caught by the caller
+			}
 		}
 
-		updateImageListFromMediaSource(preload, preloadCallback = null) {
-			this.updatingImageList = true;
-			this.lastImageListUpdate = Date.now();
+		async updateMediaListFromMediaSource() {
 			const mediaContentId = config.image_url;
 			const wp = this;
-			wp.findMedias(mediaContentId).then(
-				(result) => {
-					wp.updatingImageList = false;
-					if (!wp.cancelUpdatingImageList) {
-						if (config.image_order == "random") {
-							wp.imageList = result.sort(() => 0.5 - Math.random());
-						} else {
-							wp.imageList = result.sort();
-						}
-						logger.debug("Image list from media-source is now:", wp.imageList);
-						if (preload) {
-							wp.preloadImages(preloadCallback);
-						}
-					}
-				},
-				(error) => {
-					wp.updatingImageList = false;
-					error = `Failed to update image list from ${config.image_url}: ${JSON.stringify(error)}`;
-					logger.error(error);
-					wp.displayMessage(error, 10000);
+
+			try {
+				const result = await wp.findMedias(mediaContentId);
+				if (config.image_order == "random") {
+					wp.mediaList = result.sort(() => 0.5 - Math.random());
+				} else {
+					wp.mediaList = result.sort(); // Sort consistently if not random
 				}
-			);
+			} catch (error) {
+				// Error is logged in findMedias, re-throw for updateMediaList handler
+				throw new Error(`Failed to update image list from ${config.image_url}: ${error.message || stringify(error)}`);
+			}
 		}
 
-		updateImageListFromUnsplashAPI(preload, preloadCallback = null) {
-			this.updatingImageList = true;
-			this.lastImageListUpdate = Date.now();
-			const wp = this;
+		async updateMediaListFromUnsplashAPI() {
 			const urls = [];
 			const data = {};
-			const http = new XMLHttpRequest();
-			http.responseType = "json";
-			// count: The number of photos to return. (Default: 1; max: 30)
-			http.open("GET", `${config.image_url}&count=30`, true);
-			http.onload = function () {
-				if (http.status == 200 || http.status === 0) {
-					logger.debug(`Got unsplash API response`);
-					http.response.forEach((entry) => {
-						logger.debug(entry);
-						const url = entry.urls.raw + "&w=${width}&h=${height}&auto=format";
-						urls.push(url);
-						data[url] = entry;
-					});
-				} else {
-					logger.warn("Unsplash API error, get random images", http);
-					urls.push("https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}");
+			const width = 1920; // Define or retrieve dynamically if needed
+			const height = 1080;
+			const timestamp = Date.now();
+
+			const requestUrl = `${config.image_url}&count=30`;
+
+			logger.debug(`Unsplash API request: ${requestUrl}`);
+
+			try {
+				const response = await fetch(requestUrl, {
+					method: "GET",
+					headers: { Accept: "application/json" },
+					signal: AbortSignal.timeout(10000)
+				});
+
+				if (!response.ok) {
+					throw new Error(`Unsplash API request failed with status ${response.status}: ${response.statusText}`);
 				}
-				if (!wp.cancelUpdatingImageList) {
-					wp.imageList = urls;
-					imageInfoCache = data;
-					logger.debug("Image list from unsplash is now:", wp.imageList);
-					if (preload) {
-						wp.updatingImageList = false;
-						wp.preloadImages(preloadCallback);
-					}
-				}
-				wp.updatingImageList = false;
-			};
-			logger.debug(`Unsplash API request: ${config.image_url}`);
-			http.send();
+
+				const json = await response.json();
+				logger.debug("Got Unsplash API response");
+
+				json.forEach((entry) => {
+					logger.debug(entry);
+					const url = `${entry.urls.raw}&w=${width}&h=${height}&auto=format`;
+					urls.push(url);
+					data[url] = entry;
+				});
+
+				this.mediaList = urls;
+				mediaInfoCache = data;
+				logger.debug("Image list from Unsplash is now:", this.mediaList);
+			} catch (error) {
+				logger.warn("Unsplash API error, falling back to random image", error);
+				const fallbackUrl = `https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}`;
+				this.mediaList = [fallbackUrl];
+				mediaInfoCache = {}; // Clear cache on error/fallback
+				logger.debug("Falling back to random Unsplash image.");
+			}
 		}
 
-		updateImageListFromImmichAPI(preload, preloadCallback = null) {
+		async _immichFetch(url, options = {}) {
+			const defaultOptions = {
+				headers: {
+					"x-api-key": config.immich_api_key,
+					"Content-Type": "application/json",
+					Accept: "application/json"
+				},
+				timeout: 10000 // 10 seconds timeout
+			};
+			const mergedOptions = { ...defaultOptions, ...options };
+			mergedOptions.headers = { ...defaultOptions.headers, ...options.headers };
+
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), mergedOptions.timeout);
+
+			try {
+				const response = await fetch(url, { ...mergedOptions, signal: controller.signal });
+				clearTimeout(timeoutId);
+
+				if (!response.ok) {
+					const errorText = await response.text();
+					throw new Error(`Immich API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+				}
+				return await response.json();
+			} catch (error) {
+				clearTimeout(timeoutId);
+				if (error.name === "AbortError") {
+					throw new Error(`Immich API request timed out: ${url}`);
+				}
+				throw error; // Re-throw other errors
+			}
+		}
+
+		async updateMediaListFromImmichAPI() {
 			if (!config.immich_api_key) {
-				logger.error("immich_api_key not configured");
-				return;
+				throw new Error("immich_api_key not configured");
 			}
 			const wp = this;
-			wp.updatingImageList = true;
-			wp.imageList = [];
-			wp.lastImageListUpdate = Date.now();
 			const urls = [];
 			const data = {};
 			const apiUrl = config.image_url.replace(/^immich\+/, "");
@@ -2290,6 +2294,7 @@ function initWallpanel() {
 					if (config.exclude_media_types && config.exclude_media_types.includes(assetType)) {
 						return;
 					}
+
 					for (const exclude of excludeRegExp) {
 						if (exclude.test(asset.originalFileName)) {
 							return;
@@ -2316,236 +2321,133 @@ function initWallpanel() {
 				});
 			}
 
-			function processUrls() {
-				if (!wp.cancelUpdatingImageList) {
-					if (config.image_order == "random") {
-						wp.imageList = urls.sort(() => 0.5 - Math.random());
-					} else {
-						wp.imageList = urls;
-					}
-					imageInfoCache = data;
-					logger.debug("Image list from immich is now:", wp.imageList);
-					if (preload) {
-						wp.updatingImageList = false;
-						wp.preloadImages(preloadCallback);
-					}
+			function finalizeImageList() {
+				if (config.image_order == "random") {
+					wp.mediaList = urls.sort(() => 0.5 - Math.random());
+				} else {
+					wp.mediaList = urls.sort(); // Sort consistently if not random
 				}
-				wp.updatingImageList = false;
+				mediaInfoCache = data;
+				logger.debug("Image list from immich is now:", wp.mediaList);
 			}
 
-			if (config.immich_persons && config.immich_persons.length) {
-				const orPersonNames = [];
-				config.immich_persons.forEach((entry) => {
-					let andPersonNames = Array.isArray(entry) ? entry : [entry];
-					andPersonNames = andPersonNames.map((v) => v.toLowerCase());
-					orPersonNames.push(andPersonNames);
-				});
-				logger.debug(orPersonNames);
-				let immichPeople = [];
-				const personNameToId = {};
+			try {
+				if (config.immich_persons && config.immich_persons.length) {
+					const orPersonNames = config.immich_persons.map((entry) =>
+						(Array.isArray(entry) ? entry : [entry]).map((v) => v.toLowerCase())
+					);
+					const personNameToId = {};
+					let allPeople = [];
+					let page = 1;
+					let hasNextPage = true;
 
-				function fetchAssets(index = 0) {
-					const personNames = orPersonNames[index];
-					const personIds = [];
-					personNames.forEach((personName) => {
-						const personId = personNameToId[personName];
-						if (personId) {
-							personIds.push(personId);
-						} else {
-							logger.error(`Person not found in immich: ${personName}`);
-						}
+					// Fetch all people first
+					while (hasNextPage) {
+						const peopleData = await wp._immichFetch(`${apiUrl}/people?size=1000&page=${page}`);
+						allPeople = allPeople.concat(peopleData.people);
+						hasNextPage = peopleData.hasNextPage;
+						page++;
+					}
+					allPeople.forEach((person) => {
+						personNameToId[person.name.toLowerCase()] = person.id;
 					});
 
-					function afterFetchAssets() {
-						if (index + 1 < orPersonNames.length) {
-							fetchAssets(index + 1);
-						} else {
-							processUrls();
+					// Fetch assets for each person/group criteria
+					for (const personNames of orPersonNames) {
+						const personIds = personNames
+							.map((name) => personNameToId[name])
+							.filter((id) => {
+								if (!id) logger.error(`Person not found in immich: ${name}`);
+								return !!id;
+							});
+
+						if (personIds.length > 0) {
+							logger.debug("Searching asset metadata for persons: ", personIds);
+							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
+								method: "POST",
+								body: JSON.stringify({ personIds: personIds, withExif: true, size: 1000 })
+							});
+							logger.debug(`Got immich API response`, searchResults);
+							if (!searchResults.assets.count) {
+								logger.warn(`No media items found in immich that contain all these people: ${personNames}`);
+							} else {
+								processAssets(searchResults.assets.items);
+							}
 						}
 					}
+				} else if (config.immich_memories) {
+					logger.debug("Fetching immich memories (on_this_day)");
+					const allMemories = await wp._immichFetch(`${apiUrl}/memories?type=on_this_day`);
+					logger.debug(`Got immich API response`, allMemories);
+					const now = new Date();
+					allMemories
+						.filter((memory) => {
+							const showAt = new Date(memory.showAt);
+							const hideAt = new Date(memory.hideAt);
+							return now >= showAt && now <= hideAt;
+						})
+						.forEach((memory) => {
+							logger.debug("Processing memory:", memory);
+							processAssets(memory.assets);
+						});
+				} else if (config.immich_tag_names && config.immich_tag_names.length) {
+					const tagNamesLower = config.immich_tag_names.map((v) => v.toLowerCase());
+					logger.debug("Fetching immich tags");
+					const allTags = await wp._immichFetch(`${apiUrl}/tags`);
+					logger.debug(`Got immich API response`, allTags);
+					const tagIds = allTags
+						.filter((tag) => {
+							const include = tagNamesLower.includes(tag.name.toLowerCase());
+							logger.debug(`${include ? "Adding" : "Skipping"} tag: ${tag.name}`);
+							return include;
+						})
+						.map((tag) => tag.id);
 
-					if (personIds.length > 0) {
-						const http = new XMLHttpRequest();
-						http.responseType = "json";
-						http.open("POST", `${apiUrl}/search/metadata`, true);
-						http.setRequestHeader("x-api-key", config.immich_api_key);
-						http.setRequestHeader("Content-Type", "application/json");
-						logger.debug("Searching asset metdata for persons: ", personIds);
-						http.onload = function () {
-							if (http.status == 200 || http.status === 0) {
-								const searchResults = http.response;
-								logger.debug(`Got immich API response`, searchResults);
-								if (!searchResults.assets.count) {
-									logger.error(`No media items found in immich that contain all these people: ${personNames}`);
-								} else {
-									processAssets(searchResults.assets.items);
-								}
-							} else {
-								logger.error("Immich API error", http);
-							}
-							afterFetchAssets();
-						};
-						http.send(JSON.stringify({ personIds: personIds, withExif: true, size: 1000 }));
+					if (tagIds.length > 0) {
+						logger.debug("Searching asset metadata for tags: ", tagIds);
+						const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
+							method: "POST",
+							body: JSON.stringify({ tagIds: tagIds, withExif: true, size: 1000 })
+						});
+						logger.debug("Got immich API response", searchResults);
+						processAssets(searchResults.assets.items);
 					} else {
-						afterFetchAssets();
+						logger.warn("No matching immich tags found or selected.");
+					}
+				} else {
+					// Default: Fetch albums
+					const albumNamesLower = (config.immich_album_names || []).map((v) => v.toLowerCase());
+					logger.debug(`Fetching immich albums (shared=${config.immich_shared_albums})`);
+					const allAlbums = await wp._immichFetch(`${apiUrl}/albums?shared=${config.immich_shared_albums}`);
+					logger.debug("Got immich API response", allAlbums);
+
+					const albumIdsToFetch = allAlbums
+						.filter((album) => {
+							const include = !albumNamesLower.length || albumNamesLower.includes(album.albumName.toLowerCase());
+							logger.debug(`${include ? "Adding" : "Skipping"} album: ${album.albumName}`);
+							return include;
+						})
+						.map((album) => album.id);
+
+					if (albumIdsToFetch.length > 0) {
+						const albumDetailPromises = albumIdsToFetch.map((albumId) => {
+							logger.debug("Fetching album metadata: ", albumId);
+							return wp._immichFetch(`${apiUrl}/albums/${albumId}`);
+						});
+						const albumDetailsList = await Promise.all(albumDetailPromises);
+						albumDetailsList.forEach((albumDetails) => {
+							logger.debug(`Got immich album details`, albumDetails);
+							processAssets(albumDetails.assets, albumDetails.albumName);
+						});
+					} else {
+						logger.warn("No matching immich albums found or selected.");
 					}
 				}
 
-				function fetchPeople(page = 1) {
-					const http = new XMLHttpRequest();
-					http.responseType = "json";
-					http.open("GET", `${apiUrl}/people?size=1000&page=${page}`, true);
-					http.setRequestHeader("x-api-key", config.immich_api_key);
-					http.onload = function () {
-						if (http.status == 200 || http.status === 0) {
-							logger.debug(`Got immich API response`, http.response);
-							immichPeople = immichPeople.concat(http.response.people);
-							if (http.response.hasNextPage) {
-								return fetchPeople(page + 1);
-							}
-							immichPeople.forEach((person) => {
-								personNameToId[person.name.toLowerCase()] = person.id;
-							});
-							fetchAssets();
-						} else {
-							logger.error("Immich API error", http);
-							wp.updatingImageList = false;
-						}
-					};
-					http.send();
-				}
-				fetchPeople();
-			} else if (config.immich_memories) {
-				const http = new XMLHttpRequest();
-				http.responseType = "json";
-				http.open("GET", `${apiUrl}/memories?type=on_this_day`, true);
-				http.setRequestHeader("x-api-key", config.immich_api_key);
-				http.setRequestHeader("Content-Type", "application/json");
-				http.onload = function () {
-					if (http.status == 200 || http.status === 0) {
-						const allMemories = http.response;
-						logger.debug(`Got immich API response`, allMemories);
-
-						const now = new Date();
-
-						allMemories
-							.filter(function (memory) {
-								const showAt = new Date(memory.showAt);
-								const hideAt = new Date(memory.hideAt);
-								return now >= showAt && now <= hideAt;
-							})
-							.forEach((memory) => {
-								logger.debug(memory);
-								processAssets(memory.assets);
-								processUrls();
-							});
-					} else {
-						logger.error("Immich API error", http);
-						wp.updatingImageList = false;
-					}
-				};
-				http.send();
-			} else if (config.immich_tag_names && config.immich_tag_names.length) {
-				const tagNames = config.immich_tag_names.map((v) => v.toLowerCase());
-				const http = new XMLHttpRequest();
-				http.responseType = "json";
-				http.open("GET", `${apiUrl}/tags`, true);
-				http.setRequestHeader("x-api-key", config.immich_api_key);
-				http.onload = function () {
-					const tagIds = [];
-					if (http.status == 200 || http.status === 0) {
-						const allTags = http.response;
-						logger.debug(`Got immich API response`, allTags);
-						allTags.forEach((tag) => {
-							logger.debug(tag);
-							if (!tagNames.includes(tag.name.toLowerCase())) {
-								logger.debug("Skipping tag: ", tag.name);
-							} else {
-								logger.debug("Adding tag: ", tag.name);
-								tagIds.push(tag.id);
-							}
-						});
-						if (tagIds.length > 0) {
-							const http2 = new XMLHttpRequest();
-							http2.responseType = "json";
-							http2.open("POST", `${apiUrl}/search/metadata`, true);
-							http2.setRequestHeader("x-api-key", config.immich_api_key);
-							http2.setRequestHeader("Content-Type", "application/json");
-							logger.debug("Searching asset metdata for tags: ", tagIds);
-							http2.onload = function () {
-								if (http2.status == 200 || http2.status === 0) {
-									const searchResults = http2.response;
-									logger.debug(`Got immich API response`, searchResults);
-									processAssets(searchResults.assets.items);
-									processUrls();
-								} else {
-									logger.error("Immich API error", http2);
-								}
-							};
-							http2.send(JSON.stringify({ tagIds: tagIds, withExif: true, size: 1000 }));
-						} else {
-							logger.error("No immich tags selected");
-							wp.updatingImageList = false;
-						}
-					} else {
-						logger.error("Immich API error", http);
-						wp.updatingImageList = false;
-					}
-				};
-				http.send();
-			} else {
-				const http = new XMLHttpRequest();
-				http.responseType = "json";
-				http.open("GET", `${apiUrl}/albums?shared=${config.immich_shared_albums}`, true);
-				http.setRequestHeader("x-api-key", config.immich_api_key);
-				http.onload = function () {
-					const albumIds = [];
-					const albumNames = (config.immich_album_names || []).map((v) => v.toLowerCase());
-					if (http.status == 200 || http.status === 0) {
-						const allAlbums = http.response;
-						logger.debug(`Got immich API response`, allAlbums);
-						allAlbums.forEach((album) => {
-							logger.debug(album);
-							if (albumNames.length && !albumNames.includes(album.albumName.toLowerCase())) {
-								logger.debug("Skipping album: ", album.albumName);
-							} else {
-								logger.debug("Adding album: ", album.albumName);
-								albumIds.push(album.id);
-							}
-						});
-						if (albumIds) {
-							albumIds.forEach((albumId) => {
-								logger.debug("Fetching album metdata: ", albumId);
-								const http2 = new XMLHttpRequest();
-								http2.responseType = "json";
-								http2.open("GET", `${apiUrl}/albums/${albumId}`, true);
-								http2.setRequestHeader("x-api-key", config.immich_api_key);
-								http2.onload = function () {
-									if (http2.status == 200 || http2.status === 0) {
-										const albumDetails = http2.response;
-										logger.debug(`Got immich API response`, albumDetails);
-										processAssets(albumDetails.assets, albumDetails.albumName);
-									} else {
-										logger.error("Immich API error", http2);
-									}
-									albumIds.pop(albumId);
-									if (albumIds.length == 0) {
-										// All processed
-										processUrls();
-									}
-								};
-								http2.send();
-							});
-						} else {
-							logger.error("No immich albums selected");
-							wp.updatingImageList = false;
-						}
-					} else {
-						logger.error("Immich API error", http);
-						wp.updatingImageList = false;
-					}
-				};
-				http.send();
+				finalizeImageList();
+			} catch (error) {
+				logger.error("Immich API processing failed:", error);
+				throw error; // Re-throw for the main updateMediaList handler
 			}
 		}
 
@@ -2561,13 +2463,26 @@ function initWallpanel() {
 			return url;
 		}
 
-		async loadMediaFromUrl(curElem, sourceUrl, mediaType = null, headers = null, useFetch = false) {
+		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
+			const realUrl = this.fillPlaceholders(url);
+			if (realUrl != url && mediaInfoCache[url]) {
+				mediaInfoCache[realUrl] = mediaInfoCache[url];
+			}
+			element.mediaUrl = realUrl;
+			url = realUrl;
+
 			const loadMediaWithElement = async (elem, url) => {
 				if (useFetch) {
-					const response = await fetch(url, { headers: headers || {} });
+					headers = headers || {};
+					const response = await fetch(url, { headers: headers });
 					if (!response.ok) {
 						logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
 						return;
+					}
+					// The object URL created by URL.createObjectURL() must be released
+					// using URL.revokeObjectURL() to free the associated memory again.
+					if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
+						URL.revokeObjectURL(elem.src);
 					}
 					const blob = await response.blob();
 					elem.src = window.URL.createObjectURL(blob);
@@ -2628,29 +2543,25 @@ function initWallpanel() {
 				} else {
 					this.imageTwo = newElem;
 				}
+				if (typeof currentElem.src === "string" && currentElem.src.startsWith("blob:")) {
+					URL.revokeObjectURL(currentElem.src);
+				}
 				currentElem.replaceWith(newElem);
 			};
 
 			const handleFallback = async (currentElem, url, mediaType = null, originalError = null) => {
-				let fallbackSuccessful = false;
 				const fallbackElem = createFallbackElement(currentElem, mediaType);
 				replaceElementWith(currentElem, fallbackElem);
 				try {
 					await loadMediaWithElement(fallbackElem, url);
-					fallbackSuccessful = true;
 				} catch (e) {
 					this.handleMediaError(currentElem, originalError || e);
-				}
-				if (fallbackSuccessful) {
-					this.handleMediaLoaded(fallbackElem);
 				}
 			};
 
 			const loadOrFallback = async (currentElem, url, withFallback) => {
-				let loadSuccessful = false;
 				try {
 					await loadMediaWithElement(currentElem, url);
-					loadSuccessful = true;
 				} catch (e) {
 					if (withFallback) {
 						await handleFallback(currentElem, url, null, e);
@@ -2658,93 +2569,77 @@ function initWallpanel() {
 						this.handleMediaError(currentElem, e);
 					}
 				}
-				if (loadSuccessful) {
-					this.handleMediaLoaded(currentElem);
-				}
 			};
 
 			if (!mediaType) {
-				await loadOrFallback(curElem, sourceUrl, true);
-			} else if (mediaType === curElem.tagName.toLowerCase()) {
-				await loadOrFallback(curElem, sourceUrl, false);
+				await loadOrFallback(element, url, true);
+			} else if (mediaType === element.tagName.toLowerCase()) {
+				await loadOrFallback(element, url, false);
 			} else {
-				await handleFallback(curElem, sourceUrl, mediaType);
+				await handleFallback(element, url, mediaType);
 			}
 		}
 
-		updateImageFromUrl(img, url, mediaType = null, headers = null, useFetch = false) {
-			const realUrl = this.fillPlaceholders(url);
-			if (realUrl != url && imageInfoCache[url]) {
-				imageInfoCache[realUrl] = imageInfoCache[url];
-			}
-			img.imageUrl = realUrl;
-			logger.debug(`Updating image '${img.id}' from '${realUrl}'`);
-
-			this.loadMediaFromUrl(img, realUrl, mediaType, headers, useFetch);
-		}
-
-		updateImageIndex() {
-			if (this.imageListDirection == "forwards") {
-				this.imageIndex++;
+		updateMediaIndex() {
+			if (this.mediaListDirection == "forwards") {
+				this.mediaIndex++;
 			} else {
-				this.imageIndex--;
+				this.mediaIndex--;
 			}
-			if (this.imageIndex >= this.imageList.length) {
-				this.imageIndex = 0;
-			} else if (this.imageIndex < 0) {
-				this.imageIndex = this.imageList.length - 1;
+			if (this.mediaIndex >= this.mediaList.length) {
+				this.mediaIndex = 0;
+			} else if (this.mediaIndex < 0) {
+				this.mediaIndex = this.mediaList.length - 1;
 			}
 		}
 
-		updateImageFromMediaSource(img) {
-			if (this.imageList.length == 0) {
+		async updateMediaFromMediaSource(element) {
+			if (!this.mediaList || this.mediaList.length === 0) {
 				return;
 			}
-			this.updateImageIndex();
-			img.imageUrl = this.imageList[this.imageIndex];
-			this.hass
-				.callWS({
+
+			element.mediaUrl = this.mediaList[this.mediaIndex];
+
+			try {
+				const result = await this.hass.callWS({
 					type: "media_source/resolve_media",
-					media_content_id: img.imageUrl
-				})
-				.then(
-					(result) => {
-						let src = result.url;
-						if (!src.startsWith("http://") && !src.startsWith("https://")) {
-							src = `${document.location.origin}${src}`;
-						}
-						logger.debug(`Setting image src: ${src}`);
+					media_content_id: element.mediaUrl
+				});
 
-						const matchedType = result.mime_type?.match(/^(image|video)\//);
-						const mediaType = { image: "img", video: "video" }[matchedType?.[1]] || null;
-						this.loadMediaFromUrl(img, src, mediaType);
-					},
-					(error) => {
-						logger.error(`media_source/resolve_media error for ${img.imageUrl}:`, error);
-					}
-				);
+				let src = result.url;
+				if (!src.startsWith("http://") && !src.startsWith("https://")) {
+					src = `${document.location.origin}${src}`;
+				}
+
+				logger.debug(`Setting image src: ${src}`);
+
+				const matchedType = result.mime_type?.match(/^(image|video)\//);
+				const mediaType = { image: "img", video: "video" }[matchedType?.[1]] || null;
+
+				await this.updateMediaFromUrl(element, src, mediaType);
+			} catch (error) {
+				logger.error(`media_source/resolve_media error for ${element.mediaUrl}:`, error);
+			}
 		}
 
-		updateImageFromUnsplashAPI(img) {
-			if (this.imageList.length == 0) {
+		async updateMediaFromUnsplashAPI(element) {
+			if (this.mediaList.length == 0) {
 				return;
 			}
-			this.updateImageIndex();
-			this.updateImageFromUrl(img, this.imageList[this.imageIndex], "img");
+			await this.updateMediaFromUrl(element, this.mediaList[this.mediaIndex], "img");
 		}
 
-		updateImageFromImmichAPI(img) {
-			if (this.imageList.length == 0) {
+		async updateMediaFromImmichAPI(element) {
+			if (this.mediaList.length == 0) {
 				return;
 			}
-			this.updateImageIndex();
-			const url = this.imageList[this.imageIndex];
-			const imageInfo = imageInfoCache[url] || {};
-			const mediaType = imageInfo["mediaType"] == "video" ? "video" : "img";
-			this.updateImageFromUrl(img, url, mediaType, { "x-api-key": config.immich_api_key }, true);
+			const url = this.mediaList[this.mediaIndex];
+			const mediaInfo = mediaInfoCache[url] || {};
+			const mediaType = mediaInfo["mediaType"] == "video" ? "video" : "img";
+			await this.updateMediaFromUrl(element, url, mediaType, { "x-api-key": config.immich_api_key }, true);
 		}
 
-		updateImageFromMediaEntity(img) {
+		async updateMediaFromMediaEntity(element) {
 			const mediaEntity = config.image_url.replace(/^media-entity:\/\//, "");
 			const entity = this.hass.states[mediaEntity];
 			if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
@@ -2756,90 +2651,85 @@ function initWallpanel() {
 			const url = entityPicture + querySuffix;
 			if ("media_exif" in entity.attributes) {
 				// immich-home-assistant provides media_exif
-				imageInfoCache[url] = entity.attributes["media_exif"];
+				mediaInfoCache[url] = entity.attributes["media_exif"];
 			} else {
-				imageInfoCache[url] = entity.attributes;
+				mediaInfoCache[url] = entity.attributes;
 			}
 			mediaEntityState = entity.state;
-			this.updateImageFromUrl(img, url, "img", null, true);
+			await this.updateMediaFromUrl(element, url, "img", null, true);
 		}
 
-		updateImage(img, callback = null) {
+		async updateMedia(element, callback = null) {
 			if (!config.show_images) {
 				return;
 			}
-			img.setAttribute("data-loading", true);
 
-			if (imageSourceType() == "media-source") {
-				this.updateImageFromMediaSource(img);
-			} else if (imageSourceType() == "unsplash-api") {
-				this.updateImageFromUnsplashAPI(img);
-			} else if (imageSourceType() == "immich-api") {
-				this.updateImageFromImmichAPI(img);
-			} else if (imageSourceType() == "media-entity") {
-				this.updateImageFromMediaEntity(img);
-			} else if (imageSourceType() == "iframe") {
-				this.updateImageFromUrl(img, config.image_url.replace(/^iframe\+/, ""), "iframe");
-			} else {
-				this.updateImageFromUrl(img, config.image_url);
+			const elementType = element == this.getActiveMediaElement() ? "active" : "inactive";
+			if (elementType == "active") {
+				const inactiveElement = this.getInactiveMediaElement();
+				if (inactiveElement.tagName.toLowerCase() === "video") {
+					try {
+						inactiveElement.pause();
+					} catch (e) {
+						logger.debug(e);
+					}
+				}
+			}
+			this.updatingMedia = true;
+			this.updateMediaIndex();
+			try {
+				if (mediaSourceType() == "media-source") {
+					await this.updateMediaFromMediaSource(element);
+				} else if (mediaSourceType() == "unsplash-api") {
+					await this.updateMediaFromUnsplashAPI(element);
+				} else if (mediaSourceType() == "immich-api") {
+					await this.updateMediaFromImmichAPI(element);
+				} else if (mediaSourceType() == "media-entity") {
+					await this.updateMediaFromMediaEntity(element);
+				} else if (mediaSourceType() == "iframe") {
+					await this.updateMediaFromUrl(element, config.image_url.replace(/^iframe\+/, ""), "iframe");
+				} else {
+					await this.updateMediaFromUrl(element, config.image_url);
+				}
+
+				element = elementType == "active" ? this.getActiveMediaElement() : this.getInactiveMediaElement();
+				const isVideo = element.tagName.toLowerCase() === "video";
+
+				if (isVideo) {
+					await new Promise((resolve, reject) => {
+						if (element.readyState >= element.HAVE_ENOUGH_DATA) {
+							resolve();
+						} else {
+							const onCanPlay = () => {
+								element.removeEventListener("canplay", onCanPlay);
+								resolve();
+							};
+							const onError = () => {
+								element.removeEventListener("error", onError);
+								reject(new Error("Video failed to load"));
+							};
+							element.addEventListener("canplay", onCanPlay);
+							element.addEventListener("error", onError);
+						}
+					});
+				}
+				this.loadBackgroundImage(element);
+
+				if (!isVideo && config.show_image_info && /.*\.jpe?g$/i.test(element.mediaUrl.split("?")[0])) {
+					this.fetchEXIFInfo(element);
+				}
+			} finally {
+				this.updatingMedia = false;
 			}
 
 			if (callback) {
 				const wp = this;
-				const start = Date.now();
-
-				function _checkLoading() {
-					if (img.getAttribute("data-loading") == "false" || Date.now() - start >= 2000) {
-						callback(wp, img);
-					} else {
-						setTimeout(_checkLoading, 50);
-					}
-				}
-				setTimeout(_checkLoading, 1);
-			}
-		}
-
-		preloadImage(img, callback = null) {
-			const wp = this;
-			if (
-				this.updatingImageList ||
-				img.getAttribute("data-loading") == "true" ||
-				(this.screensaverRunning() && img.parentNode.style.opacity == 1)
-			) {
-				if (callback) {
-					callback(wp, img);
-				}
-				return;
-			}
-			this.updateImage(img, function (wp, updatedImg) {
-				wp.setImageDataInfo(updatedImg);
-				if (callback) {
-					callback(wp, updatedImg);
-				}
-			});
-		}
-
-		preloadImages(callback = null) {
-			logger.debug("Preloading images");
-			if (["media-entity", "iframe"].includes(imageSourceType())) {
-				this.preloadImage(this.imageOne, function (wp) {
-					if (callback) {
-						callback(wp);
-					}
-				});
-			} else {
-				this.preloadImage(this.imageOne, function (wp) {
-					wp.preloadImage(wp.imageTwo, function (wp) {
-						if (callback) {
-							callback(wp);
-						}
-					});
-				});
+				callback(wp, element);
 			}
 		}
 
 		startPlayingActiveMedia() {
-			const activeElem = this.getActiveImageElement();
+			const activeElem = this.getActiveMediaElement();
 			if (typeof activeElem.play !== "function") {
 				return; // Not playable element.
 			}
@@ -2858,7 +2748,7 @@ function initWallpanel() {
 			if (!config.video_loop) {
 				// Immediately switch to next image at the end of the playback.
 				const onTimeUpdate = () => {
-					if (this.getActiveImageElement() !== activeElem) {
+					if (this.getActiveMediaElement() !== activeElem) {
 						cleanupListeners();
 						return;
 					}
@@ -2866,14 +2756,14 @@ function initWallpanel() {
 					if (activeElem.currentTime > config.crossfade_time) {
 						const remainingTime = activeElem.duration - activeElem.currentTime;
 						if (remainingTime <= config.crossfade_time) {
-							this.switchActiveImage("display_time_elapsed");
+							this.switchActiveMedia("display_time_elapsed");
 							cleanupListeners();
 						}
 					}
 				};
 				const onMediaEnded = () => {
-					if (this.getActiveImageElement() === activeElem) {
-						this.switchActiveImage("media_end");
+					if (this.getActiveMediaElement() === activeElem) {
+						this.switchActiveMedia("media_end");
 					}
 					cleanupListeners();
 				};
@@ -2894,14 +2784,18 @@ function initWallpanel() {
 			// Start playing the media.
 			activeElem.play().catch((e) => {
 				cleanupListeners();
-				if (activeElem === this.getActiveImageElement()) {
+				if (activeElem === this.getActiveMediaElement()) {
 					logger.error(`Failed to play media "${activeElem.src}":`, e);
 				}
 			});
 		}
 
-		switchActiveImage(eventType) {
-			const sourceType = imageSourceType();
+		switchActiveMedia(eventType) {
+			if (this.afterFadeoutTimer) {
+				clearTimeout(this.afterFadeoutTimer);
+			}
+
+			const sourceType = mediaSourceType();
 
 			if (sourceType === "media-entity") {
 				const mediaEntity = config.image_url.replace(/^media-entity:\/\//, "");
@@ -2917,39 +2811,37 @@ function initWallpanel() {
 				} else if (config.media_entity_load_unchanged) {
 					logger.debug(`Media entity ${mediaEntity} state unchanged, but media_entity_load_unchanged = true`);
 				} else {
-					this.lastImageUpdate = Date.now();
+					this.lastMediaUpdate = Date.now();
 					this.restartProgressBarAnimation();
 					return;
 				}
 				mediaEntityState = entity.state;
 			}
 
-			this.lastImageUpdate = Date.now();
+			this.lastMediaUpdate = Date.now();
 
-			const crossfadeMillis = eventType == "user_action" ? 250 : null;
-			if (["media-entity", "iframe"].includes(sourceType)) {
-				const nextImg = this.imageTwoContainer.style.opacity == 1 ? this.imageOne : this.imageTwo;
-				const wp = this;
-				wp.updateImage(nextImg, () => {
-					wp._switchActiveImage(crossfadeMillis);
-				});
+			let crossfadeMillis = eventType == "user_action" ? 250 : null;
+
+			let newElement = this.getActiveMediaElement();
+			if (newElement.src) {
+				newElement = this.getInactiveMediaElement();
 			} else {
-				this._switchActiveImage(crossfadeMillis);
+				crossfadeMillis = 0;
 			}
+			this.updateMedia(newElement, (wp, element) => {
+				wp._switchActiveMedia(element, crossfadeMillis);
+			});
 		}
 
 		getImageFit(width, height) {
-			if (width >= height) {
+			if (!width || !height || width >= height) {
 				return config.image_fit_landscape;
 			}
 			return config.image_fit_portrait;
 		}
 
-		_switchActiveImage(crossfadeMillis = null) {
-			if (this.afterFadeoutTimer) {
-				clearTimeout(this.afterFadeoutTimer);
-			}
-			this.lastImageUpdate = Date.now();
+		_switchActiveMedia(newElement, crossfadeMillis = null) {
+			this.lastMediaUpdate = Date.now();
 
 			if (crossfadeMillis === null) {
 				crossfadeMillis = Math.round(config.crossfade_time * 1000);
@@ -2958,56 +2850,63 @@ function initWallpanel() {
 			this.imageOneContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
 			this.imageTwoContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
 
-			let curActive = this.imageOneContainer;
-			let newActive = this.imageTwoContainer;
-			let curImg = this.imageOne;
-			let newImg = this.imageTwo;
-			if (this.imageTwoContainer.style.opacity == 1) {
-				curActive = this.imageTwoContainer;
-				newActive = this.imageOneContainer;
-				curImg = this.imageTwo;
-				newImg = this.imageOne;
+			let curActiveContainer = this.imageOneContainer;
+			let newActiveContainer = this.imageTwoContainer;
+			let curMedia = this.imageOne;
+			let newMedia = this.imageTwo;
+			if (newElement == this.imageOne) {
+				curActiveContainer = this.imageTwoContainer;
+				newActiveContainer = this.imageOneContainer;
+				curMedia = this.imageTwo;
+				newMedia = this.imageOne;
 			}
-			logger.debug(`Switching active image to '${newActive.id}'`);
+			logger.debug(`Switching active media to '${newActiveContainer.id}'`);
 
 			this.setImageURLEntityState();
-			this.setImageDataInfo(newImg);
+			this.setImageDataInfo(newMedia);
 
-			if (newActive.style.opacity != 1) {
-				newActive.style.opacity = 1;
+			if (newActiveContainer.style.opacity != 1) {
+				newActiveContainer.style.opacity = 1;
 			}
-			if (curActive.style.opacity != 0) {
-				curActive.style.opacity = 0;
+			if (curActiveContainer.style.opacity != 0) {
+				curActiveContainer.style.opacity = 0;
 			}
-			// Determine if the new image is landscape or portrait, and set the appropriate image_fit
-			newImg.style.objectFit = this.getImageFit(newImg.naturalWidth, newImg.naturalHeight);
+
+			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
+			let width = 0;
+			let height = 0;
+			if (newMedia.mediaUrl) {
+				const mediaInfo = mediaInfoCache[newMedia.mediaUrl];
+				if (mediaInfo) {
+					width = mediaInfo.exifImageWidth;
+					height = mediaInfo.exifImageHeight;
+				}
+			}
+			if (!width || !height) {
+				if (curMedia.tagName.toLowerCase() === "video") {
+					width = newMedia.videoWidth;
+					height = newMedia.videoHeight;
+				} else {
+					width = newMedia.naturalWidth;
+					height = newMedia.naturalHeight;
+				}
+			}
+			logger.debug(`Size of media element is ${width}x${height}`, newMedia);
+			newMedia.style.objectFit = this.getImageFit(width, height);
 
 			this.startPlayingActiveMedia();
 			this.restartProgressBarAnimation();
 			this.restartKenBurnsEffect();
 
-			// Load next image after fade out
-			// only if not media-entity, which will not yet have changed already
-			// iframe will be loaded when switching images
-			// TODO: Refactor, always load new media right before switch
-			if (!["media-entity", "iframe"].includes(imageSourceType())) {
-				const wp = this;
+			if (curMedia.tagName.toLowerCase() === "video") {
 				this.afterFadeoutTimer = setTimeout(function () {
-					if (
-						curImg.tagName.toLowerCase() === "video" &&
-						curImg.currentTime > 0 &&
-						!curImg.paused &&
-						!curImg.ended &&
-						curImg.readyState > curImg.HAVE_CURRENT_DATA
-					) {
-						curImg.pause();
+					if (curMedia.tagName.toLowerCase() === "video") {
+						try {
+							curMedia.pause();
+						} catch (e) {
+							logger.debug(e);
+						}
 					}
-					wp.updateImage(curImg);
-					let cont = wp.imageOneBackground;
-					if (curImg == wp.imageTwo) {
-						cont = wp.imageTwoBackground;
-					}
-					cont.style.backgroundImage = "";
 				}, crossfadeMillis);
 			}
 		}
@@ -3056,8 +2955,8 @@ function initWallpanel() {
 			this.startPlayingActiveMedia();
 
 			// Set the correct objectFit for the active image
-			const activeImage = this.getActiveImageElement();
-			activeImage.style.objectFit = this.getImageFit(activeImage.naturalWith, activeImage.naturalHeight);
+			const activeElement = this.getActiveMediaElement();
+			activeElement.style.objectFit = this.getImageFit(activeElement.naturalWith, activeElement.naturalHeight);
 
 			this.restartProgressBarAnimation();
 			this.restartKenBurnsEffect();
@@ -3075,7 +2974,7 @@ function initWallpanel() {
 			}
 
 			this.lastMove = Date.now();
-			this.lastImageUpdate = Date.now();
+			this.lastMediaUpdate = Date.now();
 			this.screensaverStartedAt = Date.now();
 			this.screensaverStoppedAt = null;
 			document.documentElement.style.overflow = "hidden";
@@ -3184,11 +3083,11 @@ function initWallpanel() {
 				logger.debug("Setting screen to black");
 				this.screensaverOverlay.style.background = "#000000";
 			} else if (config.show_images) {
-				if (now - this.lastImageUpdate >= config.display_time * 1000) {
-					this.switchActiveImage("display_time_elapsed");
+				if (now - this.lastMediaUpdate >= config.display_time * 1000) {
+					this.switchActiveMedia("display_time_elapsed");
 				}
-				if (now - this.lastImageListUpdate >= config.image_list_update_interval * 1000) {
-					this.updateImageList();
+				if (now - this.lastMediaListUpdate >= config.image_list_update_interval * 1000) {
+					this.updateMediaList(null, true);
 				}
 				if (this.imageOneContainer.style.visibility != "visible") {
 					this.imageOneContainer.style.visibility = "visible";
@@ -3226,12 +3125,12 @@ function initWallpanel() {
 					const p = this.screenWakeLock._player;
 					html += `<b>Screen wake lock video</b>: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
 				}
-				const activeImage = this.getActiveImageElement();
-				if (activeImage) {
-					html += `<b>Current image:</b> ${activeImage.imageUrl}<br/>`;
-					const imgInfo = imageInfoCache[activeImage.imageUrl];
-					if (imgInfo) {
-						html += `<b>Image info:</b> ${JSON.stringify(imgInfo)}<br/>`;
+				const activeElement = this.getActiveMediaElement();
+				if (activeElement) {
+					html += `<b>Current media:</b> ${activeElement.mediaUrl}<br/>`;
+					const mediaInfo = mediaInfoCache[activeElement.mediaUrl];
+					if (mediaInfo) {
+						html += `<b>Media info:</b> ${JSON.stringify(mediaInfo)}<br/>`;
 					}
 				}
 				this.debugBox.innerHTML = html;
@@ -3247,16 +3146,9 @@ function initWallpanel() {
 			}
 		}
 
-		switchImageDirection(direction) {
-			this.imageListDirection = direction;
-			if (this.afterFadeoutTimer) {
-				clearTimeout(this.afterFadeoutTimer);
-			}
-			this.updateImageIndex();
-			const inactiveImage = this.getInactiveImageElement();
-			this.updateImage(inactiveImage, function (wp) {
-				wp.switchActiveImage("user_action");
-			});
+		switchMediaDirection(direction) {
+			this.mediaListDirection = direction;
+			this.switchActiveMedia("user_action");
 		}
 
 		motionDetected() {
@@ -3364,9 +3256,9 @@ function initWallpanel() {
 			}
 			evt.stopImmediatePropagation();
 
-			let switchImage = "";
+			let switchMedia = "";
 			if (swipe) {
-				switchImage = swipe == "left" ? "backwards" : "forwards";
+				switchMedia = swipe == "left" ? "backwards" : "forwards";
 			} else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
 				let right = 0.0;
 				let bottom = 0.0;
@@ -3378,7 +3270,7 @@ function initWallpanel() {
 				}
 				if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
 					if (isClick) {
-						switchImage = "forwards";
+						switchMedia = "forwards";
 					} else {
 						return;
 					}
@@ -3387,7 +3279,7 @@ function initWallpanel() {
 					right >= (100 - config.touch_zone_size_previous_image) / 100
 				) {
 					if (isClick) {
-						switchImage = "backwards";
+						switchMedia = "backwards";
 					} else {
 						return;
 					}
@@ -3409,18 +3301,15 @@ function initWallpanel() {
 				}
 			}
 
-			if (switchImage) {
-				if (
-					this.imageOne.getAttribute("data-loading") == "true" ||
-					this.imageTwo.getAttribute("data-loading") == "true"
-				) {
-					logger.debug("Already switching image");
+			if (switchMedia) {
+				if (this.updatingMedia) {
+					logger.debug("Already switching media");
 				} else {
-					logger.debug(`Switching image, direction ${switchImage}`);
-					if (this.imageListDirection != switchImage) {
-						this.switchImageDirection(switchImage);
+					logger.debug(`Switching media, direction ${switchMedia}`);
+					if (this.mediaListDirection != switchMedia) {
+						this.switchMediaDirection(switchMedia);
 					} else {
-						this.switchActiveImage("user_action");
+						this.switchActiveMedia("user_action");
 					}
 				}
 				return;
