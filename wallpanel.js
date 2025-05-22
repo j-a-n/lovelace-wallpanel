@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.46.0";
+const version = "4.46.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -973,12 +973,14 @@ function initWallpanel() {
 			if (!image_url_entity || !this.__hass.states[image_url_entity]) return;
 			const activeElement = this.getActiveMediaElement();
 			if (!activeElement || !activeElement.mediaUrl) return;
+			// Maximum length for input_text entity is 255
+			const mediaUrl = activeElement.mediaUrl.substring(0, 255);
 
-			logger.debug("Updating image_url_entity", image_url_entity, activeElement.mediaUrl);
+			logger.debug("Updating image_url_entity", image_url_entity, mediaUrl);
 			this.__hass
 				.callService("input_text", "set_value", {
 					entity_id: image_url_entity,
-					value: activeElement.mediaUrl
+					value: mediaUrl
 				})
 				.then(
 					(result) => {
@@ -2862,15 +2864,14 @@ function initWallpanel() {
 			}
 			logger.debug(`Switching active media to '${newActiveContainer.id}'`);
 
-			this.setImageURLEntityState();
-			this.setImageDataInfo(newMedia);
-
 			if (newActiveContainer.style.opacity != 1) {
 				newActiveContainer.style.opacity = 1;
 			}
 			if (curActiveContainer.style.opacity != 0) {
 				curActiveContainer.style.opacity = 0;
 			}
+
+			this.setImageDataInfo(newMedia);
 
 			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
 			let width = 0;
@@ -2894,6 +2895,7 @@ function initWallpanel() {
 			logger.debug(`Size of media element is ${width}x${height}`, newMedia);
 			newMedia.style.objectFit = this.getImageFit(width, height);
 
+			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
 			this.restartProgressBarAnimation();
 			this.restartKenBurnsEffect();
