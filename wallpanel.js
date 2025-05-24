@@ -2508,11 +2508,12 @@ function initWallpanel() {
 
 						const onError = () => {
 							cleanup();
-							reject(new Error(`Failed to load ${elem.tagName} "${url}", ${elem.error?.message | "unknown"}`));
+							reject(new Error(`Failed to load ${elem.tagName} "${url}"`));
 						};
 
 						elem.addEventListener(loadEventName, onLoad);
 						elem.onerror = onError;
+						elem.crossOrigin = "anonymous";
 						elem.src = url;
 					});
 				}
