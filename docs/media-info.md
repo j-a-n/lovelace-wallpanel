@@ -27,9 +27,15 @@ Available option names are: `year`, `month`, `day`, `weekday`, `hour`, `minute` 
 Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
 See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
 
-The `image.relativePath` placeholder is replaced with the pathname to the current image, relative to the `image_url`
-configuration parameter. `image.url` is the complete URL of the image, while `image.path` is the image path.
-`image.folderName` contains the name of the parent folder.
+
+The following placeholders can also be used:
+
+* `image.url`: The full URL of the media item.
+* `image.path`: The complete path to the media item.
+* `image.relativePath`: The path to the current media item, relative to the `image_url` configuration parameter.
+* `image.folderName`: The name of the folder containing the media file.
+* `image.filename`: The name of the media file.
+
 
 **Examples**
 

@@ -127,9 +127,19 @@ const classStyles = {
 		"background-color": "white"
 	}
 };
-const mediaInfoCacheMaxSize = 1000;
-let mediaInfoCache = {};
-const mediaInfoCacheKeys = [];
+
+const mediaInfoCacheMaxSize = 500;
+const mediaInfoCache = new Map();
+
+function addToMediaInfoCache(mediaUrl, value) {
+	while (mediaInfoCache.size >= mediaInfoCacheMaxSize) {
+		// Remove the oldest key (first inserted)
+		const oldestKey = mediaInfoCache.keys().next().value;
+		mediaInfoCache.delete(oldestKey);
+	}
+	mediaInfoCache.set(mediaUrl, value);
+}
+
 const configEntityStates = {};
 let mediaEntityState = null;
 let elHass = null;
@@ -1898,24 +1908,18 @@ function initWallpanel() {
 
 		fetchEXIFInfo(img) {
 			const wp = this;
-			if (mediaInfoCache[img.mediaUrl]) {
+
+			if (mediaInfoCache.get(img.infoCacheUrl)) {
 				return;
 			}
-			if (mediaInfoCacheKeys.length >= mediaInfoCacheMaxSize) {
-				const oldest = mediaInfoCacheKeys.shift();
-				if (mediaInfoCache[oldest]) {
-					delete mediaInfoCache[oldest];
-				}
-			}
-
 			const tmpImg = document.createElement("img");
 			tmpImg.src = img.src;
 			tmpImg.mediaUrl = img.mediaUrl;
+			tmpImg.infoCacheUrl = img.infoCacheUrl;
 			getImageData(tmpImg, function () {
 				logger.debug("EXIF data:", tmpImg.exifdata);
-				mediaInfoCacheKeys.push(tmpImg.mediaUrl);
-				mediaInfoCache[tmpImg.mediaUrl] = tmpImg.exifdata;
-				wp.setImageDataInfo(tmpImg);
+				addToMediaInfoCache(tmpImg.infoCacheUrl, tmpImg.exifdata);
+				wp.setMediaDataInfo(tmpImg);
 
 				const exifLong = tmpImg.exifdata["GPSLongitude"];
 				const exifLat = tmpImg.exifdata["GPSLatitude"];
@@ -1924,6 +1928,7 @@ function initWallpanel() {
 					const latitude = exifLat[0] * m + (exifLat[1] * m * 60 + exifLat[2] * m) / 3600;
 					m = tmpImg.exifdata["GPSLongitudeRef"] == "W" ? -1 : 1;
 					const longitude = exifLong[0] * m + (exifLong[1] * m * 60 + exifLong[2] * m) / 3600;
+					logger.debug(`Fetching nominatim data for lat=${latitude} lon=${longitude}`);
 
 					const xhr = new XMLHttpRequest();
 					xhr.onload = function () {
@@ -1931,21 +1936,23 @@ function initWallpanel() {
 							const info = JSON.parse(xhr.responseText);
 							logger.debug("nominatim data:", info);
 							if (info && info.address) {
-								mediaInfoCache[tmpImg.mediaUrl].address = info.address;
-								wp.setImageDataInfo(tmpImg);
+								const mediaInfo = mediaInfoCache.get(tmpImg.infoCacheUrl);
+								if (mediaInfo) {
+									mediaInfo.address = info.address;
+									wp.setMediaDataInfo(tmpImg);
+								} else {
+									logger.warning("URL not in cache:", tmpImg.infoCacheUrl);
+								}
 							}
 						} else {
 							logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
-							delete mediaInfoCache[tmpImg.mediaUrl];
 						}
 					};
 					xhr.onerror = function (event) {
 						logger.error("nominatim error:", event);
-						delete mediaInfoCache[tmpImg.mediaUrl];
 					};
 					xhr.ontimeout = function (event) {
 						logger.error("nominatim timeout:", event);
-						delete mediaInfoCache[tmpImg.mediaUrl];
 					};
 					xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
 					xhr.timeout = 15000;
@@ -1954,14 +1961,23 @@ function initWallpanel() {
 			});
 		}
 
-		setImageDataInfo(img) {
-			if (!img || !img.mediaUrl) {
+		setMediaDataInfo(mediaElement) {
+			const infoCacheUrl = mediaElement.infoCacheUrl;
+			const mediaUrl = mediaElement.mediaUrl;
+			if (!infoCacheUrl) {
+				logger.error("infoCacheUrl missing:", mediaElement);
 				return;
 			}
+			if (!mediaUrl) {
+				logger.error("mediaUrl missing:", mediaElement);
+				return;
+			}
+
 			const infoElements = [];
-			if (this.imageOne.mediaUrl == img.mediaUrl) {
+			if (this.imageOne.infoCacheUrl == infoCacheUrl) {
 				infoElements.push(this.imageOneInfo);
-			} else if (this.imageTwo.mediaUrl == img.mediaUrl) {
+			}
+			if (this.imageTwo.infoCacheUrl == infoCacheUrl) {
 				infoElements.push(this.imageTwoInfo);
 			}
 			if (infoElements.length == 0) {
@@ -1976,7 +1992,7 @@ function initWallpanel() {
 				return;
 			}
 
-			let mediaInfo = mediaInfoCache[img.mediaUrl];
+			let mediaInfo = mediaInfoCache.get(infoCacheUrl);
 			if (!mediaInfo) {
 				mediaInfo = {};
 			}
@@ -1984,25 +2000,26 @@ function initWallpanel() {
 				mediaInfo.image = {};
 			}
 			if (!mediaInfo.image.url) {
-				mediaInfo.image.url = img.mediaUrl;
+				mediaInfo.image.url = mediaUrl;
 			}
+			const mediaUrlWithoutQuery = mediaUrl.replace(/\?[^?]*$/, "").replace(/\/+$/, "");
 			if (!mediaInfo.image.path) {
-				mediaInfo.image.path = img.mediaUrl.replace(/^[^:]+:\/\/[^/]+/, "");
+				mediaInfo.image.path = mediaUrlWithoutQuery.replace(/^[^:]+:\/\/[^/]+/, "");
 			}
 			if (!mediaInfo.image.relativePath) {
-				mediaInfo.image.relativePath = img.mediaUrl.replace(config.image_url, "").replace(/^\/+/, "");
+				mediaInfo.image.relativePath = mediaUrlWithoutQuery.replace(config.image_url, "").replace(/^\/+/, "");
 			}
 			if (!mediaInfo.image.filename) {
-				mediaInfo.image.filename = img.mediaUrl.replace(/^.*[\\/]/, "");
+				mediaInfo.image.filename = mediaUrlWithoutQuery.replace(/^.*[\\/]/, "");
 			}
 			if (!mediaInfo.image.folderName) {
 				mediaInfo.image.folderName = "";
-				const parts = img.mediaUrl.split("/");
+				const parts = mediaUrlWithoutQuery.split("/");
 				if (parts.length >= 2) {
 					mediaInfo.image.folderName = parts[parts.length - 2];
 				}
 			}
-			logger.debug("Image info:", mediaInfo);
+			logger.debug("Media info:", mediaInfo);
 
 			let html = config.image_info_template;
 			html = html.replace(/\${([^}]+)}/g, (match, tags) => {
@@ -2098,7 +2115,11 @@ function initWallpanel() {
 			} else if (sourceType == "media-source") {
 				updateFunction = wp.updateMediaListFromMediaSource;
 			} else {
-				this.mediaList = [];
+				let url = config.image_url;
+				if (sourceType == "iframe") {
+					url = url.replace(/^iframe\+/, "");
+				}
+				this.mediaList = [url];
 				if (callback) {
 					callback();
 				}
@@ -2196,11 +2217,7 @@ function initWallpanel() {
 
 		async updateMediaListFromUnsplashAPI() {
 			const urls = [];
-			const data = {};
-			const width = 1920; // Define or retrieve dynamically if needed
-			const height = 1080;
 			const timestamp = Date.now();
-
 			const requestUrl = `${config.image_url}&count=30`;
 
 			logger.debug(`Unsplash API request: ${requestUrl}`);
@@ -2221,20 +2238,16 @@ function initWallpanel() {
 
 				json.forEach((entry) => {
 					logger.debug(entry);
-					const url = `${entry.urls.raw}&w=${width}&h=${height}&auto=format`;
+					const url = `${entry.urls.raw}&w=\${width}&h=\${height}&auto=format`;
 					urls.push(url);
-					data[url] = entry;
+					addToMediaInfoCache(url, entry);
 				});
-
 				this.mediaList = urls;
-				mediaInfoCache = data;
-				logger.debug("Image list from Unsplash is now:", this.mediaList);
 			} catch (error) {
 				logger.warn("Unsplash API error, falling back to random image", error);
-				const fallbackUrl = `https://source.unsplash.com/random/${width}x${height}?sig=${timestamp}`;
-				this.mediaList = [fallbackUrl];
-				mediaInfoCache = {}; // Clear cache on error/fallback
 				logger.debug("Falling back to random Unsplash image.");
+				const fallbackUrl = `https://source.unsplash.com/random/\${width}x\${height}?sig=${timestamp}`;
+				this.mediaList = [fallbackUrl];
 			}
 		}
 
@@ -2277,7 +2290,6 @@ function initWallpanel() {
 			}
 			const wp = this;
 			const urls = [];
-			const data = {};
 			const apiUrl = config.image_url.replace(/^immich\+/, "");
 			const excludeRegExp = [];
 			if (config.exclude_filenames) {
@@ -2312,13 +2324,13 @@ function initWallpanel() {
 						}
 					}
 					const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
-					data[url] = asset.exifInfo || {};
-
-					data[url]["mediaType"] = assetType;
-					data[url]["image"] = {
+					const mediaInfo = asset.exifInfo || {};
+					mediaInfo["mediaType"] = assetType;
+					mediaInfo["image"] = {
 						filename: asset.originalFileName,
 						folderName: folderName
 					};
+					addToMediaInfoCache(url, mediaInfo);
 					urls.push(url);
 				});
 			}
@@ -2329,8 +2341,6 @@ function initWallpanel() {
 				} else {
 					wp.mediaList = urls.sort(); // Sort consistently if not random
 				}
-				mediaInfoCache = data;
-				logger.debug("Image list from immich is now:", wp.mediaList);
 			}
 
 			try {
@@ -2466,13 +2476,6 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
-			const realUrl = this.fillPlaceholders(url);
-			if (realUrl != url && mediaInfoCache[url]) {
-				mediaInfoCache[realUrl] = mediaInfoCache[url];
-			}
-			element.mediaUrl = realUrl;
-			url = realUrl;
-
 			const loadMediaWithElement = async (elem, url) => {
 				if (useFetch) {
 					headers = headers || {};
@@ -2597,69 +2600,69 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromMediaSource(element) {
-			if (!this.mediaList || this.mediaList.length === 0) {
-				return;
-			}
-
-			element.mediaUrl = this.mediaList[this.mediaIndex];
-
 			try {
 				const result = await this.hass.callWS({
 					type: "media_source/resolve_media",
 					media_content_id: element.mediaUrl
 				});
+				const matchedType = result.mime_type?.match(/^(image|video)\//);
+				const mediaType = { image: "img", video: "video" }[matchedType?.[1]] || null;
 
 				let src = result.url;
 				if (!src.startsWith("http://") && !src.startsWith("https://")) {
 					src = `${document.location.origin}${src}`;
 				}
-
 				logger.debug(`Setting image src: ${src}`);
-
-				const matchedType = result.mime_type?.match(/^(image|video)\//);
-				const mediaType = { image: "img", video: "video" }[matchedType?.[1]] || null;
-
-				await this.updateMediaFromUrl(element, src, mediaType);
+				element.mediaUrl = src;
+				await this.updateMediaFromUrl(element, element.mediaUrl, mediaType);
 			} catch (error) {
 				logger.error(`media_source/resolve_media error for ${element.mediaUrl}:`, error);
 			}
 		}
 
-		async updateMediaFromUnsplashAPI(element) {
-			if (this.mediaList.length == 0) {
-				return;
-			}
-			await this.updateMediaFromUrl(element, this.mediaList[this.mediaIndex], "img");
-		}
-
 		async updateMediaFromImmichAPI(element) {
-			if (this.mediaList.length == 0) {
-				return;
-			}
-			const url = this.mediaList[this.mediaIndex];
-			const mediaInfo = mediaInfoCache[url] || {};
+			const mediaInfo = mediaInfoCache.get(element.mediaUrl) || {};
 			const mediaType = mediaInfo["mediaType"] == "video" ? "video" : "img";
-			await this.updateMediaFromUrl(element, url, mediaType, { "x-api-key": config.immich_api_key }, true);
+			await this.updateMediaFromUrl(element, element.mediaUrl, mediaType, { "x-api-key": config.immich_api_key }, true);
 		}
 
 		async updateMediaFromMediaEntity(element) {
-			const mediaEntity = config.image_url.replace(/^media-entity:\/\//, "");
+			const mediaEntity = element.mediaUrl.replace(/^media-entity:\/\//, "");
 			const entity = this.hass.states[mediaEntity];
 			if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
 				return;
 			}
 			const entityPicture = entity.attributes.entity_picture;
 			let querySuffix = entityPicture.indexOf("?") > 0 ? "&" : "?";
-			querySuffix += "width=${width}&height=${height}";
-			const url = entityPicture + querySuffix;
+			querySuffix += this.fillPlaceholders("width=${width}&height=${height}");
+			element.mediaUrl = entityPicture + querySuffix;
+			element.infoCacheUrl = element.mediaUrl;
 			if ("media_exif" in entity.attributes) {
 				// immich-home-assistant provides media_exif
-				mediaInfoCache[url] = entity.attributes["media_exif"];
+				addToMediaInfoCache(element.infoCacheUrl, entity.attributes["media_exif"]);
 			} else {
-				mediaInfoCache[url] = entity.attributes;
+				addToMediaInfoCache(element.infoCacheUrl, entity.attributes);
 			}
 			mediaEntityState = entity.state;
-			await this.updateMediaFromUrl(element, url, "img", null, true);
+			await this.updateMediaFromUrl(element, element.mediaUrl, "img", null, true);
+		}
+
+		async updateMediaFromUnsplashAPI(element) {
+			const mediaInfo = mediaInfoCache.get(element.mediaUrl);
+			element.mediaUrl = this.fillPlaceholders(element.mediaUrl);
+			if (mediaInfo) {
+				addToMediaInfoCache(element.mediaUrl, mediaInfo);
+			}
+			await this.updateMediaFromUrl(element, element.mediaUrl, "img");
+		}
+
+		async updateMediaFromMediaIframe(element) {
+			await this.updateMediaFromUrl(element, element.mediaUrl, "iframe");
+		}
+
+		async updateMediaFromOtherSrc(element) {
+			element.mediaUrl = this.fillPlaceholders(element.mediaUrl);
+			await this.updateMediaFromUrl(element, element.mediaUrl);
 		}
 
 		async updateMedia(element, callback = null) {
@@ -2680,6 +2683,12 @@ function initWallpanel() {
 			}
 			this.updatingMedia = true;
 			this.updateMediaIndex();
+			element.mediaUrl = this.mediaList[this.mediaIndex];
+			if (!element.mediaUrl) {
+				return;
+			}
+			element.infoCacheUrl = element.mediaUrl;
+
 			try {
 				if (mediaSourceType() == "media-source") {
 					await this.updateMediaFromMediaSource(element);
@@ -2690,9 +2699,9 @@ function initWallpanel() {
 				} else if (mediaSourceType() == "media-entity") {
 					await this.updateMediaFromMediaEntity(element);
 				} else if (mediaSourceType() == "iframe") {
-					await this.updateMediaFromUrl(element, config.image_url.replace(/^iframe\+/, ""), "iframe");
+					await this.updateMediaFromMediaIframe(element);
 				} else {
-					await this.updateMediaFromUrl(element, config.image_url);
+					await this.updateMediaFromOtherSrc(element);
 				}
 
 				element = elementType == "active" ? this.getActiveMediaElement() : this.getInactiveMediaElement();
@@ -2872,13 +2881,13 @@ function initWallpanel() {
 				curActiveContainer.style.opacity = 0;
 			}
 
-			this.setImageDataInfo(newMedia);
+			this.setMediaDataInfo(newMedia);
 
 			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
 			let width = 0;
 			let height = 0;
-			if (newMedia.mediaUrl) {
-				const mediaInfo = mediaInfoCache[newMedia.mediaUrl];
+			if (newMedia.infoCacheUrl) {
+				const mediaInfo = mediaInfoCache.get(newMedia.infoCacheUrl);
 				if (mediaInfo) {
 					width = mediaInfo.exifImageWidth;
 					height = mediaInfo.exifImageHeight;
@@ -3131,7 +3140,7 @@ function initWallpanel() {
 				const activeElement = this.getActiveMediaElement();
 				if (activeElement) {
 					html += `<b>Current media:</b> ${activeElement.mediaUrl}<br/>`;
-					const mediaInfo = mediaInfoCache[activeElement.mediaUrl];
+					const mediaInfo = mediaInfoCache.get(activeElement.mediaUrl);
 					if (mediaInfo) {
 						html += `<b>Media info:</b> ${JSON.stringify(mediaInfo)}<br/>`;
 					}
