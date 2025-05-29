@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.46.1";
+const version = "4.46.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -2725,7 +2725,9 @@ function initWallpanel() {
 						}
 					});
 				}
-				this.loadBackgroundImage(element);
+				if (config.image_background === "image") {
+					this.loadBackgroundImage(element);
+				}
 
 				if (!isVideo && config.show_image_info && /.*\.jpe?g$/i.test(element.mediaUrl.split("?")[0])) {
 					this.fetchEXIFInfo(element);
