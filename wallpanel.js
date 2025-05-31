@@ -6,7 +6,7 @@
 const version = "4.46.3";
 const defaultConfig = {
 	enabled: false,
-	enabled_on_tabs: [],
+	enabled_on_views: [],
 	debug: false,
 	wait_for_browser_mod_time: 0.25,
 	log_level_console: "info",
@@ -457,21 +457,21 @@ function mergeConfig(target, ...sources) {
 	// https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
 	if (!sources.length) return target;
 	const source = sources.shift();
+	const renamedOptions = {
+		image_excludes: "exclude_filenames",
+		image_fit: "image_fit_landscape",
+		enabled_on_tabs: "enabled_on_views"
+	};
 
 	if (isObject(target) && isObject(source)) {
 		for (let key in source) {
 			let val = source[key];
-			if (key == "image_excludes") {
+
+			if (renamedOptions[key]) {
 				logger.warn(
-					"The configuration option 'image_excludes' has been renamed to 'exclude_filenames'. Please update your wallpanel configuration accordingly."
+					`The configuration option '${key}' has been renamed to '${renamedOptions[key]}'. Please update your wallpanel configuration accordingly.`
 				);
-				key = "exclude_filenames";
-			}
-			if (key == "image_fit") {
-				logger.warn(
-					"The configuration option 'image_fit' has been renamed to 'image_fit_landscape'. Please update your wallpanel configuration accordingly."
-				);
-				key = "image_fit_landscape";
+				key = renamedOptions[key];
 			}
 
 			if (isObject(val)) {
@@ -642,10 +642,10 @@ function isActive() {
 		return false;
 	}
 	if (
-		config.enabled_on_tabs &&
-		config.enabled_on_tabs.length > 0 &&
+		config.enabled_on_views &&
+		config.enabled_on_views.length > 0 &&
 		activeTab &&
-		!config.enabled_on_tabs.includes(activeTab)
+		!config.enabled_on_views.includes(activeTab)
 	) {
 		logger.debug(`Wallpanel not enabled on current tab ${activeTab}`);
 		return false;

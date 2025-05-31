@@ -4,7 +4,7 @@ You can set the following configuration parameters for every individual Home Ass
 | Config                           | Description                                                                                            | Default   |
 | ---------------------------------| ------------------------------------------------------------------------------------------------------ | --------- |
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
-| enabled_on_tabs                  | Enable WallPanel on the named panel tabs only. If the list is empty, WallPanel is enabled on all tabs. | []   |
+| enabled_on_views                 | Enable WallPanel on the named panel views only. If the list is empty, WallPanel is enabled on all views. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
 | wait_for_browser_mod_time        | How long to wait for browser_mod to be available (in seconds)? This config attribute can only be set in the main configuration and not in profiles, user-specific or device-specific. | 0.25      |
 | log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
@@ -109,7 +109,7 @@ wallpanel:
 ```yaml
 wallpanel:
   enabled: true
-  enabled_on_tabs:
+  enabled_on_views:
     - default_view
   debug: false
   hide_toolbar: true
