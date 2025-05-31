@@ -1992,6 +1992,8 @@ function initWallpanel() {
 				return;
 			}
 
+			// Check if attributes are undefined to avoid overwriting existing ones (e.g., from the Immich API),
+			// even if the new value is an empty string
 			let mediaInfo = mediaInfoCache.get(infoCacheUrl);
 			if (!mediaInfo) {
 				mediaInfo = {};
@@ -1999,20 +2001,20 @@ function initWallpanel() {
 			if (!mediaInfo.image) {
 				mediaInfo.image = {};
 			}
-			if (!mediaInfo.image.url) {
+			if (mediaInfo.image.url === undefined) {
 				mediaInfo.image.url = mediaUrl;
 			}
 			const mediaUrlWithoutQuery = mediaUrl.replace(/\?[^?]*$/, "").replace(/\/+$/, "");
-			if (!mediaInfo.image.path) {
+			if (mediaInfo.image.path === undefined) {
 				mediaInfo.image.path = mediaUrlWithoutQuery.replace(/^[^:]+:\/\/[^/]+/, "");
 			}
-			if (!mediaInfo.image.relativePath) {
+			if (mediaInfo.image.relativePath === undefined) {
 				mediaInfo.image.relativePath = mediaUrlWithoutQuery.replace(config.image_url, "").replace(/^\/+/, "");
 			}
-			if (!mediaInfo.image.filename) {
+			if (mediaInfo.image.filename === undefined) {
 				mediaInfo.image.filename = mediaUrlWithoutQuery.replace(/^.*[\\/]/, "");
 			}
-			if (!mediaInfo.image.folderName) {
+			if (mediaInfo.image.folderName === undefined) {
 				mediaInfo.image.folderName = "";
 				const parts = mediaUrlWithoutQuery.split("/");
 				if (parts.length >= 2) {
