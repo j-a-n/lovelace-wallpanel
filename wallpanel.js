@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.46.2";
+const version = "4.46.3";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_tabs: [],
@@ -2219,20 +2219,24 @@ function initWallpanel() {
 
 		async updateMediaListFromUnsplashAPI() {
 			const urls = [];
-			const timestamp = Date.now();
 			const requestUrl = `${config.image_url}&count=30`;
 
 			logger.debug(`Unsplash API request: ${requestUrl}`);
-
 			try {
-				const response = await fetch(requestUrl, {
+				const options = {
 					method: "GET",
-					headers: { Accept: "application/json" },
-					signal: AbortSignal.timeout(10000)
-				});
+					headers: { Accept: "application/json" }
+				};
+				if (typeof AbortSignal !== "undefined") {
+					logger.debug("Using AbortSignal");
+					options.signal = AbortSignal.timeout(10000); // 10 seconds timeout
+				}
+
+				const response = await fetch(requestUrl, options);
 
 				if (!response.ok) {
-					throw new Error(`Unsplash API request failed with status ${response.status}: ${response.statusText}`);
+					const errorText = await response.text();
+					throw new Error(`Unsplash API request failed: ${response.status} ${response.statusText} - ${errorText}`);
 				}
 
 				const json = await response.json();
@@ -2246,10 +2250,10 @@ function initWallpanel() {
 				});
 				this.mediaList = urls;
 			} catch (error) {
-				logger.warn("Unsplash API error, falling back to random image", error);
-				logger.debug("Falling back to random Unsplash image.");
-				const fallbackUrl = `https://source.unsplash.com/random/\${width}x\${height}?sig=${timestamp}`;
-				this.mediaList = [fallbackUrl];
+				if (error.name === "AbortError") {
+					throw new Error(`Unsplash API request timed out: ${requestUrl}`);
+				}
+				throw error; // Re-throw other errors
 			}
 		}
 
@@ -2259,18 +2263,18 @@ function initWallpanel() {
 					"x-api-key": config.immich_api_key,
 					"Content-Type": "application/json",
 					Accept: "application/json"
-				},
-				timeout: 10000 // 10 seconds timeout
+				}
 			};
 			const mergedOptions = { ...defaultOptions, ...options };
 			mergedOptions.headers = { ...defaultOptions.headers, ...options.headers };
+			if (typeof AbortSignal !== "undefined") {
+				logger.debug("Using AbortSignal");
+				mergedOptions.signal = AbortSignal.timeout(10000); // 10 seconds timeout
+			}
 
-			const controller = new AbortController();
-			const timeoutId = setTimeout(() => controller.abort(), mergedOptions.timeout);
-
+			logger.debug(`Immich API request: ${url}`);
 			try {
-				const response = await fetch(url, { ...mergedOptions, signal: controller.signal });
-				clearTimeout(timeoutId);
+				const response = await fetch(url, mergedOptions);
 
 				if (!response.ok) {
 					const errorText = await response.text();
@@ -2278,7 +2282,6 @@ function initWallpanel() {
 				}
 				return await response.json();
 			} catch (error) {
-				clearTimeout(timeoutId);
 				if (error.name === "AbortError") {
 					throw new Error(`Immich API request timed out: ${url}`);
 				}
