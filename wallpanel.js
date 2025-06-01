@@ -1105,7 +1105,6 @@ function initWallpanel() {
 			this.imageOne.style.pointerEvents = "none";
 			this.imageOne.style.width = "100%";
 			this.imageOne.style.height = "100%";
-			this.imageOne.style.objectFit = "contain";
 			this.imageOne.style.border = "none";
 
 			this.imageOneInfoContainer.removeAttribute("style");
@@ -1144,7 +1143,6 @@ function initWallpanel() {
 			this.imageTwo.style.pointerEvents = "none";
 			this.imageTwo.style.width = "100%";
 			this.imageTwo.style.height = "100%";
-			this.imageTwo.style.objectFit = "contain";
 			this.imageTwo.style.border = "none";
 
 			this.imageTwoInfoContainer.removeAttribute("style");
@@ -1231,8 +1229,6 @@ function initWallpanel() {
 			this.style.transition = `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out`;
 			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
 			this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
-			this.imageOne.style.objectFit = config.image_fit_landscape;
-			this.imageTwo.style.objectFit = config.image_fit_landscape;
 
 			if (config.info_animation_duration_x) {
 				this.infoBoxPosX.style.animation = `moveX ${config.info_animation_duration_x}s ${config.info_animation_timing_function_x} infinite alternate`;
@@ -1610,7 +1606,9 @@ function initWallpanel() {
 			if (delay < 50) {
 				delay = 50;
 			}
-			let duration = Math.ceil(config.image_animation_ken_burns_duration || config.display_time + config.crossfade_time * 2 + 1);
+			const duration = Math.ceil(
+				config.image_animation_ken_burns_duration || config.display_time + config.crossfade_time * 2 + 1
+			);
 			setTimeout(function () {
 				activeElement.style.animation = `kenBurnsEffect ${duration}s ease`;
 			}, delay);
@@ -2750,6 +2748,76 @@ function initWallpanel() {
 			}
 		}
 
+		setMediaDimensions() {
+			const activeElem = this.getActiveMediaElement();
+
+			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
+			let width = 0;
+			let height = 0;
+			if (activeElem.infoCacheUrl) {
+				const mediaInfo = mediaInfoCache.get(activeElem.infoCacheUrl);
+				if (mediaInfo) {
+					width = mediaInfo.exifImageWidth;
+					height = mediaInfo.exifImageHeight;
+				}
+			}
+			if (!width || !height) {
+				if (activeElem.tagName.toLowerCase() === "video") {
+					width = activeElem.videoWidth;
+					height = activeElem.videoHeight;
+				} else {
+					width = activeElem.naturalWidth;
+					height = activeElem.naturalHeight;
+				}
+			}
+			logger.debug(`Size of media element is ${width}x${height}`, activeElem);
+
+			const mediaFit = ""; // cover / contain
+			if (mediaFit) {
+				// Experimental: calculate sizes
+				activeElem.style.position = "absolute";
+				activeElem.style.objectFit = "fill";
+				activeElem.style.left = "0px";
+				activeElem.style.top = "0px";
+				const availWidth = this.screensaverContainer.clientWidth;
+				const availHeight = this.screensaverContainer.clientHeight;
+				let setHeight = height;
+				let setWidth = width;
+				let setTop = 0;
+				let setLeft = 0;
+				if (mediaFit == "cover") {
+					// Fill the whole screen, center and crop image
+					const diffWidth = availWidth - width;
+					const diffHeight = availHeight - height;
+
+					logger.debug(`${availWidth}x${availHeight} - ${width}x${height} - ${diffWidth}x${diffHeight}`);
+					if (Math.abs(diffWidth) > Math.abs(diffHeight)) {
+						logger.debug("Using available width");
+						setWidth = availWidth;
+						const ratioWidth = availWidth / width;
+						setHeight = Math.round(height * ratioWidth);
+						setTop = Math.round((height * ratioWidth - availHeight) / -2);
+					} else {
+						logger.debug("Using available height");
+						setHeight = availHeight;
+						const ratioHeight = availHeight / height;
+						setWidth = Math.round(width * ratioHeight);
+						setLeft = Math.round((width * ratioHeight - availWidth) / -2);
+					}
+				}
+				activeElem.style.width = `${setWidth}px`;
+				activeElem.style.height = `${setHeight}px`;
+				activeElem.style.top = `${setTop}px`;
+				activeElem.style.left = `${setLeft}px`;
+			} else {
+				if (!width || !height || width >= height) {
+					activeElem.style.objectFit = config.image_fit_landscape;
+				} else {
+					activeElem.style.objectFit = config.image_fit_portrait;
+				}
+			}
+		}
+
 		startPlayingActiveMedia() {
 			const activeElem = this.getActiveMediaElement();
 			if (typeof activeElem.play !== "function") {
@@ -2855,13 +2923,6 @@ function initWallpanel() {
 			});
 		}
 
-		getImageFit(width, height) {
-			if (!width || !height || width >= height) {
-				return config.image_fit_landscape;
-			}
-			return config.image_fit_portrait;
-		}
-
 		_switchActiveMedia(newElement, crossfadeMillis = null) {
 			this.lastMediaUpdate = Date.now();
 
@@ -2892,29 +2953,7 @@ function initWallpanel() {
 			}
 
 			this.setMediaDataInfo(newMedia);
-
-			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
-			let width = 0;
-			let height = 0;
-			if (newMedia.infoCacheUrl) {
-				const mediaInfo = mediaInfoCache.get(newMedia.infoCacheUrl);
-				if (mediaInfo) {
-					width = mediaInfo.exifImageWidth;
-					height = mediaInfo.exifImageHeight;
-				}
-			}
-			if (!width || !height) {
-				if (curMedia.tagName.toLowerCase() === "video") {
-					width = newMedia.videoWidth;
-					height = newMedia.videoHeight;
-				} else {
-					width = newMedia.naturalWidth;
-					height = newMedia.naturalHeight;
-				}
-			}
-			logger.debug(`Size of media element is ${width}x${height}`, newMedia);
-			newMedia.style.objectFit = this.getImageFit(width, height);
-
+			this.setMediaDimensions();
 			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
 			this.restartProgressBarAnimation();
@@ -2973,13 +3012,9 @@ function initWallpanel() {
 
 			this.updateStyle();
 			this.setupScreensaver();
+			this.setMediaDimensions();
 			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
-
-			// Set the correct objectFit for the active image
-			const activeElement = this.getActiveMediaElement();
-			activeElement.style.objectFit = this.getImageFit(activeElement.naturalWith, activeElement.naturalHeight);
-
 			this.restartProgressBarAnimation();
 			this.restartKenBurnsEffect();
 
