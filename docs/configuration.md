@@ -4,7 +4,7 @@ You can set the following configuration parameters for every individual Home Ass
 | Config                           | Description                                                                                            | Default   |
 | ---------------------------------| ------------------------------------------------------------------------------------------------------ | --------- |
 | enabled                          | Enable WallPanel? <br>*You will need to set this to **true** to activate the wall panel for the dashboard.* | false   |
-| enabled_on_views                 | Enable WallPanel on the named panel views only. If the list is empty, WallPanel is enabled on all views. | []   |
+| enabled_on_views                 | Enable WallPanel on the named views (path) only. See [Enable WallPanel on specific Views](configuration.md#enable-wallpanel-on-specific-views) for details. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
 | wait_for_browser_mod_time        | How long to wait for browser_mod to be available (in seconds)? This config attribute can only be set in the main configuration and not in profiles, user-specific or device-specific. | 0.25      |
 | log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
@@ -266,3 +266,17 @@ wallpanel:
 
 A profile can be selected using a URL parameter:
 `http://hass:8123/lovelace/default_view?wp_profile=night`
+
+## Enable WallPanel on specific Views
+To enable WallPanel only on specific views, use the `enabled_on_views` configuration option.
+
+This option accepts a list of view paths where WallPanel should be active. You can find the path in your dashboard’s YAML configuration or directly from the browser URL.
+
+For example, in the URL below, the path of the view is `1`:
+
+```
+https://hass:8123/dashboard-test/1
+```
+
+If you leave the list empty, WallPanel will be enabled on all views by default.
+
