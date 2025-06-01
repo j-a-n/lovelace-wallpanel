@@ -2481,7 +2481,7 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
-			const loadMediaWithElement = async (elem, url) => {
+			const loadMediaWithElement = async (elem) => {
 				if (useFetch) {
 					headers = headers || {};
 					const response = await fetch(url, { headers: headers });
@@ -2521,7 +2521,6 @@ function initWallpanel() {
 
 						elem.addEventListener(loadEventName, onLoad);
 						elem.onerror = onError;
-						elem.crossOrigin = "anonymous";
 						elem.src = url;
 					});
 				}
@@ -2560,22 +2559,22 @@ function initWallpanel() {
 				currentElem.replaceWith(newElem);
 			};
 
-			const handleFallback = async (currentElem, url, mediaType = null, originalError = null) => {
+			const handleFallback = async (currentElem, mediaType = null, originalError = null) => {
 				const fallbackElem = createFallbackElement(currentElem, mediaType);
 				replaceElementWith(currentElem, fallbackElem);
 				try {
-					await loadMediaWithElement(fallbackElem, url);
+					await loadMediaWithElement(fallbackElem);
 				} catch (e) {
 					this.handleMediaError(currentElem, originalError || e);
 				}
 			};
 
-			const loadOrFallback = async (currentElem, url, withFallback) => {
+			const loadOrFallback = async (currentElem, withFallback) => {
 				try {
-					await loadMediaWithElement(currentElem, url);
+					await loadMediaWithElement(currentElem);
 				} catch (e) {
 					if (withFallback) {
-						await handleFallback(currentElem, url, null, e);
+						await handleFallback(currentElem, null, e);
 					} else {
 						this.handleMediaError(currentElem, e);
 					}
@@ -2583,11 +2582,11 @@ function initWallpanel() {
 			};
 
 			if (!mediaType) {
-				await loadOrFallback(element, url, true);
+				await loadOrFallback(element, true);
 			} else if (mediaType === element.tagName.toLowerCase()) {
-				await loadOrFallback(element, url, false);
+				await loadOrFallback(element, false);
 			} else {
-				await handleFallback(element, url, mediaType);
+				await handleFallback(element, mediaType);
 			}
 		}
 
