@@ -1965,7 +1965,7 @@ function initWallpanel() {
 
 		setMediaDataInfo(mediaElement) {
 			const infoCacheUrl = mediaElement.infoCacheUrl;
-			const mediaUrl = mediaElement.mediaUrl;
+			let mediaUrl = mediaElement.mediaUrl;
 			if (!infoCacheUrl) {
 				logger.error("infoCacheUrl missing:", mediaElement);
 				return;
@@ -1974,6 +1974,7 @@ function initWallpanel() {
 				logger.error("mediaUrl missing:", mediaElement);
 				return;
 			}
+			mediaUrl = decodeURI(mediaUrl);
 
 			const infoElements = [];
 			if (this.imageOne.infoCacheUrl == infoCacheUrl) {
