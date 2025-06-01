@@ -74,6 +74,7 @@ const defaultConfig = {
 	image_animation_ken_burns: false,
 	image_animation_ken_burns_zoom: 1.3,
 	image_animation_ken_burns_delay: 0,
+	image_animation_ken_burns_duration: 0,
 	camera_motion_detection_enabled: false,
 	camera_motion_detection_facing_mode: "user",
 	camera_motion_detection_threshold: 5,
@@ -1337,8 +1338,11 @@ function initWallpanel() {
 						transform-origin: bottom left;
 						transform: scale(1.0);
 					}
-					100% {
+					50% {
 						transform: scale(${config.image_animation_ken_burns_zoom});
+					}
+					100% {
+						transform: scale(1.0);
 					}
 				}
 				${classCss}
@@ -1606,8 +1610,9 @@ function initWallpanel() {
 			if (delay < 50) {
 				delay = 50;
 			}
+			let duration = Math.ceil(config.image_animation_ken_burns_duration || config.display_time + config.crossfade_time * 2 + 1);
 			setTimeout(function () {
-				activeElement.style.animation = `kenBurnsEffect ${config.display_time + Math.ceil(config.crossfade_time * 2) + 1}s ease`;
+				activeElement.style.animation = `kenBurnsEffect ${duration}s ease`;
 			}, delay);
 		}
 
@@ -1820,7 +1825,6 @@ function initWallpanel() {
 			});
 			infoBoxResizeObserver.observe(this.infoBoxContent);
 
-			//////////////////this.reconfigure();
 			// Correct possibly incorrect entity state
 			this.setScreensaverEntityState();
 		}
