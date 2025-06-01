@@ -50,8 +50,8 @@ const defaultConfig = {
 	immich_persons: [],
 	immich_memories: false,
 	immich_resolution: "preview",
-	image_fit_landscape: "cover", // cover / contain / fill
-	image_fit_portrait: "contain", // cover / contain / fill
+	image_fit_landscape: "cover", // cover / contain
+	image_fit_portrait: "contain", // cover / contain
 	image_list_update_interval: 3600,
 	image_order: "sorted", // sorted / random
 	exclude_filenames: [], // Excluded filenames (regex)
@@ -75,6 +75,7 @@ const defaultConfig = {
 	image_animation_ken_burns_zoom: 1.3,
 	image_animation_ken_burns_delay: 0,
 	image_animation_ken_burns_duration: 0,
+	image_animation_ken_burns_animations: ["simple"], // simple / experimental
 	camera_motion_detection_enabled: false,
 	camera_motion_detection_facing_mode: "user",
 	camera_motion_detection_threshold: 5,
@@ -82,6 +83,7 @@ const defaultConfig = {
 	camera_motion_detection_capture_height: 48,
 	camera_motion_detection_capture_interval: 0.3,
 	camera_motion_detection_capture_visible: false,
+	custom_css: "",
 	style: {},
 	badges: [],
 	cards: [{ type: "weather-forecast", entity: "weather.home", show_forecast: true }],
@@ -1329,19 +1331,48 @@ function initWallpanel() {
 						width: 100%;
 					}
 				}
-				@keyframes kenBurnsEffect {
+				@keyframes kenBurnsEffect-experimental {
 					0% {
-						transform-origin: bottom left;
-						transform: scale(1.0);
+						transform: scale(1.0) translateX(calc(var(--hidden-width) / -2 * 1px)) translateY(calc(var(--hidden-height) / -2 * 1px));
 					}
 					50% {
-						transform: scale(${config.image_animation_ken_burns_zoom});
+						transform: scale(var(--ken-burns-zoom));
+					}
+					90% {
+						transform: scale(calc(1.0 + ((var(--ken-burns-zoom) - 1.0)/2))) translateX(calc(var(--hidden-width) / 2 * 1px)) translateY(calc(var(--hidden-height) / 2 * 1px));
 					}
 					100% {
 						transform: scale(1.0);
 					}
 				}
+				@keyframes kenBurnsEffect-experimental2 {
+					0% {
+						transform: scale(1.0);
+					}
+					25% {
+						transform: scale(calc(1.0 + ((var(--ken-burns-zoom) - 1.0)/2))) translateX(calc(var(--hidden-width) / 2 * 1px)) translateY(calc(var(--hidden-height) / 2 * 1px));
+					}
+					50% {
+						transform: scale(var(--ken-burns-zoom));
+					}
+					75% {
+						transform: scale(calc(1.0 + ((var(--ken-burns-zoom) - 1.0)/2))) translateX(calc(var(--hidden-width) / -2 * 1px)) translateY(calc(var(--hidden-height) / -2 * 1px));
+					}
+					100% {
+						transform: scale(1.0);
+					}
+				}
+				@keyframes kenBurnsEffect-simple {
+					0% {
+						transform-origin: bottom left;
+						transform: scale(1.0);
+					}
+					100% {
+						transform: scale(var(--ken-burns-zoom));
+					}
+				}
 				${classCss}
+				${config.custom_css}
 			`;
 		}
 
@@ -1597,20 +1628,29 @@ function initWallpanel() {
 		}
 
 		restartKenBurnsEffect() {
-			if (!config.image_animation_ken_burns) {
+			if (!config.image_animation_ken_burns || !config.image_animation_ken_burns_animations.length) {
 				return;
 			}
 			const activeElement = this.getActiveMediaElement();
 			activeElement.style.animation = "none";
+			activeElement.style.setProperty("--ken-burns-zoom", config.image_animation_ken_burns_zoom);
+
 			let delay = Math.floor(config.image_animation_ken_burns_delay * 1000);
 			if (delay < 50) {
 				delay = 50;
 			}
 			const duration = Math.ceil(
-				config.image_animation_ken_burns_duration || config.display_time + config.crossfade_time * 2 + 1
+				config.image_animation_ken_burns_duration || (config.display_time + config.crossfade_time * 2) * 1.2
 			);
-			setTimeout(function () {
-				activeElement.style.animation = `kenBurnsEffect ${duration}s ease`;
+			const animation =
+				config.image_animation_ken_burns_animations[
+					Math.floor(Math.random() * config.image_animation_ken_burns_animations.length)
+				];
+			if (this.kenburnsDelayStartTimer) {
+				clearTimeout(this.kenburnsDelayStartTimer);
+			}
+			this.kenburnsDelayStartTimer = setTimeout(function () {
+				activeElement.style.animation = `kenBurnsEffect-${animation} ${duration}s linear`;
 			}, delay);
 		}
 
@@ -1808,6 +1848,7 @@ function initWallpanel() {
 			window.addEventListener("resize", () => {
 				if (wp.screensaverRunning()) {
 					wp.updateShadowStyle();
+					wp.setMediaDimensions();
 				}
 			});
 			window.addEventListener("hass-more-info", () => {
@@ -2773,50 +2814,49 @@ function initWallpanel() {
 			}
 			logger.debug(`Size of media element is ${width}x${height}`, activeElem);
 
-			const mediaFit = ""; // cover / contain
-			if (mediaFit) {
-				// Experimental: calculate sizes
-				activeElem.style.position = "absolute";
-				activeElem.style.objectFit = "fill";
-				activeElem.style.left = "0px";
-				activeElem.style.top = "0px";
-				const availWidth = this.screensaverContainer.clientWidth;
-				const availHeight = this.screensaverContainer.clientHeight;
-				let setHeight = height;
-				let setWidth = width;
-				let setTop = 0;
-				let setLeft = 0;
-				if (mediaFit == "cover") {
-					// Fill the whole screen, center and crop image
-					const diffWidth = availWidth - width;
-					const diffHeight = availHeight - height;
+			const mediaFit = !width || !height || width >= height ? config.image_fit_landscape : config.image_fit_portrait; // cover / contain
 
-					logger.debug(`${availWidth}x${availHeight} - ${width}x${height} - ${diffWidth}x${diffHeight}`);
-					if (Math.abs(diffWidth) > Math.abs(diffHeight)) {
-						logger.debug("Using available width");
-						setWidth = availWidth;
-						const ratioWidth = availWidth / width;
-						setHeight = Math.round(height * ratioWidth);
-						setTop = Math.round((height * ratioWidth - availHeight) / -2);
-					} else {
-						logger.debug("Using available height");
-						setHeight = availHeight;
-						const ratioHeight = availHeight / height;
-						setWidth = Math.round(width * ratioHeight);
-						setLeft = Math.round((width * ratioHeight - availWidth) / -2);
-					}
-				}
-				activeElem.style.width = `${setWidth}px`;
-				activeElem.style.height = `${setHeight}px`;
-				activeElem.style.top = `${setTop}px`;
-				activeElem.style.left = `${setLeft}px`;
+			activeElem.style.position = "absolute";
+			activeElem.style.objectFit = "fill";
+			activeElem.style.left = "0px";
+			activeElem.style.top = "0px";
+			const availWidth = this.screensaverContainer.clientWidth;
+			const availHeight = this.screensaverContainer.clientHeight;
+			let setHeight = height;
+			let setWidth = width;
+			let hiddenHeight = 0;
+			let hiddenWidth = 0;
+			let setTop = 0;
+			let setLeft = 0;
+
+			const ratioWidth = availWidth / width;
+			const ratioHeight = availHeight / height;
+			const diffWidth = availWidth - width * ratioHeight;
+			const diffHeight = availHeight - height * ratioWidth;
+
+			logger.debug(`avail=${availWidth}x${availHeight} - size=${width}x${height} - diff=${diffWidth}x${diffHeight}`);
+			if ((mediaFit == "contain" && diffWidth < diffHeight) || (mediaFit == "cover" && diffWidth >= diffHeight)) {
+				logger.debug("Using available width");
+				setWidth = availWidth;
+				setHeight = Math.round(height * ratioWidth);
+				setTop = Math.round((height * ratioWidth - availHeight) / -2);
+				hiddenHeight = Math.max(setHeight - availHeight, 0);
 			} else {
-				if (!width || !height || width >= height) {
-					activeElem.style.objectFit = config.image_fit_landscape;
-				} else {
-					activeElem.style.objectFit = config.image_fit_portrait;
-				}
+				logger.debug("Using available height");
+				setHeight = availHeight;
+				setWidth = Math.round(width * ratioHeight);
+				setLeft = Math.round((width * ratioHeight - availWidth) / -2);
+				hiddenWidth = Math.max(setWidth - availWidth, 0);
 			}
+			logger.debug(
+				`setSize=${setWidth}x${setHeight} - setPosition=${setTop}x${setLeft} - hidden=${hiddenWidth}x${hiddenHeight}`
+			);
+			activeElem.style.width = `${setWidth}px`;
+			activeElem.style.height = `${setHeight}px`;
+			activeElem.style.top = `${setTop}px`;
+			activeElem.style.left = `${setLeft}px`;
+			activeElem.style.setProperty("--hidden-width", hiddenWidth);
+			activeElem.style.setProperty("--hidden-height", hiddenHeight);
 		}
 
 		startPlayingActiveMedia() {
