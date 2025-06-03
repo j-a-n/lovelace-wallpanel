@@ -85,7 +85,7 @@ wallpanel:
 ```
 
 The width of the view can be adjusted using CSS.
-The following example uses 80% of the available width of the viewport:
+The following example uses 80 % of the available width of the viewport:
 
 ```yaml
 wallpanel:
@@ -108,6 +108,19 @@ wallpanel:
       transform: scale(1.2)
       transform-origin: top center
 ```
+
+To utilize the full screen width and remove any extra padding, apply the following:
+```
+wallpanel:
+  views:
+    - title: Wallpanel
+  style:
+    wallpanel-screensaver-info-container:
+      padding: 0px
+    wallpanel-screensaver-info-box-views:
+      width: 100vw
+```
+
 
 ## Info Box animation
 The info box, which contains the cards and badges, can be animated and moved around the screen using CSS animations.
