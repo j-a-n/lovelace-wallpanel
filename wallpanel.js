@@ -1551,8 +1551,7 @@ function initWallpanel() {
 					const viewContainer = document.createElement("div");
 					if (config.card_interaction) {
 						viewElement.style.pointerEvents = "auto";
-					}
-					else {
+					} else {
 						viewElement.style.pointerEvents = "none";
 					}
 					if (viewConfig.wp_style) {
@@ -1597,8 +1596,7 @@ function initWallpanel() {
 
 					if (config.card_interaction) {
 						cardContainer.style.pointerEvents = "auto";
-					}
-					else {
+					} else {
 						cardContainer.style.pointerEvents = "none";
 					}
 					for (const attr in style) {
