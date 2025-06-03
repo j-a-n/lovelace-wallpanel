@@ -29,7 +29,7 @@ const defaultConfig = {
 	keep_screen_on_time: 0,
 	black_screen_after_time: 0,
 	control_reactivation_time: 1.0,
-	screensaver_stop_navigation_path: "",
+	screensaver_start_navigation_path: "",
 	screensaver_stop_close_browser_mod_popup: false,
 	screensaver_entity: "",
 	stop_screensaver_on_mouse_move: true,
@@ -463,7 +463,8 @@ function mergeConfig(target, ...sources) {
 	const renamedOptions = {
 		image_excludes: "exclude_filenames",
 		image_fit: "image_fit_landscape",
-		enabled_on_tabs: "enabled_on_views"
+		enabled_on_tabs: "enabled_on_views",
+		screensaver_stop_navigation_path: "screensaver_start_navigation_path"
 	};
 
 	if (isObject(target) && isObject(source)) {
@@ -3094,12 +3095,12 @@ function initWallpanel() {
 
 			this.setScreensaverEntityState();
 
-			if (config.screensaver_stop_navigation_path || config.screensaver_stop_close_browser_mod_popup) {
+			if (config.screensaver_start_navigation_path || config.screensaver_stop_close_browser_mod_popup) {
 				this.screensaverStopNavigationPathTimeout = setTimeout(
 					() => {
-						if (config.screensaver_stop_navigation_path) {
+						if (config.screensaver_start_navigation_path) {
 							skipDisableScreensaverOnLocationChanged = true;
-							navigate(config.screensaver_stop_navigation_path);
+							navigate(config.screensaver_start_navigation_path);
 							setTimeout(() => {
 								skipDisableScreensaverOnLocationChanged = false;
 							}, 5000);

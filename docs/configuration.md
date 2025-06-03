@@ -34,7 +34,7 @@ You can set the following configuration parameters for every individual Home Ass
 | disable_screensaver_on_browser_mod_popup     | Disable screensaver if a browser mod popup is active?                                      | false     |
 | disable_screensaver_on_browser_mod_popup_func| Javascript function to determine whether to disable screensaver based on active browser mod popup (see [Browser Mod Popups](browser-mod.md#browser-mod-popups)) |    |
 | disable_screensaver_when_assist_active | Disable screensaver if assist dialog is active?                                                  | true      |
-| screensaver_stop_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is stopped. Use a complete path to avoid redirects which will stop the screensaver. |           |
+| screensaver_start_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is started. Use a complete path to avoid redirects which will stop the screensaver. |           |
 | screensaver_stop_close_browser_mod_popup | Close the active browser mod popup when screensaver is stopped?                                | false     |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |        |
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
@@ -120,7 +120,7 @@ wallpanel:
   keep_screen_on_time: 86400
   black_screen_after_time: 7200
   control_reactivation_time: 1.0
-  screensaver_stop_navigation_path: /lovelace/default_view
+  screensaver_start_navigation_path: /lovelace/default_view
   image_url: 'http://picsum.photos/${width}/${height}?random=${timestamp}'
   image_fit_landscape: cover
   image_list_update_interval: 3600
