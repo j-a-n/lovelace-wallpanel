@@ -50,15 +50,16 @@ You can set the following configuration parameters for every individual Home Ass
 | immich_resolution                | The resolution to use for loading images from immich (possible values are: preview / original).        | preview   |
 | exclude_filenames                | List of regular expressions for excluding files and directories from media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_types              | List of media types to exlcude media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
-| image_fit_landscape              | Value to be used for the CSS-property 'object-fit' for landscape images (possible values are: cover / contain / fill / ...). | cover |
-| image_fit_portrait               | Value to be used for the CSS-property 'object-fit' for portrait images (possible values are: cover / contain / fill / ...). | contain |
-| image_background                 | If set to `image`, the current image is also displayed as the background over the entire screen. Use the `wallpanel-screensaver-image-background` class to style the background. | color |
+| image_fit_landscape              | How to adjust a media item in landscape mode to fit the available space (cover or contain).            | cover      |
+| image_fit_portrait               | How to adjust a media item in portrait mode to fit the available space (cover or contain).             | contain    |
+| image_background                 | When set to image, a snapshot from the current media item is used as the background, covering the entire screen. To customize its appearance, apply styles using the `wallpanel-screensaver-image-background` class. | color |
 | image_list_update_interval       | When using a local media source, the image list is updated at this interval.                           | 3600       |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
 | image_animation_ken_burns        | Apply a Ken Burns effect (panning and zooming) to the images?                                          | false      |
 | image_animation_ken_burns_zoom   | Zoom level for the Ken Burns effect.                                                                   | 1.3        |
 | image_animation_ken_burns_delay  | Start Ken Burns effect with a delay (in seconds).                                                      | 0          |
-| video_loop                       | Loop video until 'display_time' is reached? Otherwise, immediately switch to the next media at the end of the video playback.  | false     |
+| image_animation_ken_burns_duration | Specifies the duration of the Ken Burns effect in seconds. If set to 0, the `display_time` value is used instead. | 0          |
+| video_loop                       | Loop video until `display_time` is reached? Otherwise, immediately switch to the next media at the end of the video playback.  | false     |
 | show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data and images from the new Unsplash API. The config name was `show_exif_info` before version 4.7. | false      |
 | show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
