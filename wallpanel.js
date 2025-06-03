@@ -1074,6 +1074,7 @@ function initWallpanel() {
 
 			this.screensaverContainer.removeAttribute("style");
 			this.screensaverContainer.style.position = "fixed";
+			this.screensaverContainer.style.pointerEvents = "none";
 			this.screensaverContainer.style.top = 0;
 			this.screensaverContainer.style.left = 0;
 			this.screensaverContainer.style.width = "100vw";
@@ -1191,12 +1192,15 @@ function initWallpanel() {
 			this.infoBox.style.setProperty("--wp-card-backdrop-filter", "none");
 			this.infoBox.style.setProperty("--wp-badges-minwidth", "200px");
 
+			this.infoBoxPosX.style.pointerEvents = "none";
 			this.infoBoxPosX.style.height = "100%";
 			this.infoBoxPosX.style.width = "100%";
 
+			this.infoBoxPosY.style.pointerEvents = "none";
 			this.infoBoxPosY.style.height = "100%";
 			this.infoBoxPosY.style.width = "100%";
 
+			this.infoBoxContent.style.pointerEvents = "none";
 			this.infoBoxContent.style.width = "fit-content";
 			this.infoBoxContent.style.height = "100%";
 			this.infoBoxContent.style.display = "grid";
@@ -1209,14 +1213,12 @@ function initWallpanel() {
 			this.fixedInfoContainer.style.width = "100%";
 			this.fixedInfoContainer.style.height = "100%";
 
-			this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
 			this.fixedInfoBox.style.pointerEvents = "none";
+			this.fixedInfoBox.style.cssText = this.infoBox.style.cssText;
 
 			this.screensaverOverlay.removeAttribute("style");
 			this.screensaverOverlay.style.position = "absolute";
-			if (config.card_interaction) {
-				this.screensaverOverlay.style.pointerEvents = "none";
-			}
+			this.screensaverOverlay.style.pointerEvents = "none";
 			this.screensaverOverlay.style.top = 0;
 			this.screensaverOverlay.style.left = 0;
 			this.screensaverOverlay.style.width = "100%";
@@ -1548,7 +1550,10 @@ function initWallpanel() {
 
 					const viewContainer = document.createElement("div");
 					if (config.card_interaction) {
-						viewElement.style.pointerEvents = "initial";
+						viewElement.style.pointerEvents = "auto";
+					}
+					else {
+						viewElement.style.pointerEvents = "none";
 					}
 					if (viewConfig.wp_style) {
 						for (const attr in viewConfig.wp_style) {
@@ -1591,7 +1596,10 @@ function initWallpanel() {
 					cardContainer.style.backdropFilter = "var(--wp-card-backdrop-filter)";
 
 					if (config.card_interaction) {
-						cardContainer.style.pointerEvents = "initial";
+						cardContainer.style.pointerEvents = "auto";
+					}
+					else {
+						cardContainer.style.pointerEvents = "none";
 					}
 					for (const attr in style) {
 						if (attr == "parent") {
@@ -3084,6 +3092,7 @@ function initWallpanel() {
 			if (config.debug) {
 				this.debugBox.style.pointerEvents = "auto";
 			}
+			this.style.pointerEvents = "auto";
 
 			this.setScreensaverEntityState();
 
@@ -3134,6 +3143,7 @@ function initWallpanel() {
 			}
 			this.style.opacity = 0;
 			this.style.visibility = "hidden";
+			this.style.pointerEvents = "none";
 			this.infoBoxPosX.style.animation = "";
 			this.infoBoxPosY.style.animation = "";
 
