@@ -2826,6 +2826,7 @@ function initWallpanel() {
 			activeElem.style.position = "absolute";
 			activeElem.style.left = "0px";
 			activeElem.style.top = "0px";
+			activeElem.style.objectFit = mediaFit;
 			const availWidth = this.screensaverContainer.clientWidth;
 			const availHeight = this.screensaverContainer.clientHeight;
 			let setHeight = height;
@@ -2863,7 +2864,6 @@ function initWallpanel() {
 			activeElem.style.left = `${setLeft}px`;
 			activeElem.style.setProperty("--hidden-width", hiddenWidth);
 			activeElem.style.setProperty("--hidden-height", hiddenHeight);
-			activeElem.style.objectFit = "fill";
 		}
 
 		startPlayingActiveMedia() {
