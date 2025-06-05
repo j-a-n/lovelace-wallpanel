@@ -2824,7 +2824,6 @@ function initWallpanel() {
 			const mediaFit = !width || !height || width >= height ? config.image_fit_landscape : config.image_fit_portrait; // cover / contain
 
 			activeElem.style.position = "absolute";
-			activeElem.style.objectFit = "fill";
 			activeElem.style.left = "0px";
 			activeElem.style.top = "0px";
 			const availWidth = this.screensaverContainer.clientWidth;
@@ -2864,6 +2863,7 @@ function initWallpanel() {
 			activeElem.style.left = `${setLeft}px`;
 			activeElem.style.setProperty("--hidden-width", hiddenWidth);
 			activeElem.style.setProperty("--hidden-height", hiddenHeight);
+			activeElem.style.objectFit = "fill";
 		}
 
 		startPlayingActiveMedia() {
