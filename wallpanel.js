@@ -2803,21 +2803,12 @@ function initWallpanel() {
 			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
 			let width = 0;
 			let height = 0;
-			if (activeElem.infoCacheUrl) {
-				const mediaInfo = mediaInfoCache.get(activeElem.infoCacheUrl);
-				if (mediaInfo) {
-					width = mediaInfo.exifImageWidth;
-					height = mediaInfo.exifImageHeight;
-				}
-			}
-			if (!width || !height) {
-				if (activeElem.tagName.toLowerCase() === "video") {
-					width = activeElem.videoWidth;
-					height = activeElem.videoHeight;
-				} else {
-					width = activeElem.naturalWidth;
-					height = activeElem.naturalHeight;
-				}
+			if (activeElem.tagName.toLowerCase() === "video") {
+				width = activeElem.videoWidth;
+				height = activeElem.videoHeight;
+			} else {
+				width = activeElem.naturalWidth;
+				height = activeElem.naturalHeight;
 			}
 			logger.debug(`Size of media element is ${width}x${height}`, activeElem);
 
