@@ -99,7 +99,7 @@ wallpanel:
 
 You can also make the content bigger if required.
 For example, enlarge it by 20 %:
-```
+```yaml
 wallpanel:
   views:
     - title: Wallpanel
@@ -110,7 +110,7 @@ wallpanel:
 ```
 
 To utilize the full screen width and remove any extra padding, apply the following:
-```
+```yaml
 wallpanel:
   views:
     - title: Wallpanel
