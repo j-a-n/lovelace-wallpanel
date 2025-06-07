@@ -109,16 +109,21 @@ wallpanel:
       transform-origin: top center
 ```
 
-To utilize the full screen width and remove any extra padding, apply the following:
+To utilize the full screen width and height for one single view and remove any extra padding, apply the following:
 ```yaml
 wallpanel:
   views:
     - title: Wallpanel
+      wp_style:
+        height: 100vh
+        width: 100vw
+  cards: []
   style:
     wallpanel-screensaver-info-container:
       padding: 0px
     wallpanel-screensaver-info-box-views:
       width: 100vw
+      height: 100vh
 ```
 
 
