@@ -1656,8 +1656,9 @@ function initWallpanel() {
 			if (this.kenburnsDelayStartTimer) {
 				clearTimeout(this.kenburnsDelayStartTimer);
 			}
+			activeElement.animationIterationCount = 1;
 			this.kenburnsDelayStartTimer = setTimeout(function () {
-				activeElement.style.animation = `kenBurnsEffect-${animation} ${duration}s linear`;
+				activeElement.style.animation = `kenBurnsEffect-${animation} ${duration}s linear forwards`;
 			}, delay);
 		}
 
