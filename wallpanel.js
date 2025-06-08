@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.47.1";
+const version = "4.47.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -2532,10 +2532,37 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
+			// Setting the src attribute works better than fetch because cross-origin requests aren't blocked
 			const loadMediaWithElement = async (elem) => {
+				const loadEventName = { img: "load", video: "loadeddata", iframe: "load" }[elem.tagName.toLowerCase()];
+				if (!loadEventName) {
+					logger.error(`Unsupported element tag "${elem.tagName}"`);
+					return;
+				}
+				const promise = new Promise((resolve, reject) => {
+					const cleanup = () => {
+						elem.onerror = null;
+						elem.removeEventListener(loadEventName, onLoad);
+					};
+
+					const onLoad = () => {
+						cleanup();
+						resolve();
+					};
+
+					const onError = () => {
+						cleanup();
+						reject(new Error(`Failed to load ${elem.tagName} "${url}"`));
+					};
+
+					elem.addEventListener(loadEventName, onLoad);
+					elem.onerror = onError;
+				});
+
 				if (useFetch) {
 					headers = headers || {};
 					const response = await fetch(url, { headers: headers });
+					logger.debug("Got respone", response);
 					if (!response.ok) {
 						logger.error(`Failed to load ${elem.tagName} "${url}"`, response);
 						return;
@@ -2548,33 +2575,9 @@ function initWallpanel() {
 					const blob = await response.blob();
 					elem.src = window.URL.createObjectURL(blob);
 				} else {
-					// Setting the src attribute on an img works better because cross-origin requests aren't blocked
-					const loadEventName = { img: "load", video: "loadeddata", iframe: "load" }[elem.tagName.toLowerCase()];
-					if (!loadEventName) {
-						logger.error(`Unsupported element tag "${elem.tagName}"`);
-						return;
-					}
-					return new Promise((resolve, reject) => {
-						const cleanup = () => {
-							elem.onerror = null;
-							elem.removeEventListener(loadEventName, onLoad);
-						};
-
-						const onLoad = () => {
-							cleanup();
-							resolve();
-						};
-
-						const onError = () => {
-							cleanup();
-							reject(new Error(`Failed to load ${elem.tagName} "${url}"`));
-						};
-
-						elem.addEventListener(loadEventName, onLoad);
-						elem.onerror = onError;
-						elem.src = url;
-					});
+					elem.src = url;
 				}
+				return promise;
 			};
 
 			const createFallbackElement = (currentElem, tagName = null) => {
@@ -2720,7 +2723,7 @@ function initWallpanel() {
 			await this.updateMediaFromUrl(element, element.mediaUrl);
 		}
 
-		async updateMedia(element, callback = null) {
+		async updateMedia(element) {
 			if (!config.show_images) {
 				return;
 			}
@@ -2790,15 +2793,12 @@ function initWallpanel() {
 			} finally {
 				this.updatingMedia = false;
 			}
-
-			if (callback) {
-				const wp = this;
-				callback(wp, element);
-			}
+			return element;
 		}
 
 		setMediaDimensions() {
 			const activeElem = this.getActiveMediaElement();
+			logger.debug("Setting dimensions for media element", activeElem);
 
 			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
 			let width = 0;
@@ -2810,8 +2810,6 @@ function initWallpanel() {
 				width = activeElem.naturalWidth;
 				height = activeElem.naturalHeight;
 			}
-			logger.debug(`Size of media element is ${width}x${height}`, activeElem);
-
 			const mediaFit = !width || !height || width >= height ? config.image_fit_landscape : config.image_fit_portrait; // cover / contain
 
 			activeElem.style.position = "absolute";
@@ -2820,34 +2818,38 @@ function initWallpanel() {
 			activeElem.style.objectFit = mediaFit;
 			const availWidth = this.screensaverContainer.clientWidth;
 			const availHeight = this.screensaverContainer.clientHeight;
-			let setHeight = height;
-			let setWidth = width;
+			let setHeight = availHeight;
+			let setWidth = availWidth;
 			let hiddenHeight = 0;
 			let hiddenWidth = 0;
 			let setTop = 0;
 			let setLeft = 0;
 
-			const ratioWidth = availWidth / width;
-			const ratioHeight = availHeight / height;
-			const diffWidth = availWidth - width * ratioHeight;
-			const diffHeight = availHeight - height * ratioWidth;
-
-			logger.debug(`avail=${availWidth}x${availHeight} - size=${width}x${height} - diff=${diffWidth}x${diffHeight}`);
-			if ((mediaFit == "contain" && diffWidth < diffHeight) || (mediaFit == "cover" && diffWidth >= diffHeight)) {
-				logger.debug("Using available width");
-				setWidth = availWidth;
-				setHeight = Math.round(height * ratioWidth);
-				setTop = Math.round((height * ratioWidth - availHeight) / -2);
-				hiddenHeight = Math.max(setHeight - availHeight, 0);
+			logger.debug(`Available size is ${availWidth}x${availHeight}, media size is ${width}x${height}`);
+			if (width && height) {
+				const ratioWidth = availWidth / width;
+				const ratioHeight = availHeight / height;
+				const diffWidth = availWidth - width * ratioHeight;
+				const diffHeight = availHeight - height * ratioWidth;
+				logger.debug(`Diff is ${diffWidth}x${diffHeight}`);
+				if ((mediaFit == "contain" && diffWidth < diffHeight) || (mediaFit == "cover" && diffWidth >= diffHeight)) {
+					logger.debug("Using available width");
+					setWidth = availWidth;
+					setHeight = Math.floor(height * ratioWidth);
+					setTop = Math.floor((availHeight - setHeight) / 2);
+					hiddenHeight = Math.max(setHeight - availHeight, 0);
+				} else {
+					logger.debug("Using available height");
+					setHeight = availHeight;
+					setWidth = Math.floor(width * ratioHeight);
+					setLeft = Math.floor((availWidth - setWidth) / 2);
+					hiddenWidth = Math.max(setWidth - availWidth, 0);
+				}
 			} else {
-				logger.debug("Using available height");
-				setHeight = availHeight;
-				setWidth = Math.round(width * ratioHeight);
-				setLeft = Math.round((width * ratioHeight - availWidth) / -2);
-				hiddenWidth = Math.max(setWidth - availWidth, 0);
+				logger.warning("Size not available for media element", activeElem);
 			}
 			logger.debug(
-				`setSize=${setWidth}x${setHeight} - setPosition=${setTop}x${setLeft} - hidden=${hiddenWidth}x${hiddenHeight}`
+				`Setting dimensions: size=${setWidth}x${setHeight} - position=${setTop}x${setLeft} - hidden=${hiddenWidth}x${hiddenHeight}`
 			);
 			activeElem.style.width = `${setWidth}px`;
 			activeElem.style.height = `${setHeight}px`;
@@ -2919,7 +2921,7 @@ function initWallpanel() {
 			});
 		}
 
-		switchActiveMedia(eventType) {
+		async switchActiveMedia(eventType) {
 			if (this.afterFadeoutTimer) {
 				clearTimeout(this.afterFadeoutTimer);
 			}
@@ -2957,9 +2959,8 @@ function initWallpanel() {
 			} else {
 				crossfadeMillis = 0;
 			}
-			this.updateMedia(newElement, (wp, element) => {
-				wp._switchActiveMedia(element, crossfadeMillis);
-			});
+			const element = await this.updateMedia(newElement);
+			this._switchActiveMedia(element, crossfadeMillis);
 		}
 
 		_switchActiveMedia(newElement, crossfadeMillis = null) {
