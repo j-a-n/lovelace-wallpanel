@@ -2836,14 +2836,14 @@ function initWallpanel() {
 					logger.debug("Using available width");
 					setWidth = availWidth;
 					setHeight = Math.floor(height * ratioWidth);
-					setTop = Math.floor((availHeight - setHeight) / 2);
-					hiddenHeight = Math.max(setHeight - availHeight, 0);
+					hiddenHeight = Math.floor(setHeight - availHeight, 0);
+					setTop = Math.floor(hiddenHeight / -2);
 				} else {
 					logger.debug("Using available height");
 					setHeight = availHeight;
 					setWidth = Math.floor(width * ratioHeight);
-					setLeft = Math.floor((availWidth - setWidth) / 2);
-					hiddenWidth = Math.max(setWidth - availWidth, 0);
+					hiddenWidth = Math.floor(setWidth - availWidth, 0);
+					setLeft = Math.floor(hiddenWidth / -2);
 				}
 			} else {
 				logger.warning("Size not available for media element", activeElem);
