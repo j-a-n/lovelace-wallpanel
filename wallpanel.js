@@ -456,6 +456,15 @@ class CameraMotionDetection {
 	}
 }
 
+function shuffleArray(array) {
+	const result = array.slice(); // Make a copy to avoid mutating the original
+	for (let i = result.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[result[i], result[j]] = [result[j], result[i]];
+	}
+	return result;
+}
+
 function mergeConfig(target, ...sources) {
 	// https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
 	if (!sources.length) return target;
@@ -2259,7 +2268,7 @@ function initWallpanel() {
 			try {
 				const result = await wp.findMedias(mediaContentId);
 				if (config.image_order == "random") {
-					wp.mediaList = result.sort(() => 0.5 - Math.random());
+					wp.mediaList = shuffleArray(result);
 				} else {
 					wp.mediaList = result.sort(); // Sort consistently if not random
 				}
@@ -2394,7 +2403,7 @@ function initWallpanel() {
 
 			function finalizeImageList() {
 				if (config.image_order == "random") {
-					wp.mediaList = urls.sort(() => 0.5 - Math.random());
+					wp.mediaList = shuffleArray(urls);
 				} else {
 					wp.mediaList = urls.sort(); // Sort consistently if not random
 				}
