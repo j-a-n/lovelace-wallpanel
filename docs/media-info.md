@@ -3,7 +3,6 @@ You can show infos regarding the displayed media in the screesaver.
 The media info is available for Local Media Sources, Immich Integration and some image entities.
 Set the configuration opttion `show_image_info` to `true` to activate this feature.
 
-
 The image info can be formatted by specifying HTML code in `image_info_template`.
 Placeholders like `${EXIF-tag-name}` will be replaced with the corresponding EXIF tag value.
 See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for available EXIF tag names.
@@ -36,6 +35,8 @@ The following placeholders can also be used:
 * `image.folderName`: The name of the folder containing the media file.
 * `image.filename`: The name of the media file.
 
+!!! tip
+    Set `image_info_template: analyze` to show all available attributes.
 
 **Examples**
 

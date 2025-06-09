@@ -109,10 +109,13 @@ const classStyles = {
 		"background-position": "center",
 		"background-size": "cover"
 	},
+	"wallpanel-screensaver-image-info-container": {},
 	"wallpanel-screensaver-image-info": {
 		position: "absolute",
 		bottom: "0.5em",
 		right: "0.5em",
+		width: "calc(100% - 2em)",
+		height: "calc(100% - 5em)",
 		padding: "0.1em 0.5em 0.1em 0.5em",
 		"font-size": "2em",
 		background: "#00000055",
@@ -1129,6 +1132,8 @@ function initWallpanel() {
 			this.imageOneInfoContainer.style.height = "100%";
 			this.imageOneInfoContainer.style.border = "none";
 
+			this.imageOneInfo.style.overflowY = "auto";
+
 			if (!this.screensaverRunning()) {
 				this.imageTwoContainer.removeAttribute("style");
 				this.imageTwoContainer.style.opacity = 0;
@@ -1166,6 +1171,8 @@ function initWallpanel() {
 			this.imageTwoInfoContainer.style.width = "100%";
 			this.imageTwoInfoContainer.style.height = "100%";
 			this.imageTwoInfoContainer.style.border = "none";
+
+			this.imageTwoInfo.style.overflowY = "auto";
 
 			this.screensaverImageOverlay.removeAttribute("style");
 			this.screensaverImageOverlay.style.position = "absolute";
@@ -1745,6 +1752,7 @@ function initWallpanel() {
 			this.imageOne.id = "wallpanel-screensaver-image-one";
 
 			this.imageOneInfoContainer = document.createElement("div");
+			this.imageOneInfoContainer.className = "wallpanel-screensaver-image-info-container";
 			this.imageOneInfoContainer.id = "wallpanel-screensaver-image-one-info-container";
 
 			this.imageOneInfo = document.createElement("div");
@@ -1768,6 +1776,7 @@ function initWallpanel() {
 			this.imageTwo.id = "wallpanel-screensaver-image-two";
 
 			this.imageTwoInfoContainer = document.createElement("div");
+			this.imageTwoInfoContainer.className = "wallpanel-screensaver-image-info-container";
 			this.imageTwoInfoContainer.id = "wallpanel-screensaver-image-two-info-container";
 
 			this.imageTwoInfo = document.createElement("div");
@@ -2041,6 +2050,7 @@ function initWallpanel() {
 			if (this.imageTwo.infoCacheUrl == infoCacheUrl) {
 				infoElements.push(this.imageTwoInfo);
 			}
+
 			if (infoElements.length == 0) {
 				return;
 			}
@@ -2085,67 +2095,89 @@ function initWallpanel() {
 			logger.debug("Media info:", mediaInfo);
 
 			let html = config.image_info_template;
-			html = html.replace(/\${([^}]+)}/g, (match, tags) => {
-				let prefix = "";
-				let suffix = "";
-				let options = null;
-				if (tags.includes("!")) {
-					const tmp = tags.split("!");
-					tags = tmp[0];
-					for (let i = 1; i < tmp.length; i++) {
-						const argType = tmp[i].substring(0, tmp[i].indexOf("="));
-						const argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
-						if (argType == "prefix") {
-							prefix = argValue;
-						} else if (argType == "suffix") {
-							suffix = argValue;
-						} else if (argType == "options") {
-							options = {};
-							argValue.split(",").forEach((optVal) => {
-								const tmp2 = optVal.split(":", 2);
-								if (tmp2[0] && tmp2[1]) {
-									options[tmp2[0].replace(/\s/g, "")] = tmp2[1].replace(/\s/g, "");
-								}
-							});
-						}
-					}
-				}
-
-				let val = "";
-				const tagList = tags.split("|");
-				let tag = "";
-				for (let i = 0; i < tagList.length; i++) {
-					tag = tagList[i];
-					const keys = tag.replace(/\s/g, "").split(".");
-					val = mediaInfo;
+			if (html == "analyze") {
+				html = "";
+				function iterateOverKeys(obj, prefix = "") {
+					const keys = Object.keys(obj);
+					keys.sort();
 					keys.forEach((key) => {
-						if (val) {
-							val = val[key];
+						const value = obj[key];
+						if (typeof value === "object" && value !== null) {
+							iterateOverKeys(value, key + ".");
+						} else {
+							html += `${prefix}${key}: ${stringify(value)}<br>`;
 						}
 					});
-					if (val) {
-						break;
+				}
+				iterateOverKeys(mediaInfo);
+				this.imageOneInfo.style.pointerEvents = "none";
+				this.imageTwoInfo.style.pointerEvents = "none";
+				infoElements.forEach((infoElement) => {
+					infoElement.style.pointerEvents = "auto";
+				});
+			} else {
+				html = html.replace(/\${([^}]+)}/g, (match, tags) => {
+					let prefix = "";
+					let suffix = "";
+					let options = null;
+					if (tags.includes("!")) {
+						const tmp = tags.split("!");
+						tags = tmp[0];
+						for (let i = 1; i < tmp.length; i++) {
+							const argType = tmp[i].substring(0, tmp[i].indexOf("="));
+							const argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
+							if (argType == "prefix") {
+								prefix = argValue;
+							} else if (argType == "suffix") {
+								suffix = argValue;
+							} else if (argType == "options") {
+								options = {};
+								argValue.split(",").forEach((optVal) => {
+									const tmp2 = optVal.split(":", 2);
+									if (tmp2[0] && tmp2[1]) {
+										options[tmp2[0].replace(/\s/g, "")] = tmp2[1].replace(/\s/g, "");
+									}
+								});
+							}
+						}
 					}
-				}
-				if (!val) {
-					return "";
-				}
-				if (/DateTime/i.test(tag)) {
-					const date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, "$1-$2-$3T$4:$5:$6"));
-					if (isNaN(date)) {
-						// Invalid date
+
+					let val = "";
+					const tagList = tags.split("|");
+					let tag = "";
+					for (let i = 0; i < tagList.length; i++) {
+						tag = tagList[i];
+						const keys = tag.replace(/\s/g, "").split(".");
+						val = mediaInfo;
+						keys.forEach((key) => {
+							if (val) {
+								val = val[key];
+							}
+						});
+						if (val) {
+							break;
+						}
+					}
+					if (!val) {
 						return "";
 					}
-					if (!options) {
-						options = { year: "numeric", month: "2-digit", day: "2-digit" };
+					if (/DateTime/i.test(tag)) {
+						const date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, "$1-$2-$3T$4:$5:$6"));
+						if (isNaN(date)) {
+							// Invalid date
+							return "";
+						}
+						if (!options) {
+							options = { year: "numeric", month: "2-digit", day: "2-digit" };
+						}
+						val = date.toLocaleDateString((elHass.hass || elHass.__hass).locale.language, options);
 					}
-					val = date.toLocaleDateString((elHass.hass || elHass.__hass).locale.language, options);
-				}
-				if (typeof val === "object") {
-					val = JSON.stringify(val);
-				}
-				return prefix + val + suffix;
-			});
+					if (typeof val === "object") {
+						val = JSON.stringify(val);
+					}
+					return prefix + val + suffix;
+				});
+			}
 
 			infoElements.forEach((infoElement) => {
 				infoElement.innerHTML = html;
@@ -2702,7 +2734,9 @@ function initWallpanel() {
 			}
 			const entityPicture = entity.attributes.entity_picture;
 			let querySuffix = entityPicture.indexOf("?") > 0 ? "&" : "?";
-			querySuffix += this.fillPlaceholders("width=${width}&height=${height}");
+			// Adding a timestamp ensures that the cache is bypassed
+			// and each image gets a unique infoCacheUrl for handling media information correctly
+			querySuffix += this.fillPlaceholders("width=${width}&height=${height}&ts=${timestamp_ms}");
 			element.mediaUrl = entityPicture + querySuffix;
 			element.infoCacheUrl = element.mediaUrl;
 			if ("media_exif" in entity.attributes) {
@@ -3350,6 +3384,10 @@ function initWallpanel() {
 				elements = elements.concat(this.__views);
 				elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-info-box-content"));
 				elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-fixed-info-box-content"));
+				if (config.image_info_template == "analyze") {
+					elements.push(this.imageOneInfo);
+					elements.push(this.imageTwoInfo);
+				}
 				for (let i = 0; i < elements.length; i++) {
 					const pos = elements[i].getBoundingClientRect();
 					logger.debug("Event position:", elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
