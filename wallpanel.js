@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.47.2";
+const version = "4.48.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -2001,7 +2001,7 @@ function initWallpanel() {
 									mediaInfo.address = info.address;
 									wp.setMediaDataInfo(tmpImg);
 								} else {
-									logger.warning("URL not in cache:", tmpImg.infoCacheUrl);
+									logger.warn("URL not in cache:", tmpImg.infoCacheUrl);
 								}
 							}
 						} else {
@@ -2856,7 +2856,7 @@ function initWallpanel() {
 					hiddenWidth = Math.max(setWidth - availWidth, 0);
 				}
 			} else {
-				logger.warning("Size not available for media element", activeElem);
+				logger.warn("Size not available for media element", activeElem);
 			}
 			logger.debug(
 				`Setting dimensions: size=${setWidth}x${setHeight} - position=${setLeft}x${setTop} - hidden=${hiddenWidth}x${hiddenHeight}`
