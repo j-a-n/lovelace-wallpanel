@@ -276,6 +276,8 @@ class ScreenWakeLock {
 			this._player.setAttribute("id", "ScreenWakeLockVideo");
 			this._player.setAttribute("src", videoData);
 			this._player.setAttribute("playsinline", "");
+			// Do not set muted to true or the following error can occur:
+			// Uncaught (in promise) DOMException: The play() request was interrupted because video-only background media was paused to save power. https://goo.gl/LdLk22
 			this._player.setAttribute("muted", "");
 			this._player.addEventListener("ended", () => {
 				logger.debug("Video ended");
@@ -2638,7 +2640,9 @@ function initWallpanel() {
 					.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
 
 				if (tagName.toLowerCase() === "video") {
-					Object.assign(fallbackElem, { preload: "auto", muted: true });
+					// Do not set muted to true or the following error can occur:
+					// Uncaught (in promise) DOMException: The play() request was interrupted because video-only background media was paused to save power. https://goo.gl/LdLk22
+					Object.assign(fallbackElem, { preload: "auto", muted: false });
 				}
 				return fallbackElem;
 			};
