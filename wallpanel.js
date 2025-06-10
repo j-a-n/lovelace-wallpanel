@@ -2434,14 +2434,14 @@ function initWallpanel() {
 						asset.exifInfo.exifImageWidth &&
 						asset.exifInfo.exifImageHeight
 					) {
-						if (asset.exifInfo.exifImageWidth >= asset.exifInfo.exifImageHeight) {
-							if (exclude_media_orientation == "landscape") {
-								return;
-							}
-						} else {
-							if (exclude_media_orientation == "portrait") {
-								return;
-							}
+						let orientation =
+							asset.exifInfo.exifImageWidth >= asset.exifInfo.exifImageHeight ? "landscape" : "portrait";
+						if (asset.exifInfo.orientation && [5, 6, 7, 8].includes(parseInt(asset.exifInfo.orientation))) {
+							// 90 or 270 degrees rotated
+							orientation = orientation == "landscape" ? "portrait" : "landscape";
+						}
+						if (orientation === exclude_media_orientation) {
+							return;
 						}
 					}
 
@@ -3060,12 +3060,10 @@ function initWallpanel() {
 			let curActiveContainer = this.imageOneContainer;
 			let newActiveContainer = this.imageTwoContainer;
 			let curMedia = this.imageOne;
-			let newMedia = this.imageTwo;
 			if (newElement == this.imageOne) {
 				curActiveContainer = this.imageTwoContainer;
 				newActiveContainer = this.imageOneContainer;
 				curMedia = this.imageTwo;
-				newMedia = this.imageOne;
 			}
 			logger.debug(`Switching active media to '${newActiveContainer.id}'`);
 
