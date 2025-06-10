@@ -50,6 +50,7 @@ You can set the following configuration parameters for every individual Home Ass
 | immich_resolution                | The resolution to use for loading images from immich (possible values are: preview / original).        | preview   |
 | exclude_filenames                | List of regular expressions for excluding files and directories from media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_types              | List of media types to exlcude media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
+| exclude_media_orientation        | Media orientation to exlcude. See [Media Sources](media-sources.md#exclude-files) for details.         |            |
 | image_fit_landscape              | How to adjust a media item in landscape mode to fit the available space (cover or contain).            | cover      |
 | image_fit_portrait               | How to adjust a media item in portrait mode to fit the available space (cover or contain).             | contain    |
 | image_background                 | When set to image, a snapshot from the current media item is used as the background, covering the entire screen. To customize its appearance, apply styles using the `wallpanel-screensaver-image-background` class. | color |

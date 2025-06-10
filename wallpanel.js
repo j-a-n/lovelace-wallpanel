@@ -56,6 +56,7 @@ const defaultConfig = {
 	image_order: "sorted", // sorted / random
 	exclude_filenames: [], // Excluded filenames (regex)
 	exclude_media_types: [], // Exclude media types (image / video)
+	exclude_media_orientation: "", // Exclude media items with this orientation (landscape / portrait / auto)
 	image_background: "color", // color / image
 	video_loop: false,
 	touch_zone_size_next_image: 15,
@@ -2036,11 +2037,11 @@ function initWallpanel() {
 			const infoCacheUrl = mediaElement.infoCacheUrl;
 			let mediaUrl = mediaElement.mediaUrl;
 			if (!infoCacheUrl) {
-				logger.error("infoCacheUrl missing:", mediaElement);
+				logger.debug("infoCacheUrl missing:", mediaElement);
 				return;
 			}
 			if (!mediaUrl) {
-				logger.error("mediaUrl missing:", mediaElement);
+				logger.debug("mediaUrl missing:", mediaElement);
 				return;
 			}
 			mediaUrl = decodeURI(mediaUrl);
@@ -2389,6 +2390,15 @@ function initWallpanel() {
 				throw new Error("immich_api_key not configured");
 			}
 			const wp = this;
+			const screenOrientation =
+				this.screensaverContainer.clientWidth >= this.screensaverContainer.clientHeight ? "landscape" : "portrait";
+			let exclude_media_orientation = config.exclude_media_orientation;
+			if (exclude_media_orientation == "auto") {
+				exclude_media_orientation = screenOrientation == "landscape" ? "portrait" : "landscape";
+			}
+			logger.debug(
+				`config.exclude_media_orientation=${config.exclude_media_orientation}, screenOrientation=${screenOrientation}, exclude_media_orientation=${exclude_media_orientation}`
+			);
 			const urls = [];
 			const apiUrl = config.image_url.replace(/^immich\+/, "");
 			const excludeRegExp = [];
@@ -2412,6 +2422,23 @@ function initWallpanel() {
 					for (const exclude of excludeRegExp) {
 						if (exclude.test(asset.originalFileName)) {
 							return;
+						}
+					}
+
+					if (
+						exclude_media_orientation &&
+						asset.exifInfo &&
+						asset.exifInfo.exifImageWidth &&
+						asset.exifInfo.exifImageHeight
+					) {
+						if (asset.exifInfo.exifImageWidth >= asset.exifInfo.exifImageHeight) {
+							if (exclude_media_orientation == "landscape") {
+								return;
+							}
+						} else {
+							if (exclude_media_orientation == "portrait") {
+								return;
+							}
 						}
 					}
 
@@ -2851,7 +2878,9 @@ function initWallpanel() {
 		setMediaDimensions() {
 			const activeElem = this.getActiveMediaElement();
 			logger.debug("Setting dimensions for media element", activeElem);
-
+			if (!activeElem.mediaUrl) {
+				return;
+			}
 			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
 			let width = 0;
 			let height = 0;

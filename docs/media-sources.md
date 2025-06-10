@@ -78,6 +78,20 @@ exclude_media_types:
   - video
 ```
 
+To exclude specific media orientations from being displayed, use the `exclude_media_orientation` configuration option.
+Valid values are:
+* `landscape`: excludes media in landscape format
+* `portrait`: excludes media in portrait format
+* `auto`: excludes media whose orientation does not match the screen orientation
+
+!!! note
+    This option is currently only supported for the Immich media source.
+
+**Example**
+```yaml
+exclude_media_orientation: auto
+```
+
 ## Entity with entity_picture attribute
 If an entity has the `entity_picture` attribute you can use it as media source for the screensaver.
 To do this, set `image_url` to `media-entity://<entity_id>`, replacing `<entity_id>` with the entity's name.
