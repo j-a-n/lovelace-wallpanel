@@ -1090,7 +1090,7 @@ function initWallpanel() {
 
 			this.screensaverContainer.removeAttribute("style");
 			this.screensaverContainer.style.position = "fixed";
-			this.screensaverContainer.style.pointerEvents = "none";
+			this.screensaverContainer.style.pointerEvents = "auto";
 			this.screensaverContainer.style.top = 0;
 			this.screensaverContainer.style.left = 0;
 			this.screensaverContainer.style.width = "100vw";
@@ -2033,7 +2033,10 @@ function initWallpanel() {
 			});
 		}
 
-		setMediaDataInfo(mediaElement) {
+		setMediaDataInfo(mediaElement = null) {
+			if (!mediaElement) {
+				mediaElement = this.getActiveMediaElement();
+			}
 			const infoCacheUrl = mediaElement.infoCacheUrl;
 			let mediaUrl = mediaElement.mediaUrl;
 			if (!infoCacheUrl) {
@@ -3073,7 +3076,7 @@ function initWallpanel() {
 				curActiveContainer.style.opacity = 0;
 			}
 
-			this.setMediaDataInfo(newMedia);
+			this.setMediaDataInfo();
 			this.setMediaDimensions();
 			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
@@ -3133,6 +3136,7 @@ function initWallpanel() {
 
 			this.updateStyle();
 			this.setupScreensaver();
+			this.setMediaDataInfo();
 			this.setMediaDimensions();
 			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
@@ -3216,6 +3220,8 @@ function initWallpanel() {
 			this.style.opacity = 0;
 			this.style.visibility = "hidden";
 			this.style.pointerEvents = "none";
+			this.imageOneInfo.style.pointerEvents = "none";
+			this.imageTwoInfo.style.pointerEvents = "none";
 			this.infoBoxPosX.style.animation = "";
 			this.infoBoxPosY.style.animation = "";
 
