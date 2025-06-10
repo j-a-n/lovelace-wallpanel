@@ -59,6 +59,7 @@ const defaultConfig = {
 	exclude_media_orientation: "", // Exclude media items with this orientation (landscape / portrait / auto)
 	image_background: "color", // color / image
 	video_loop: false,
+	video_volume: 0.001,
 	touch_zone_size_next_image: 15,
 	touch_zone_size_previous_image: 15,
 	show_progress_bar: false,
@@ -2672,7 +2673,7 @@ function initWallpanel() {
 				if (tagName.toLowerCase() === "video") {
 					// Do not set muted to true or the following error can occur:
 					// Uncaught (in promise) DOMException: The play() request was interrupted because video-only background media was paused to save power. https://goo.gl/LdLk22
-					Object.assign(fallbackElem, { preload: "auto", muted: false });
+					Object.assign(fallbackElem, { preload: "auto", muted: false, volume: config.video_volume });
 				}
 				return fallbackElem;
 			};
