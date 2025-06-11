@@ -61,6 +61,7 @@ You can set the following configuration parameters for every individual Home Ass
 | image_animation_ken_burns_delay  | Start Ken Burns effect with a delay (in seconds).                                                      | 0          |
 | image_animation_ken_burns_duration | Specifies the duration of the Ken Burns effect in seconds. If set to 0, the `display_time` value is used instead. | 0          |
 | video_loop                       | Loop video until `display_time` is reached? Otherwise, immediately switch to the next media at the end of the video playback.  | false     |
+| video_volume                     | Volume of videos being played (0=0%, 1=100%).                                                          | 0.001      |
 | show_image_info                  | Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data and images from the new Unsplash API. The config name was `show_exif_info` before version 4.7. | false      |
 | show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
