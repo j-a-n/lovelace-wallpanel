@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.50.0";
+const version = "4.50.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -2784,7 +2784,13 @@ function initWallpanel() {
 		async updateMediaFromImmichAPI(element) {
 			const mediaInfo = mediaInfoCache.get(element.mediaUrl) || {};
 			const mediaType = mediaInfo["mediaType"] == "video" ? "video" : "img";
-			return await this.updateMediaFromUrl(element, element.mediaUrl, mediaType, { "x-api-key": config.immich_api_key }, true);
+			return await this.updateMediaFromUrl(
+				element,
+				element.mediaUrl,
+				mediaType,
+				{ "x-api-key": config.immich_api_key },
+				true
+			);
 		}
 
 		async updateMediaFromMediaEntity(element) {
@@ -3078,8 +3084,10 @@ function initWallpanel() {
 				crossfadeMillis = 0;
 			}
 			const element = await this.updateMedia(newElement);
-			if (!element ||
-				(sourceType === "iframe" && element.mediaUrl == currentMediaUrl && !config.iframe_load_unchanged)) {
+			if (
+				!element ||
+				(sourceType === "iframe" && element.mediaUrl == currentMediaUrl && !config.iframe_load_unchanged)
+			) {
 				return;
 			}
 			this._switchActiveMedia(element, crossfadeMillis);
