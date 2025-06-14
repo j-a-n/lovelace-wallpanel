@@ -2982,18 +2982,17 @@ function initWallpanel() {
 				return; // Not playable element.
 			}
 
-			let playbackListeners;
 			const cleanupListeners = () => {
-				if (playbackListeners) {
-					Object.entries(playbackListeners).forEach(([event, handler]) => {
+				if (activeElem._wp_video_playback_listeners) {
+					Object.entries(activeElem._wp_video_playback_listeners).forEach(([event, handler]) => {
 						activeElem.removeEventListener(event, handler);
 					});
-					playbackListeners == null;
+					activeElem._wp_video_playback_listeners = null;
 				}
 			};
 
 			activeElem.loop = config.video_loop;
-			if (!config.video_loop) {
+			if (!config.video_loop && !activeElem._wp_video_playback_listeners) {
 				// Immediately switch to next image at the end of the playback.
 				const onTimeUpdate = () => {
 					if (this.getActiveMediaElement() !== activeElem) {
@@ -3019,12 +3018,12 @@ function initWallpanel() {
 					cleanupListeners();
 				};
 
-				playbackListeners = {
+				activeElem._wp_video_playback_listeners = {
 					timeupdate: onTimeUpdate,
 					ended: onMediaEnded,
 					pause: onMediaPause
 				};
-				Object.entries(playbackListeners).forEach(([event, handler]) => {
+				Object.entries(activeElem._wp_video_playback_listeners).forEach(([event, handler]) => {
 					activeElem.addEventListener(event, handler);
 				});
 			}
