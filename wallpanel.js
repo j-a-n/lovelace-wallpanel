@@ -53,6 +53,7 @@ const defaultConfig = {
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
 	media_list_update_interval: 3600,
+	media_list_max_size: 500,
 	image_order: "sorted", // sorted / random
 	exclude_filenames: [], // Excluded filenames (regex)
 	exclude_media_types: [], // Exclude media types (image / video)
@@ -179,11 +180,10 @@ const classStyles = {
 	}
 };
 
-const mediaInfoCacheMaxSize = 500;
 const mediaInfoCache = new Map();
 
 function addToMediaInfoCache(mediaUrl, value) {
-	while (mediaInfoCache.size >= mediaInfoCacheMaxSize) {
+	while (mediaInfoCache.size >= config.media_list_max_size) {
 		// Remove the oldest key (first inserted)
 		const oldestKey = mediaInfoCache.keys().next().value;
 		mediaInfoCache.delete(oldestKey);
@@ -2292,7 +2292,11 @@ function initWallpanel() {
 				});
 
 				logger.debug("Found media entry", mediaEntry);
+				let count;
 				const promises = mediaEntry.children.map(async (child) => {
+					if (count > config.media_list_max_size) {
+						return null;
+					}
 					const filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, "");
 					for (const exclude of excludeRegExp) {
 						if (exclude.test(filename)) {
@@ -2303,6 +2307,7 @@ function initWallpanel() {
 						if (config.exclude_media_types && config.exclude_media_types.includes(child.media_class)) {
 							return null; // Excluded by media type
 						}
+						count += 1;
 						return child.media_content_id;
 					}
 					if (child.media_class == "directory") {
@@ -2314,7 +2319,10 @@ function initWallpanel() {
 
 				const results = await Promise.all(promises);
 				// Flatten the results and filter out null values
-				return results.flat().filter((res) => res !== null);
+				return results
+					.flat()
+					.filter((res) => res !== null)
+					.splice(0, config.media_list_max_size);
 			} catch (error) {
 				logger.warn(`Error browsing media ${mediaContentId}:`, error);
 				throw error; // Re-throw the error to be caught by the caller
@@ -2434,6 +2442,10 @@ function initWallpanel() {
 			}
 
 			function processAssets(assets, folderName = null) {
+				if (assets.length > config.media_list_max_size) {
+					logger.info(`Using only ${config.media_list_max_size} of ${assets.length} media assets`);
+					assets = assets.slice(0, config.media_list_max_size);
+				}
 				assets.forEach((asset) => {
 					logger.debug(asset);
 					const assetType = asset.type.toLowerCase();
@@ -2529,7 +2541,7 @@ function initWallpanel() {
 							logger.debug("Searching asset metadata for persons: ", personIds);
 							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
 								method: "POST",
-								body: JSON.stringify({ personIds: personIds, withExif: true, size: 1000 })
+								body: JSON.stringify({ personIds: personIds, withExif: true, size: config.media_list_max_size })
 							});
 							logger.debug(`Got immich API response`, searchResults);
 							if (!searchResults.assets.count) {
@@ -2571,7 +2583,7 @@ function initWallpanel() {
 						logger.debug("Searching asset metadata for tags: ", tagIds);
 						const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
 							method: "POST",
-							body: JSON.stringify({ tagIds: tagIds, withExif: true, size: 1000 })
+							body: JSON.stringify({ tagIds: tagIds, withExif: true, size: config.media_list_max_size })
 						});
 						logger.debug("Got immich API response", searchResults);
 						processAssets(searchResults.assets.items);

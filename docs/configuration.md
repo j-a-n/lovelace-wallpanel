@@ -54,7 +54,8 @@ You can set the following configuration parameters for every individual Home Ass
 | image_fit_landscape              | How to adjust a media item in landscape mode to fit the available space (cover or contain).            | cover      |
 | image_fit_portrait               | How to adjust a media item in portrait mode to fit the available space (cover or contain).             | contain    |
 | image_background                 | When set to image, a snapshot from the current media item is used as the background, covering the entire screen. To customize its appearance, apply styles using the `wallpanel-screensaver-image-background` class. | color |
-| image_list_update_interval       | When using a local media source, the image list is updated at this interval.                           | 3600       |
+| media_list_update_interval       | When using a local media source, the media list is updated at this interval.                           | 3600       |
+| media_list_max_size              | The maximum number of media items to fetch from the media source.                                      | 500        |
 | image_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | sorted     |
 | image_animation_ken_burns        | Apply a Ken Burns effect (panning and zooming) to the images?                                          | false      |
 | image_animation_ken_burns_zoom   | Zoom level for the Ken Burns effect.                                                                   | 1.3        |
@@ -125,7 +126,7 @@ wallpanel:
   screensaver_start_navigation_path: /lovelace/default_view
   image_url: 'http://picsum.photos/${width}/${height}?random=${timestamp}'
   image_fit_landscape: cover
-  image_list_update_interval: 3600
+  media_list_update_interval: 3600
   image_order: 'sorted'
   image_excludes: []
   show_image_info: false

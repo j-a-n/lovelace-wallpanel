@@ -24,7 +24,7 @@ Example of using images from api.unsplash.com (new api):
 
 ```yaml
 image_order: random
-image_list_update_interval: 3600
+media_list_update_interval: 3600
 image_url: https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=dogs
 show_image_info: true
 image_info_template: '<span style="color:#990000">//</span> ${description|alt_description}'
