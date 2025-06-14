@@ -2723,6 +2723,7 @@ function initWallpanel() {
 				replaceElementWith(currentElem, fallbackElem);
 				try {
 					await loadMediaWithElement(fallbackElem);
+					return fallbackElem;
 				} catch (e) {
 					throw originalError || e;
 				}
@@ -2731,9 +2732,10 @@ function initWallpanel() {
 			const loadOrFallback = async (currentElem, withFallback) => {
 				try {
 					await loadMediaWithElement(currentElem);
+					return currentElem;
 				} catch (e) {
 					if (withFallback) {
-						await handleFallback(currentElem, null, e);
+						return await handleFallback(currentElem, null, e);
 					} else {
 						throw e;
 					}
@@ -2741,11 +2743,11 @@ function initWallpanel() {
 			};
 
 			if (!mediaType) {
-				await loadOrFallback(element, true);
+				return await loadOrFallback(element, true);
 			} else if (mediaType === element.tagName.toLowerCase()) {
-				await loadOrFallback(element, false);
+				return await loadOrFallback(element, false);
 			} else {
-				await handleFallback(element, mediaType);
+				return await handleFallback(element, mediaType);
 			}
 		}
 
@@ -2776,13 +2778,13 @@ function initWallpanel() {
 			}
 			logger.debug(`Setting image src: ${src}`);
 			element.mediaUrl = src;
-			await this.updateMediaFromUrl(element, element.mediaUrl, mediaType);
+			return await this.updateMediaFromUrl(element, element.mediaUrl, mediaType);
 		}
 
 		async updateMediaFromImmichAPI(element) {
 			const mediaInfo = mediaInfoCache.get(element.mediaUrl) || {};
 			const mediaType = mediaInfo["mediaType"] == "video" ? "video" : "img";
-			await this.updateMediaFromUrl(element, element.mediaUrl, mediaType, { "x-api-key": config.immich_api_key }, true);
+			return await this.updateMediaFromUrl(element, element.mediaUrl, mediaType, { "x-api-key": config.immich_api_key }, true);
 		}
 
 		async updateMediaFromMediaEntity(element) {
@@ -2805,7 +2807,7 @@ function initWallpanel() {
 				addToMediaInfoCache(element.infoCacheUrl, entity.attributes);
 			}
 			mediaEntityState = entity.state;
-			await this.updateMediaFromUrl(element, element.mediaUrl, "img", null, true);
+			return await this.updateMediaFromUrl(element, element.mediaUrl, "img", null, true);
 		}
 
 		async updateMediaFromUnsplashAPI(element) {
@@ -2814,16 +2816,16 @@ function initWallpanel() {
 			if (mediaInfo) {
 				addToMediaInfoCache(element.mediaUrl, mediaInfo);
 			}
-			await this.updateMediaFromUrl(element, element.mediaUrl, "img");
+			return await this.updateMediaFromUrl(element, element.mediaUrl, "img");
 		}
 
 		async updateMediaFromMediaIframe(element) {
-			await this.updateMediaFromUrl(element, element.mediaUrl, "iframe");
+			return await this.updateMediaFromUrl(element, element.mediaUrl, "iframe");
 		}
 
 		async updateMediaFromOtherSrc(element) {
 			element.mediaUrl = this.fillPlaceholders(element.mediaUrl);
-			await this.updateMediaFromUrl(element, element.mediaUrl);
+			return await this.updateMediaFromUrl(element, element.mediaUrl);
 		}
 
 		async updateMedia(element) {
@@ -2832,8 +2834,7 @@ function initWallpanel() {
 			}
 			this.updatingMedia = true;
 			try {
-				const elementType = element == this.getActiveMediaElement() ? "active" : "inactive";
-				if (elementType == "active") {
+				if (element == this.getActiveMediaElement()) {
 					const inactiveElement = this.getInactiveMediaElement();
 					if (inactiveElement.tagName.toLowerCase() === "video") {
 						try {
@@ -2852,50 +2853,51 @@ function initWallpanel() {
 				element.infoCacheUrl = element.mediaUrl;
 
 				if (mediaSourceType() == "media-source") {
-					await this.updateMediaFromMediaSource(element);
+					element = await this.updateMediaFromMediaSource(element);
 				} else if (mediaSourceType() == "unsplash-api") {
-					await this.updateMediaFromUnsplashAPI(element);
+					element = await this.updateMediaFromUnsplashAPI(element);
 				} else if (mediaSourceType() == "immich-api") {
-					await this.updateMediaFromImmichAPI(element);
+					element = await this.updateMediaFromImmichAPI(element);
 				} else if (mediaSourceType() == "media-entity") {
-					await this.updateMediaFromMediaEntity(element);
+					element = await this.updateMediaFromMediaEntity(element);
 				} else if (mediaSourceType() == "iframe") {
-					await this.updateMediaFromMediaIframe(element);
+					element = await this.updateMediaFromMediaIframe(element);
 				} else {
-					await this.updateMediaFromOtherSrc(element);
+					element = await this.updateMediaFromOtherSrc(element);
 				}
 
-				element = elementType == "active" ? this.getActiveMediaElement() : this.getInactiveMediaElement();
-				const isVideo = element.tagName.toLowerCase() === "video";
+				if (element) {
+					const isVideo = element.tagName.toLowerCase() === "video";
 
-				if (isVideo) {
-					await new Promise((resolve, reject) => {
-						if (element.readyState >= element.HAVE_ENOUGH_DATA) {
-							resolve();
-						} else {
-							const onCanPlay = () => {
-								element.removeEventListener("canplay", onCanPlay);
+					if (isVideo) {
+						await new Promise((resolve, reject) => {
+							if (element.readyState >= element.HAVE_ENOUGH_DATA) {
 								resolve();
-							};
-							const onError = () => {
-								element.removeEventListener("error", onError);
-								reject(new Error("Video failed to load"));
-							};
-							element.addEventListener("canplay", onCanPlay);
-							element.addEventListener("error", onError);
-						}
-					});
-				}
-				if (config.image_background === "image") {
-					this.loadBackgroundImage(element);
-				}
+							} else {
+								const onCanPlay = () => {
+									element.removeEventListener("canplay", onCanPlay);
+									resolve();
+								};
+								const onError = () => {
+									element.removeEventListener("error", onError);
+									reject(new Error("Video failed to load"));
+								};
+								element.addEventListener("canplay", onCanPlay);
+								element.addEventListener("error", onError);
+							}
+						});
+					}
+					if (config.image_background === "image") {
+						this.loadBackgroundImage(element);
+					}
 
-				if (
-					!isVideo &&
-					config.show_image_info &&
-					/.*\.jpe?g$/i.test(element.mediaUrl.split("?")[0].replace(/\/*$/, ""))
-				) {
-					this.fetchEXIFInfo(element);
+					if (
+						!isVideo &&
+						config.show_image_info &&
+						/.*\.jpe?g$/i.test(element.mediaUrl.split("?")[0].replace(/\/*$/, ""))
+					) {
+						this.fetchEXIFInfo(element);
+					}
 				}
 			} catch (error) {
 				// Example: "TypeError: Failed to fetch"
@@ -2982,18 +2984,17 @@ function initWallpanel() {
 				return; // Not playable element.
 			}
 
-			let playbackListeners;
 			const cleanupListeners = () => {
-				if (playbackListeners) {
-					Object.entries(playbackListeners).forEach(([event, handler]) => {
+				if (activeElem._wp_video_playback_listeners) {
+					Object.entries(activeElem._wp_video_playback_listeners).forEach(([event, handler]) => {
 						activeElem.removeEventListener(event, handler);
 					});
-					playbackListeners == null;
+					activeElem._wp_video_playback_listeners = null;
 				}
 			};
 
 			activeElem.loop = config.video_loop;
-			if (!config.video_loop) {
+			if (!config.video_loop && !activeElem._wp_video_playback_listeners) {
 				// Immediately switch to next image at the end of the playback.
 				const onTimeUpdate = () => {
 					if (this.getActiveMediaElement() !== activeElem) {
@@ -3019,12 +3020,12 @@ function initWallpanel() {
 					cleanupListeners();
 				};
 
-				playbackListeners = {
+				activeElem._wp_video_playback_listeners = {
 					timeupdate: onTimeUpdate,
 					ended: onMediaEnded,
 					pause: onMediaPause
 				};
-				Object.entries(playbackListeners).forEach(([event, handler]) => {
+				Object.entries(activeElem._wp_video_playback_listeners).forEach(([event, handler]) => {
 					activeElem.addEventListener(event, handler);
 				});
 			}
@@ -3077,7 +3078,8 @@ function initWallpanel() {
 				crossfadeMillis = 0;
 			}
 			const element = await this.updateMedia(newElement);
-			if (sourceType === "iframe" && element.mediaUrl == currentMediaUrl && !config.iframe_load_unchanged) {
+			if (!element ||
+				(sourceType === "iframe" && element.mediaUrl == currentMediaUrl && !config.iframe_load_unchanged)) {
 				return;
 			}
 			this._switchActiveMedia(element, crossfadeMillis);
