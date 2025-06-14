@@ -43,6 +43,7 @@ const defaultConfig = {
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_url_entity: "",
 	media_entity_load_unchanged: true,
+	iframe_load_unchanged: false,
 	immich_api_key: "",
 	immich_album_names: [],
 	immich_shared_albums: true,
@@ -2218,11 +2219,6 @@ function initWallpanel() {
 
 			if (!force) {
 				if (new Date().getTime() - this.lastMediaListUpdate < config.media_list_update_interval * 1000) {
-					/*
-					if (callback) {
-						callback();
-					}
-					*/
 					return;
 				}
 			}
@@ -2919,13 +2915,14 @@ function initWallpanel() {
 			if (!activeElem.mediaUrl) {
 				return;
 			}
-			// Determine if the new media is landscape or portrait, and set the appropriate image_fit
+			// Determine if the new media is landscape or portrait, and set the appropriate sizes
+			const tagName = activeElem.tagName.toLowerCase();
 			let width = 0;
 			let height = 0;
-			if (activeElem.tagName.toLowerCase() === "video") {
+			if (tagName === "video") {
 				width = activeElem.videoWidth;
 				height = activeElem.videoHeight;
-			} else {
+			} else if (tagName === "img") {
 				width = activeElem.naturalWidth;
 				height = activeElem.naturalHeight;
 			}
@@ -2964,7 +2961,7 @@ function initWallpanel() {
 					setLeft = Math.floor((setWidth - availWidth) / -2);
 					hiddenWidth = Math.max(setWidth - availWidth, 0);
 				}
-			} else {
+			} else if (tagName !== "iframe") {
 				logger.warn("Size not available for media element", activeElem);
 			}
 			logger.debug(
@@ -3069,16 +3066,19 @@ function initWallpanel() {
 			}
 
 			this.lastMediaUpdate = Date.now();
-
 			let crossfadeMillis = eventType == "user_action" ? 250 : null;
-
-			let newElement = this.getActiveMediaElement();
+			const activeElement = this.getActiveMediaElement();
+			const currentMediaUrl = activeElement.mediaUrl;
+			let newElement = activeElement;
 			if (newElement.src) {
 				newElement = this.getInactiveMediaElement();
 			} else {
 				crossfadeMillis = 0;
 			}
 			const element = await this.updateMedia(newElement);
+			if (sourceType === "iframe" && element.mediaUrl == currentMediaUrl && !config.iframe_load_unchanged) {
+				return;
+			}
 			this._switchActiveMedia(element, crossfadeMillis);
 		}
 

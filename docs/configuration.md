@@ -40,7 +40,8 @@ You can set the following configuration parameters for every individual Home Ass
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
 | image_url                        | Fetch screensaver images from this URL. See [Media Sources](media-sources.md) for details.                                         | See [Media Sources](media-sources.md) |
 | image_url_entity                 | An entity of type 'input_text' in which the URL of the current screen saver image is stored. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |        |
-| media_entity_load_unchanged      | Should a new image be loaded from the entity after the display time has expired, even if the entity state has not changed? | true      |
+| media_entity_load_unchanged      | Should a new image be fetched from the entity after the display time has expired, even if the entity's state remains unchanged? | true      |
+| iframe_load_unchanged            | Should an iframe be reloaded once its display time has expired, even if its URL remains the same?      | false     |
 | immich_api_key                   | API key that is used for authentication at the [immich API](media-sources.md#immich-api)               |           |
 | immich_shared_albums             | Show images of shared immich albums?                                                                   | true      |
 | immich_album_names               | Only show images from these immich albums.                                                             | []        |
