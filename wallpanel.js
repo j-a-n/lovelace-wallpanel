@@ -52,7 +52,7 @@ const defaultConfig = {
 	immich_resolution: "preview",
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
-	image_list_update_interval: 3600,
+	media_list_update_interval: 3600,
 	image_order: "sorted", // sorted / random
 	exclude_filenames: [], // Excluded filenames (regex)
 	exclude_media_types: [], // Exclude media types (image / video)
@@ -523,6 +523,7 @@ function mergeConfig(target, ...sources) {
 		image_excludes: "exclude_filenames",
 		image_fit: "image_fit_landscape",
 		enabled_on_tabs: "enabled_on_views",
+		image_list_update_interval: "media_list_update_interval",
 		screensaver_stop_navigation_path: "screensaver_start_navigation_path"
 	};
 
@@ -651,9 +652,9 @@ function updateConfig() {
 		if (mediaSourceType() == "media-source") {
 			config.image_url = config.image_url.replace(/\/+$/, "");
 		}
-		if (mediaSourceType() == "unsplash-api" && config.image_list_update_interval < 90) {
+		if (mediaSourceType() == "unsplash-api" && config.media_list_update_interval < 90) {
 			// Unsplash API currently places a limit of 50 requests per hour
-			config.image_list_update_interval = 90;
+			config.media_list_update_interval = 90;
 		}
 	} else {
 		config.show_images = false;
@@ -2216,7 +2217,7 @@ function initWallpanel() {
 			if (!config.image_url) return;
 
 			if (!force) {
-				if (new Date().getTime() - this.lastMediaListUpdate < config.image_list_update_interval * 1000) {
+				if (new Date().getTime() - this.lastMediaListUpdate < config.media_list_update_interval * 1000) {
 					/*
 					if (callback) {
 						callback();
@@ -3319,7 +3320,7 @@ function initWallpanel() {
 				if (now - this.lastMediaUpdate >= config.display_time * 1000) {
 					this.switchActiveMedia("display_time_elapsed");
 				}
-				if (now - this.lastMediaListUpdate >= config.image_list_update_interval * 1000) {
+				if (now - this.lastMediaListUpdate >= config.media_list_update_interval * 1000) {
 					this.updateMediaList(null, true);
 				}
 				if (this.imageOneContainer.style.visibility != "visible") {
