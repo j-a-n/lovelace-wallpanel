@@ -120,12 +120,13 @@ See [Google Photos Integration README](https://github.com/Daanoz/ha-google-photo
 
 ## Immich API
 Images and videos can be loaded from an Immich server,
-for which wallpanel accesses the [Immich API](https://immich.app/docs/api/).
+for which WallPanel accesses the [Immich API](https://immich.app/docs/api/).
 
 
 ### Immich server CORS
-You must configure the Immich server so that it accepts API calls from external domains (CORS).
-Depending on your web server, the configuration will be different.
+Wallpanel sends direct requests to the Immich server via the browser, which enforces CORS (Cross-Origin Resource Sharing) as a security measure. Unfortunately, the Immich server does not support CORS configuration, and [there are currently no plans to implement this](https://github.com/immich-app/immich/discussions/19175).
+
+To work around this limitation, you'll need to set up a reverse proxy. The specific configuration will vary depending on the reverse proxy you choose to use.
 
 Here is a configuration example for nginx:
 ```
