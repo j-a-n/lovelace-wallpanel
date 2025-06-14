@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.49.0";
+const version = "4.50.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -1278,6 +1278,7 @@ function initWallpanel() {
 		updateStyle() {
 			this.screensaverOverlay.style.background = "#00000000";
 			this.debugBox.style.visibility = config.debug ? "visible" : "hidden";
+			this.debugBox.style.pointerEvents = config.debug ? "auto" : "none";
 			//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
 			this.style.transition = `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out`;
 			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
@@ -3225,9 +3226,6 @@ function initWallpanel() {
 
 			this.style.visibility = "visible";
 			this.style.opacity = 1;
-			if (config.debug) {
-				this.debugBox.style.pointerEvents = "auto";
-			}
 			this.style.pointerEvents = "auto";
 
 			this.setScreensaverEntityState();
@@ -3371,10 +3369,11 @@ function initWallpanel() {
 					const p = this.screenWakeLock._player;
 					html += `<b>Screen wake lock video</b>: readyState=${p.readyState} currentTime=${p.currentTime} paused=${p.paused} ended=${p.ended}<br/>`;
 				}
+				html += `<b>Media list size:</b> ${this.mediaList.length}<br/>`;
 				const activeElement = this.getActiveMediaElement();
 				if (activeElement) {
 					html += `<b>Current media:</b> ${activeElement.mediaUrl}<br/>`;
-					const mediaInfo = mediaInfoCache.get(activeElement.mediaUrl);
+					const mediaInfo = mediaInfoCache.get(activeElement.infoCacheUrl);
 					if (mediaInfo) {
 						html += `<b>Media info:</b> ${JSON.stringify(mediaInfo)}<br/>`;
 					}
