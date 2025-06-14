@@ -61,7 +61,7 @@ const defaultConfig = {
 	exclude_media_orientation: "", // Exclude media items with this orientation (landscape / portrait / auto)
 	image_background: "color", // color / image
 	video_loop: false,
-	video_volume: 0.001,
+	video_volume: 0.0,
 	touch_zone_size_next_image: 15,
 	touch_zone_size_previous_image: 15,
 	show_progress_bar: false,
@@ -4919,3 +4919,4 @@ EXIF.pretty = function (img) {
 EXIF.readFromBinaryFile = function (file) {
 	return findEXIFinJPEG(file);
 };
+
