@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.50.1";
+const version = "4.51.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
