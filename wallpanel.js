@@ -3207,6 +3207,7 @@ function initWallpanel() {
 		}
 
 		startScreensaver() {
+			this.setDefaultStyle();
 			updateConfig();
 			logger.debug("Start screensaver");
 			if (!isActive()) {
@@ -3215,7 +3216,6 @@ function initWallpanel() {
 			}
 
 			const activeElement = this.getActiveMediaElement();
-			this.setDefaultStyle();
 			if (activeElement == this.imageOne) {
 				this.imageOneContainer.style.opacity = 1;
 				this.imageTwoContainer.style.opacity = 0;
