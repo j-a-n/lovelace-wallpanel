@@ -1141,7 +1141,7 @@ function initWallpanel() {
 			this.screensaverContainer.style.background = "#000000";
 
 			this.imageOneContainer.removeAttribute("style");
-			this.imageOneContainer.style.opacity = 1;
+			this.imageOneContainer.style.opacity = 0;
 			this.imageOneContainer.style.position = "absolute";
 			this.imageOneContainer.style.pointerEvents = "none";
 			this.imageOneContainer.style.top = 0;
@@ -1932,9 +1932,6 @@ function initWallpanel() {
 		reconfigure(oldConfig) {
 			const oldConfigAvailable = oldConfig && Object.keys(oldConfig).length > 0;
 
-			if (!this.screensaverRunning()) {
-				this.setDefaultStyle();
-			}
 			this.updateStyle();
 			if (this.screensaverRunning()) {
 				this.createInfoBoxContent();
@@ -3217,13 +3214,21 @@ function initWallpanel() {
 				return;
 			}
 
+			const activeElement = this.getActiveMediaElement();
+			this.setDefaultStyle();
+			if (activeElement == this.imageOne) {
+				this.imageOneContainer.style.opacity = 1;
+				this.imageTwoContainer.style.opacity = 0;
+			} else {
+				this.imageOneContainer.style.opacity = 0;
+				this.imageTwoContainer.style.opacity = 1;
+			}
+
 			this.screensaverStartedAt = Date.now();
 			this.screensaverStoppedAt = null;
 			this.currentWidth = this.screensaverContainer.clientWidth;
 			this.currentHeight = this.screensaverContainer.clientHeight;
 
-			this.setDefaultStyle();
-			this.updateStyle();
 			this.setupScreensaver();
 			this.setMediaDataInfo();
 			this.setMediaDimensions();
