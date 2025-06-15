@@ -291,7 +291,12 @@ const logger = {
 		}
 		logger.addMessage("error", arguments);
 		if (config.alert_errors) {
-			alert(`Wallpanel error: ${stringify(arguments)}`);
+			const msg = `Wallpanel error: ${stringify(arguments)}`;
+			if (wallpanel) {
+				wallpanel.showMessage("error", "Error", msg, 10000);
+			} else {
+				alert(msg);
+			}
 		}
 	}
 };
@@ -3207,11 +3212,20 @@ function initWallpanel() {
 		}
 
 		startScreensaver() {
+			logger.debug("Start screensaver");
+
+			this.screensaverStartedAt = Date.now();
+			this.screensaverStoppedAt = null;
+			this.currentWidth = this.screensaverContainer.clientWidth;
+			this.currentHeight = this.screensaverContainer.clientHeight;
+
 			this.setDefaultStyle();
 			updateConfig();
-			logger.debug("Start screensaver");
+
 			if (!isActive()) {
 				logger.debug("Wallpanel not active, not starting screensaver");
+				this.screensaverStartedAt = null;
+				this.screensaverStoppedAt = Date.now();
 				return;
 			}
 
@@ -3223,11 +3237,6 @@ function initWallpanel() {
 				this.imageOneContainer.style.opacity = 0;
 				this.imageTwoContainer.style.opacity = 1;
 			}
-
-			this.screensaverStartedAt = Date.now();
-			this.screensaverStoppedAt = null;
-			this.currentWidth = this.screensaverContainer.clientWidth;
-			this.currentHeight = this.screensaverContainer.clientHeight;
 
 			this.setupScreensaver();
 			this.setMediaDataInfo();
