@@ -90,7 +90,7 @@ const defaultConfig = {
 	custom_css: "",
 	style: {},
 	badges: [],
-	cards: [{ type: "weather-forecast", entity: "weather.home", show_forecast: true }],
+	cards: [],
 	views: [],
 	card_interaction: false,
 	profile: "",

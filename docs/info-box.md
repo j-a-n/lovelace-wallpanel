@@ -24,7 +24,7 @@ wallpanel:
 ## Cards
 For [Cards](https://www.home-assistant.io/dashboards/cards/) you can also use the same yaml config.
 
-Example (and default) for Cards:
+Example for Cards:
 ```yaml
 wallpanel:
   cards:
@@ -79,7 +79,6 @@ You can then reference the view in the wallpanel configuration:
 
 ```yaml
 wallpanel:
-  cards: []
   views:
     - title: Wallpanel
 ```
@@ -89,7 +88,6 @@ The following example uses 80 % of the available width of the viewport:
 
 ```yaml
 wallpanel:
-  cards: []
   views:
     - title: Wallpanel
   style:
@@ -117,7 +115,6 @@ wallpanel:
       wp_style:
         height: 100vh
         width: 100vw
-  cards: []
   style:
     wallpanel-screensaver-info-container:
       padding: 0px

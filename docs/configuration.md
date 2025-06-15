@@ -79,7 +79,7 @@ You can set the following configuration parameters for every individual Home Ass
 | info_move_fade_duration          | Duration of the fade-in and fade-out animation of the info box in case of movement (0 = no animation). | 2.0        |
 | style                            | Additional CSS styles for WallPanel elements.                                                          | {}         |
 | badges                           | Badges to display in info box. Set to [] to show no badges at all. See [Badges](info-box.md#badges) for details.  | []         |
-| cards                            | Cards to display in info box. Set to [] to show no cards at all. See [Cards](info-box.md#cards) for details.      | See [Cards](info-box.md#cards)  |
+| cards                            | Cards to display in info box. Set to [] to show no cards at all. See [Cards](info-box.md#cards) for details.      | []         |
 | views                            | Dashboard views to display in info box. Set to [] to show no views at all. See [Views](info-box.md#views) for details. | []         |
 | card_interaction                 | Allow interaction with the elements displayed in the info box?                                         | false      |
 | profiles                         | See [Configuration profiles](#profiles) for details.                                                   | {}         |
