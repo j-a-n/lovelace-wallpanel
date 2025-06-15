@@ -35,7 +35,7 @@ A separate profile can be defined for each device:
 ```yaml
 wallpanel:
   enabled: true
-  image_order: random
+  media_order: random
   profiles:
     device.e9a2c86e_5526f1ee:
       image_url: media-source://media_source/local/kitchen

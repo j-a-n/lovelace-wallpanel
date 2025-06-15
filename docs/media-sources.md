@@ -23,7 +23,7 @@ You can narrow down the images from unsplash.com using certain search terms, for
 Example of using images from api.unsplash.com (new api):
 
 ```yaml
-image_order: random
+media_order: random
 media_list_update_interval: 3600
 image_url: https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=dogs
 show_image_info: true

@@ -55,7 +55,7 @@ const defaultConfig = {
 	image_fit_portrait: "contain", // cover / contain
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
-	image_order: "sorted", // sorted / random
+	image_order: "random", // sorted / random
 	exclude_filenames: [], // Excluded filenames (regex)
 	exclude_media_types: [], // Exclude media types (image / video)
 	exclude_media_orientation: "", // Exclude media items with this orientation (landscape / portrait / auto)
@@ -523,6 +523,7 @@ function mergeConfig(target, ...sources) {
 	const renamedOptions = {
 		image_excludes: "exclude_filenames",
 		image_fit: "image_fit_landscape",
+		image_order: "media_order",
 		enabled_on_tabs: "enabled_on_views",
 		image_list_update_interval: "media_list_update_interval",
 		screensaver_stop_navigation_path: "screensaver_start_navigation_path"
