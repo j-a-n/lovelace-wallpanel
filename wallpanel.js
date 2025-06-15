@@ -55,7 +55,7 @@ const defaultConfig = {
 	image_fit_portrait: "contain", // cover / contain
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
-	image_order: "random", // sorted / random
+	media_order: "random", // sorted / random
 	exclude_filenames: [], // Excluded filenames (regex)
 	exclude_media_types: [], // Exclude media types (image / video)
 	exclude_media_orientation: "", // Exclude media items with this orientation (landscape / portrait / auto)
