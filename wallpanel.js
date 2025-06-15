@@ -942,6 +942,8 @@ function initWallpanel() {
 			this.lastClickTime = 0;
 			this.clickCount = 0;
 			this.touchStartX = -1;
+			this.currentWidth = 0;
+			this.currentHeight = 0;
 			this.energyCollectionUpdateEnabled = false;
 			this.energyCollectionUpdateInterval = 60;
 			this.lastEnergyCollectionUpdate = 0;
@@ -1899,7 +1901,12 @@ function initWallpanel() {
 				);
 			});
 			window.addEventListener("resize", () => {
-				if (wp.screensaverRunning()) {
+				const width = this.screensaverContainer.clientWidth;
+				const height = this.screensaverContainer.clientHeight;
+				if (wp.screensaverRunning() && (wp.currentWidth != width || wp.currentHeight != height)) {
+					logger.debug(`Size changed from ${wp.currentWidth}x${wp.currentHeight} to ${width}x${height}`);
+					wp.currentWidth = width;
+					wp.currentHeight = height;
 					wp.updateShadowStyle();
 					wp.setMediaDimensions();
 				}
@@ -1924,7 +1931,9 @@ function initWallpanel() {
 		reconfigure(oldConfig) {
 			const oldConfigAvailable = oldConfig && Object.keys(oldConfig).length > 0;
 
-			this.setDefaultStyle();
+			if (!this.screensaverRunning()) {
+				this.setDefaultStyle();
+			}
 			this.updateStyle();
 			if (this.screensaverRunning()) {
 				this.createInfoBoxContent();
@@ -2751,17 +2760,25 @@ function initWallpanel() {
 			}
 		}
 
-		updateMediaIndex() {
+		getNextMediaURL(updateIndex = true) {
+			if (!this.mediaList.length) {
+				return null;
+			}
+			let mediaIndex = this.mediaIndex;
 			if (this.mediaListDirection == "forwards") {
-				this.mediaIndex++;
+				mediaIndex++;
 			} else {
-				this.mediaIndex--;
+				mediaIndex--;
 			}
-			if (this.mediaIndex >= this.mediaList.length) {
-				this.mediaIndex = 0;
-			} else if (this.mediaIndex < 0) {
-				this.mediaIndex = this.mediaList.length - 1;
+			if (mediaIndex >= this.mediaList.length) {
+				mediaIndex = 0;
+			} else if (mediaIndex < 0) {
+				mediaIndex = this.mediaList.length - 1;
 			}
+			if (updateIndex) {
+				this.mediaIndex = mediaIndex;
+			}
+			return this.mediaList[mediaIndex];
 		}
 
 		async updateMediaFromMediaSource(element) {
@@ -2850,9 +2867,7 @@ function initWallpanel() {
 						}
 					}
 				}
-
-				this.updateMediaIndex();
-				element.mediaUrl = this.mediaList[this.mediaIndex];
+				element.mediaUrl = this.getNextMediaURL();
 				if (!element.mediaUrl) {
 					return;
 				}
@@ -3074,20 +3089,21 @@ function initWallpanel() {
 			}
 
 			this.lastMediaUpdate = Date.now();
-			let crossfadeMillis = eventType == "user_action" ? 250 : null;
-			const activeElement = this.getActiveMediaElement();
-			const currentMediaUrl = activeElement.mediaUrl;
-			let newElement = activeElement;
+			
+			if (sourceType === "iframe" && (!config.iframe_load_unchanged) && this.getNextMediaURL(false) == this.getActiveMediaElement().mediaUrl) {
+				return;
+			}
+		
+			let crossfadeMillis = eventType == "user_action" ? 250 : Math.round(config.crossfade_time * 1000);
+			let newElement = this.getActiveMediaElement();
 			if (newElement.src) {
 				newElement = this.getInactiveMediaElement();
 			} else {
 				crossfadeMillis = 0;
 			}
+			
 			const element = await this.updateMedia(newElement);
-			if (
-				!element ||
-				(sourceType === "iframe" && element.mediaUrl == currentMediaUrl && !config.iframe_load_unchanged)
-			) {
+			if (!element) {
 				return;
 			}
 			this._switchActiveMedia(element, crossfadeMillis);
@@ -3095,11 +3111,6 @@ function initWallpanel() {
 
 		_switchActiveMedia(newElement, crossfadeMillis = null) {
 			this.lastMediaUpdate = Date.now();
-
-			if (crossfadeMillis === null) {
-				crossfadeMillis = Math.round(config.crossfade_time * 1000);
-			}
-
 			this.imageOneContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
 			this.imageTwoContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
 
@@ -3201,7 +3212,10 @@ function initWallpanel() {
 
 			this.screensaverStartedAt = Date.now();
 			this.screensaverStoppedAt = null;
+			this.currentWidth = this.screensaverContainer.clientWidth;
+			this.currentHeight = this.screensaverContainer.clientHeight;
 
+			this.setDefaultStyle();
 			this.updateStyle();
 			this.setupScreensaver();
 			this.setMediaDataInfo();
@@ -4919,4 +4933,3 @@ EXIF.pretty = function (img) {
 EXIF.readFromBinaryFile = function (file) {
 	return findEXIFinJPEG(file);
 };
-
