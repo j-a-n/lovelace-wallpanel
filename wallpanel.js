@@ -3089,11 +3089,15 @@ function initWallpanel() {
 			}
 
 			this.lastMediaUpdate = Date.now();
-			
-			if (sourceType === "iframe" && (!config.iframe_load_unchanged) && this.getNextMediaURL(false) == this.getActiveMediaElement().mediaUrl) {
+
+			if (
+				sourceType === "iframe" &&
+				!config.iframe_load_unchanged &&
+				this.getNextMediaURL(false) == this.getActiveMediaElement().mediaUrl
+			) {
 				return;
 			}
-		
+
 			let crossfadeMillis = eventType == "user_action" ? 250 : Math.round(config.crossfade_time * 1000);
 			let newElement = this.getActiveMediaElement();
 			if (newElement.src) {
@@ -3101,7 +3105,7 @@ function initWallpanel() {
 			} else {
 				crossfadeMillis = 0;
 			}
-			
+
 			const element = await this.updateMedia(newElement);
 			if (!element) {
 				return;
