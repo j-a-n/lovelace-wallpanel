@@ -1955,11 +1955,7 @@ function initWallpanel() {
 					oldConfig.image_url != config.image_url)
 			) {
 				const wp = this;
-
-				let switchMedia = false;
-				if (oldConfigAvailable) {
-					switchMedia = true;
-				}
+				const switchMedia = this.screensaverRunning() && oldConfigAvailable;
 
 				const imgUrlChanged = oldConfig.image_url != config.image_url;
 				if (imgUrlChanged) {
