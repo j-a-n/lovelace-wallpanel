@@ -2388,7 +2388,7 @@ function initWallpanel() {
 
 			try {
 				let urls = await wp.findMedias(mediaContentId);
-				if (config.image_order == "random") {
+				if (config.media_order == "random") {
 					urls = shuffleArray(urls);
 				} else {
 					urls = urls.sort(); // Sort consistently if not random
@@ -2564,7 +2564,7 @@ function initWallpanel() {
 					console.warn(msg);
 					wp.showMessage("warning", "Warning", msg);
 				}
-				if (config.image_order == "random") {
+				if (config.media_order == "random") {
 					urls = shuffleArray(urls);
 				} else {
 					urls = urls.sort(); // Sort consistently if not random
