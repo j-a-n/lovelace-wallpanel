@@ -521,6 +521,18 @@ function shuffleArray(array) {
 	return result;
 }
 
+function getHaCameraStreamPlayerAndVideo(haCameraStreamElement) {
+	if (!haCameraStreamElement.shadowRoot) {
+		return [null, null];
+	}
+	const player = haCameraStreamElement.shadowRoot.querySelector("ha-web-rtc-player") || haCameraStreamElement.shadowRoot.querySelector("ha-hls-player");
+	if (!player || !player.shadowRoot) {
+		return [player, null];
+	}
+	const video = player.shadowRoot.querySelector("video");
+	return [player, video];
+}
+
 function mergeConfig(target, ...sources) {
 	// https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
 	if (!sources.length) return target;
@@ -653,6 +665,7 @@ function updateConfig() {
 	}
 
 	if (config.image_url) {
+		config.image_url = config.image_url.replace(/^media-entity:\/\//, "media-entity-image://");
 		if (config.image_url.startsWith("/")) {
 			config.image_url = `media-source://media_source${config.image_url}`;
 		}
@@ -752,7 +765,8 @@ function mediaSourceType() {
 	if (!config.show_images || !config.image_url) {
 		return "";
 	}
-	if (config.image_url.startsWith("media-entity://")) return "media-entity";
+	if (config.image_url.startsWith("media-entity-video://")) return "media-entity-video";
+	if (config.image_url.startsWith("media-entity-image://")) return "media-entity-image";
 	if (config.image_url.startsWith("media-source://")) return "media-source";
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
 	if (config.image_url.startsWith("immich+")) return "immich-api";
@@ -1018,7 +1032,7 @@ function initWallpanel() {
 					view.hass = this.hass;
 				});
 
-				if (mediaSourceType() == "media-entity") {
+				if (mediaSourceType() == "media-entity-image") {
 					this.switchActiveMedia("entity_update");
 				}
 			}
@@ -1723,18 +1737,61 @@ function initWallpanel() {
 			}, delay);
 		}
 
-		getActiveMediaElement() {
-			if (this.imageOneContainer.style.opacity == 1) {
-				return this.imageOne;
+		getMediaElement(active = true, mediaElement = false) {
+			let elem = this.imageOneContainer.style.opacity == (active ? 1 : 0) ? this.imageOne : this.imageTwo;
+			if (mediaElement && elem.tagName.toLowerCase() == "ha-camera-stream") {
+				const video = getHaCameraStreamPlayerAndVideo(elem)[1];
+				if (video) {
+					elem = video;
+				}
 			}
-			return this.imageTwo;
+			return elem;
 		}
 
-		getInactiveMediaElement() {
-			if (this.imageOneContainer.style.opacity == 1) {
-				return this.imageTwo;
+		getActiveMediaElement(mediaElement = false) {
+			return this.getMediaElement(true, mediaElement);
+		}
+
+		getInactiveMediaElement(mediaElement = false) {
+			return this.getMediaElement(false, mediaElement);
+		}
+
+		replaceMediaElement(mediaElement, mediaType) {
+			if (typeof mediaElement.src === "string" && mediaElement.src.startsWith("blob:")) {
+				URL.revokeObjectURL(mediaElement.src);
 			}
-			return this.imageOne;
+			if (typeof mediaElement.pause == "function") {
+				mediaElement.pause();
+			}
+			if (mediaElement.tagName.toLowerCase() == "ha-camera-stream") {
+				const video = getHaCameraStreamPlayerAndVideo(mediaElement)[1];
+				if (video) {
+					video.pause();
+				}
+			}
+			mediaType = mediaType.toLowerCase();
+			const newMediaElement = document.createElement(mediaType);
+			[...mediaElement.attributes]
+				.filter((attr) => attr.name != "src")
+				.forEach((attr) => newMediaElement.setAttribute(attr.name, attr.value));
+			
+			newMediaElement.mediaUrl = mediaElement.mediaUrl;
+			newMediaElement.infoCacheUrl = mediaElement.infoCacheUrl;
+			
+			if (mediaType === "video") {
+				// Do not set muted to true or the following error can occur:
+				// Uncaught (in promise) DOMException: The play() request was interrupted because video-only background media was paused to save power. https://goo.gl/LdLk22
+				Object.assign(newMediaElement, { preload: "auto", muted: false, volume: config.video_volume });
+			}
+
+			mediaElement.replaceWith(newMediaElement);
+			if (mediaElement === this.imageOne) {
+				this.imageOne = newMediaElement;
+			} else {
+				this.imageTwo = newMediaElement;
+			}
+			mediaElement.remove();
+			return newMediaElement;
 		}
 
 		loadBackgroundImage(element) {
@@ -2225,13 +2282,12 @@ function initWallpanel() {
 
 		async updateMediaList(callback = null, force = false, retryCount = 0) {
 			if (!config.image_url) return;
-
 			if (!force) {
 				if (new Date().getTime() - this.lastMediaListUpdate < config.media_list_update_interval * 1000) {
 					return;
 				}
 			}
-
+			
 			const wp = this;
 			let updateFunction = null;
 			const sourceType = mediaSourceType();
@@ -2446,17 +2502,20 @@ function initWallpanel() {
 
 			function processAssets(assets, folderName = null) {
 				assets.forEach((asset) => {
-					logger.debug(asset);
+					logger.debug("Processing immich asset", asset);
 					const assetType = asset.type.toLowerCase();
 					if (!["image", "video"].includes(assetType)) {
+						logger.debug("Neither image nor video, skipping");
 						return;
 					}
 					if (config.exclude_media_types && config.exclude_media_types.includes(assetType)) {
+						logger.debug(`Media type "${assetType}" excluded`);
 						return;
 					}
 
 					for (const exclude of excludeRegExp) {
 						if (exclude.test(asset.originalFileName)) {
+							logger.debug(`Media item excluded by regex "${exclude}"`);
 							return;
 						}
 					}
@@ -2474,6 +2533,7 @@ function initWallpanel() {
 							orientation = orientation == "landscape" ? "portrait" : "landscape";
 						}
 						if (orientation === exclude_media_orientation) {
+							logger.debug(`Media item with orientation "${orientation}" excluded`);
 							return;
 						}
 					}
@@ -2499,6 +2559,11 @@ function initWallpanel() {
 			}
 
 			function finalizeImageList() {
+				if (urls.length == 0) {
+					const msg = "No matching media assets found";
+					console.warn(msg);
+					wp.showMessage("warning", "Warning", msg);
+				}
 				if (config.image_order == "random") {
 					urls = shuffleArray(urls);
 				} else {
@@ -2552,7 +2617,9 @@ function initWallpanel() {
 							});
 							logger.debug(`Got immich API response`, searchResults);
 							if (!searchResults.assets.count) {
-								logger.warn(`No media items found in immich that contain all these people: ${personNames}`);
+								const msg = `No media items found in immich that contain all these people: ${personNames}`;
+								logger.warn(msg);
+								wp.showMessage("warning", "Warning", msg);
 							} else {
 								processAssets(searchResults.assets.items);
 							}
@@ -2595,7 +2662,9 @@ function initWallpanel() {
 						logger.debug("Got immich API response", searchResults);
 						processAssets(searchResults.assets.items);
 					} else {
-						logger.warn("No matching immich tags found or selected.");
+						const msg = "No matching immich tags found or selected."
+						logger.warn(msg);
+						wp.showMessage("warning", "Warning", msg);
 					}
 				} else {
 					// Default: Fetch albums
@@ -2623,11 +2692,14 @@ function initWallpanel() {
 							processAssets(albumDetails.assets, albumDetails.albumName);
 						});
 					} else {
-						logger.warn("No matching immich albums found or selected.");
+						const msg = "No matching immich albums found or selected.";
+						logger.warn(msg);
+						wp.showMessage("warning", "Warning", msg);
 					}
 				}
-
+				
 				finalizeImageList();
+
 			} catch (error) {
 				logger.error("Immich API processing failed:", error);
 				throw error; // Re-throw for the main updateMediaList handler
@@ -2649,10 +2721,12 @@ function initWallpanel() {
 		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
 			// Setting the src attribute works better than fetch because cross-origin requests aren't blocked
 			const loadMediaWithElement = async (elem) => {
-				const loadEventName = { img: "load", video: "loadeddata", iframe: "load" }[elem.tagName.toLowerCase()];
+				const tagName = elem.tagName.toLowerCase();
+				const loadEventName = { img: "load", video: "loadeddata", iframe: "load" }[tagName];
 				if (!loadEventName) {
 					throw new Error(`Unsupported element tag "${elem.tagName}"`);
 				}
+
 				const promise = new Promise((resolve, reject) => {
 					const cleanup = () => {
 						elem.onerror = null;
@@ -2672,7 +2746,6 @@ function initWallpanel() {
 					elem.addEventListener(loadEventName, onLoad);
 					elem.onerror = onError;
 				});
-
 				if (useFetch) {
 					headers = headers || {};
 					const response = await fetch(url, { headers: headers });
@@ -2693,44 +2766,11 @@ function initWallpanel() {
 				return promise;
 			};
 
-			const createFallbackElement = (currentElem, tagName = null) => {
-				if (!tagName) {
-					tagName = currentElem.tagName.toLowerCase() === "img" ? "video" : "img";
-				}
-				const fallbackElem = document.createElement(tagName);
-
-				// Clone all custom and HTML attributes except 'src', it will be set later.
-				Object.entries(currentElem)
-					.filter(([key]) => !(key in HTMLElement.prototype))
-					.forEach(([key, value]) => (fallbackElem[key] = value));
-
-				[...currentElem.attributes]
-					.filter((attr) => attr.name !== "src")
-					.forEach((attr) => fallbackElem.setAttribute(attr.name, attr.value));
-
-				if (tagName.toLowerCase() === "video") {
-					// Do not set muted to true or the following error can occur:
-					// Uncaught (in promise) DOMException: The play() request was interrupted because video-only background media was paused to save power. https://goo.gl/LdLk22
-					Object.assign(fallbackElem, { preload: "auto", muted: false, volume: config.video_volume });
-				}
-				return fallbackElem;
-			};
-
-			const replaceElementWith = (currentElem, newElem) => {
-				if (currentElem === this.imageOne) {
-					this.imageOne = newElem;
-				} else {
-					this.imageTwo = newElem;
-				}
-				if (typeof currentElem.src === "string" && currentElem.src.startsWith("blob:")) {
-					URL.revokeObjectURL(currentElem.src);
-				}
-				currentElem.replaceWith(newElem);
-			};
-
 			const handleFallback = async (currentElem, mediaType = null, originalError = null) => {
-				const fallbackElem = createFallbackElement(currentElem, mediaType);
-				replaceElementWith(currentElem, fallbackElem);
+				if (!mediaType) {
+					mediaType = currentElem.tagName.toLowerCase() === "img" ? "video" : "img";
+				}
+				const fallbackElem = this.replaceMediaElement(currentElem, mediaType);
 				try {
 					await loadMediaWithElement(fallbackElem);
 					return fallbackElem;
@@ -2812,26 +2852,78 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromMediaEntity(element) {
-			const mediaEntity = element.mediaUrl.replace(/^media-entity:\/\//, "");
-			const entity = this.hass.states[mediaEntity];
-			if (!entity || !entity.attributes || !entity.attributes.entity_picture) {
-				return;
+			const match = element.mediaUrl.match(/^media-entity-(image|video):\/\/(.*)/);
+			if (!match) {
+				throw new Error(`Invalid URL "${element.mediaUrl}"`);
 			}
-			const entityPicture = entity.attributes.entity_picture;
-			let querySuffix = entityPicture.indexOf("?") > 0 ? "&" : "?";
-			// Adding a timestamp ensures that the cache is bypassed
-			// and each image gets a unique infoCacheUrl for handling media information correctly
-			querySuffix += this.fillPlaceholders("width=${width}&height=${height}&ts=${timestamp_ms}");
-			element.mediaUrl = entityPicture + querySuffix;
-			element.infoCacheUrl = element.mediaUrl;
-			if ("media_exif" in entity.attributes) {
-				// immich-home-assistant provides media_exif
-				addToMediaInfoCache(element.infoCacheUrl, entity.attributes["media_exif"]);
-			} else {
-				addToMediaInfoCache(element.infoCacheUrl, entity.attributes);
+			const mediaType = match[1];
+			const mediaEntity = match[2];
+			const entity = this.hass.states[mediaEntity];
+			if (!entity) {
+				throw new Error(`Entity "${mediaEntity}" not available`);
 			}
 			mediaEntityState = entity.state;
-			return await this.updateMediaFromUrl(element, element.mediaUrl, "img", null, true);
+
+			function attributesToMediaInfoCache() {
+				if ("media_exif" in entity.attributes) {
+					// immich-home-assistant provides media_exif
+					addToMediaInfoCache(element.infoCacheUrl, entity.attributes["media_exif"]);
+				} else {
+					addToMediaInfoCache(element.infoCacheUrl, entity.attributes);
+				}
+			}
+			
+			if (mediaType == "video") {
+				element.infoCacheUrl = element.mediaUrl;
+				attributesToMediaInfoCache();
+				element = this.replaceMediaElement(element, "ha-camera-stream");
+				element.style.visibility = "hidden";
+				Object.assign(element, {
+					hass: this.__hass,
+					stateObj: this.__hass.states[mediaEntity],
+					"allow-exoplayer": false,
+					"controls": false
+				});
+				
+				return new Promise((resolve, reject) => {
+					async function onLoad(evt) {
+						const el = evt.currentTarget;
+						el.removeEventListener("load", onLoad);
+						await el.updateComplete;
+						const [player, video] = getHaCameraStreamPlayerAndVideo(el);
+						player.style.height = "100%";
+						video.autoplay = false;
+						video.muted = false;
+						video.volume = config.video_volume;
+						video.style.maxHeight = "100%";
+						video.style.height = "100%";
+						if (video.readyState >= element.HAVE_ENOUGH_DATA) {
+							resolve(el);
+						} else {
+							const onCanPlay = () => {
+								video.removeEventListener("canplay", onCanPlay);
+								resolve(el);
+							}
+							video.addEventListener("canplay", onCanPlay);
+						}
+					};
+					element.addEventListener("load", onLoad);
+				});
+			}
+			else {
+				if (!entity.attributes || !entity.attributes.entity_picture) {
+					throw new Error(`Entity "${mediaEntity}" has no entity_picture attribute`);
+				}
+				const entityPicture = entity.attributes.entity_picture;
+				let querySuffix = entityPicture.indexOf("?") > 0 ? "&" : "?";
+				// Adding a timestamp ensures that the cache is bypassed
+				// and each image gets a unique infoCacheUrl for handling media information correctly
+				querySuffix += this.fillPlaceholders("width=${width}&height=${height}&ts=${timestamp_ms}");
+				element.mediaUrl = entityPicture + querySuffix;
+				element.infoCacheUrl = element.mediaUrl;
+				attributesToMediaInfoCache();
+				return await this.updateMediaFromUrl(element, element.mediaUrl, "img", null, true);
+			}
 		}
 
 		async updateMediaFromUnsplashAPI(element) {
@@ -2880,7 +2972,7 @@ function initWallpanel() {
 					element = await this.updateMediaFromUnsplashAPI(element);
 				} else if (mediaSourceType() == "immich-api") {
 					element = await this.updateMediaFromImmichAPI(element);
-				} else if (mediaSourceType() == "media-entity") {
+				} else if (mediaSourceType().startsWith("media-entity")) {
 					element = await this.updateMediaFromMediaEntity(element);
 				} else if (mediaSourceType() == "iframe") {
 					element = await this.updateMediaFromMediaIframe(element);
@@ -2889,6 +2981,8 @@ function initWallpanel() {
 				}
 
 				if (element) {
+					element.style.visibility = "visible";
+					
 					const isVideo = element.tagName.toLowerCase() === "video";
 
 					if (isVideo) {
@@ -2898,9 +2992,11 @@ function initWallpanel() {
 							} else {
 								const onCanPlay = () => {
 									element.removeEventListener("canplay", onCanPlay);
+									element.removeEventListener("error", onError);
 									resolve();
 								};
 								const onError = () => {
+									element.removeEventListener("canplay", onCanPlay);
 									element.removeEventListener("error", onError);
 									reject(new Error("Video failed to load"));
 								};
@@ -2936,20 +3032,21 @@ function initWallpanel() {
 
 		setMediaDimensions() {
 			const activeElem = this.getActiveMediaElement();
+			const mediaElem = this.getActiveMediaElement(true);
 			logger.debug("Setting dimensions for media element", activeElem);
 			if (!activeElem.mediaUrl) {
 				return;
 			}
 			// Determine if the new media is landscape or portrait, and set the appropriate sizes
-			const tagName = activeElem.tagName.toLowerCase();
+			const tagName = mediaElem.tagName.toLowerCase();
 			let width = 0;
 			let height = 0;
 			if (tagName === "video") {
-				width = activeElem.videoWidth;
-				height = activeElem.videoHeight;
+				width = mediaElem.videoWidth;
+				height = mediaElem.videoHeight;
 			} else if (tagName === "img") {
-				width = activeElem.naturalWidth;
-				height = activeElem.naturalHeight;
+				width = mediaElem.naturalWidth;
+				height = mediaElem.naturalHeight;
 			}
 			const mediaFit = !width || !height || width >= height ? config.image_fit_landscape : config.image_fit_portrait; // cover / contain
 
@@ -2987,7 +3084,7 @@ function initWallpanel() {
 					hiddenWidth = Math.max(setWidth - availWidth, 0);
 				}
 			} else if (tagName !== "iframe") {
-				logger.warn("Size not available for media element", activeElem);
+				logger.warn("Size not available for media element", mediaElem);
 			}
 			logger.debug(
 				`Setting dimensions: size=${setWidth}x${setHeight} - position=${setLeft}x${setTop} - hidden=${hiddenWidth}x${hiddenHeight}`
@@ -3001,31 +3098,33 @@ function initWallpanel() {
 		}
 
 		startPlayingActiveMedia() {
-			const activeElem = this.getActiveMediaElement();
-			if (typeof activeElem.play !== "function") {
+			let activeElem = this.getActiveMediaElement();
+			let videoElement = this.getActiveMediaElement(true);
+			
+			if (typeof videoElement.play !== "function") {
 				return; // Not playable element.
 			}
 
 			const cleanupListeners = () => {
-				if (activeElem._wp_video_playback_listeners) {
-					Object.entries(activeElem._wp_video_playback_listeners).forEach(([event, handler]) => {
-						activeElem.removeEventListener(event, handler);
+				if (videoElement._wp_video_playback_listeners) {
+					Object.entries(videoElement._wp_video_playback_listeners).forEach(([event, handler]) => {
+						videoElement.removeEventListener(event, handler);
 					});
-					activeElem._wp_video_playback_listeners = null;
+					videoElement._wp_video_playback_listeners = null;
 				}
 			};
 
-			activeElem.loop = config.video_loop;
-			if (!config.video_loop && !activeElem._wp_video_playback_listeners) {
+			videoElement.loop = config.video_loop;
+			if (!config.video_loop && !videoElement._wp_video_playback_listeners) {
 				// Immediately switch to next image at the end of the playback.
 				const onTimeUpdate = () => {
-					if (this.getActiveMediaElement() !== activeElem) {
+					if (this.getActiveMediaElement() !== videoElement) {
 						cleanupListeners();
 						return;
 					}
 					// If the media has played enough and is near the end.
-					if (activeElem.currentTime > config.crossfade_time) {
-						const remainingTime = activeElem.duration - activeElem.currentTime;
+					if (videoElement.currentTime > config.crossfade_time) {
+						const remainingTime = videoElement.duration - videoElement.currentTime;
 						if (remainingTime <= config.crossfade_time) {
 							this.switchActiveMedia("display_time_elapsed");
 							cleanupListeners();
@@ -3033,7 +3132,7 @@ function initWallpanel() {
 					}
 				};
 				const onMediaEnded = () => {
-					if (this.getActiveMediaElement() === activeElem) {
+					if (this.getActiveMediaElement() === videoElement) {
 						this.switchActiveMedia("media_end");
 					}
 					cleanupListeners();
@@ -3042,21 +3141,23 @@ function initWallpanel() {
 					cleanupListeners();
 				};
 
-				activeElem._wp_video_playback_listeners = {
+				videoElement._wp_video_playback_listeners = {
 					timeupdate: onTimeUpdate,
 					ended: onMediaEnded,
 					pause: onMediaPause
 				};
-				Object.entries(activeElem._wp_video_playback_listeners).forEach(([event, handler]) => {
-					activeElem.addEventListener(event, handler);
+				Object.entries(videoElement._wp_video_playback_listeners).forEach(([event, handler]) => {
+					videoElement.addEventListener(event, handler);
 				});
 			}
 
 			// Start playing the media.
-			activeElem.play().catch((e) => {
+			const wp = this;
+			videoElement.play().catch((e) => {
 				cleanupListeners();
 				if (activeElem === this.getActiveMediaElement()) {
-					logger.error(`Failed to play media "${activeElem.src}":`, e);
+					logger.error(`Failed to play media "${activeElem.mediaUrl}" (src=${videoElement.src}):`, e);
+					wp.showMessage("error", "Error", `Failed to play media "${activeElem.mediaUrl}": ${e}`);
 				}
 			});
 		}
@@ -3067,11 +3168,11 @@ function initWallpanel() {
 			}
 
 			const sourceType = mediaSourceType();
-
-			if (sourceType === "media-entity") {
-				const mediaEntity = config.image_url.replace(/^media-entity:\/\//, "");
+			if (sourceType === "media-entity-image") {
+				const mediaEntity = config.image_url.replace(/^media-entity-image:\/\//, "");
 				const entity = this.hass.states[mediaEntity];
 				if (!entity) {
+					logger.error(`Media entity "${mediaEntity}" not available`);
 					return;
 				}
 
@@ -3090,24 +3191,21 @@ function initWallpanel() {
 			}
 
 			this.lastMediaUpdate = Date.now();
-
+			const activeElement = this.getActiveMediaElement();
 			if (
 				sourceType === "iframe" &&
 				!config.iframe_load_unchanged &&
-				this.getNextMediaURL(false) == this.getActiveMediaElement().mediaUrl
+				this.getNextMediaURL(false) == activeElement.mediaUrl
 			) {
 				return;
 			}
 
 			let crossfadeMillis = eventType == "user_action" ? 250 : Math.round(config.crossfade_time * 1000);
-			let newElement = this.getActiveMediaElement();
-			if (newElement.src) {
-				newElement = this.getInactiveMediaElement();
-			} else {
+			if (eventType == "start") {
 				crossfadeMillis = 0;
 			}
-
-			const element = await this.updateMedia(newElement);
+			const updateElement = this.getInactiveMediaElement();
+			const element = await this.updateMedia(updateElement);
 			if (!element) {
 				return;
 			}
@@ -3128,7 +3226,7 @@ function initWallpanel() {
 				curMedia = this.imageTwo;
 			}
 			logger.debug(`Switching active media to '${newActiveContainer.id}'`);
-
+			
 			if (newActiveContainer.style.opacity != 1) {
 				newActiveContainer.style.opacity = 1;
 			}
@@ -3207,7 +3305,7 @@ function initWallpanel() {
 			}
 		}
 
-		startScreensaver() {
+		async startScreensaver() {
 			logger.debug("Start screensaver");
 
 			this.screensaverStartedAt = Date.now();
@@ -3234,14 +3332,9 @@ function initWallpanel() {
 				this.imageTwoContainer.style.opacity = 1;
 			}
 
+			await this.switchActiveMedia("start");
 			this.setupScreensaver();
-			this.setMediaDataInfo();
-			this.setMediaDimensions();
-			this.setImageURLEntityState();
-			this.startPlayingActiveMedia();
-			this.restartProgressBarAnimation();
-			this.restartKenBurnsEffect();
-
+			
 			if (config.keep_screen_on_time > 0) {
 				const wp = this;
 				setTimeout(function () {
