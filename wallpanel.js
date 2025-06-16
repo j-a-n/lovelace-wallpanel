@@ -525,7 +525,9 @@ function getHaCameraStreamPlayerAndVideo(haCameraStreamElement) {
 	if (!haCameraStreamElement.shadowRoot) {
 		return [null, null];
 	}
-	const player = haCameraStreamElement.shadowRoot.querySelector("ha-web-rtc-player") || haCameraStreamElement.shadowRoot.querySelector("ha-hls-player");
+	const player =
+		haCameraStreamElement.shadowRoot.querySelector("ha-web-rtc-player") ||
+		haCameraStreamElement.shadowRoot.querySelector("ha-hls-player");
 	if (!player || !player.shadowRoot) {
 		return [player, null];
 	}
@@ -1774,10 +1776,10 @@ function initWallpanel() {
 			[...mediaElement.attributes]
 				.filter((attr) => attr.name != "src")
 				.forEach((attr) => newMediaElement.setAttribute(attr.name, attr.value));
-			
+
 			newMediaElement.mediaUrl = mediaElement.mediaUrl;
 			newMediaElement.infoCacheUrl = mediaElement.infoCacheUrl;
-			
+
 			if (mediaType === "video") {
 				// Do not set muted to true or the following error can occur:
 				// Uncaught (in promise) DOMException: The play() request was interrupted because video-only background media was paused to save power. https://goo.gl/LdLk22
@@ -2287,7 +2289,7 @@ function initWallpanel() {
 					return;
 				}
 			}
-			
+
 			const wp = this;
 			let updateFunction = null;
 			const sourceType = mediaSourceType();
@@ -2662,7 +2664,7 @@ function initWallpanel() {
 						logger.debug("Got immich API response", searchResults);
 						processAssets(searchResults.assets.items);
 					} else {
-						const msg = "No matching immich tags found or selected."
+						const msg = "No matching immich tags found or selected.";
 						logger.warn(msg);
 						wp.showMessage("warning", "Warning", msg);
 					}
@@ -2697,9 +2699,8 @@ function initWallpanel() {
 						wp.showMessage("warning", "Warning", msg);
 					}
 				}
-				
-				finalizeImageList();
 
+				finalizeImageList();
 			} catch (error) {
 				logger.error("Immich API processing failed:", error);
 				throw error; // Re-throw for the main updateMediaList handler
@@ -2872,7 +2873,7 @@ function initWallpanel() {
 					addToMediaInfoCache(element.infoCacheUrl, entity.attributes);
 				}
 			}
-			
+
 			if (mediaType == "video") {
 				element.infoCacheUrl = element.mediaUrl;
 				attributesToMediaInfoCache();
@@ -2882,10 +2883,10 @@ function initWallpanel() {
 					hass: this.__hass,
 					stateObj: this.__hass.states[mediaEntity],
 					"allow-exoplayer": false,
-					"controls": false
+					controls: false
 				});
-				
-				return new Promise((resolve, reject) => {
+
+				return new Promise((resolve) => {
 					async function onLoad(evt) {
 						const el = evt.currentTarget;
 						el.removeEventListener("load", onLoad);
@@ -2903,14 +2904,13 @@ function initWallpanel() {
 							const onCanPlay = () => {
 								video.removeEventListener("canplay", onCanPlay);
 								resolve(el);
-							}
+							};
 							video.addEventListener("canplay", onCanPlay);
 						}
-					};
+					}
 					element.addEventListener("load", onLoad);
 				});
-			}
-			else {
+			} else {
 				if (!entity.attributes || !entity.attributes.entity_picture) {
 					throw new Error(`Entity "${mediaEntity}" has no entity_picture attribute`);
 				}
@@ -2982,7 +2982,7 @@ function initWallpanel() {
 
 				if (element) {
 					element.style.visibility = "visible";
-					
+
 					const isVideo = element.tagName.toLowerCase() === "video";
 
 					if (isVideo) {
@@ -3098,9 +3098,9 @@ function initWallpanel() {
 		}
 
 		startPlayingActiveMedia() {
-			let activeElem = this.getActiveMediaElement();
-			let videoElement = this.getActiveMediaElement(true);
-			
+			const activeElem = this.getActiveMediaElement();
+			const videoElement = this.getActiveMediaElement(true);
+
 			if (typeof videoElement.play !== "function") {
 				return; // Not playable element.
 			}
@@ -3226,7 +3226,7 @@ function initWallpanel() {
 				curMedia = this.imageTwo;
 			}
 			logger.debug(`Switching active media to '${newActiveContainer.id}'`);
-			
+
 			if (newActiveContainer.style.opacity != 1) {
 				newActiveContainer.style.opacity = 1;
 			}
@@ -3334,7 +3334,7 @@ function initWallpanel() {
 
 			await this.switchActiveMedia("start");
 			this.setupScreensaver();
-			
+
 			if (config.keep_screen_on_time > 0) {
 				const wp = this;
 				setTimeout(function () {
