@@ -92,31 +92,35 @@ Valid values are:
 exclude_media_orientation: auto
 ```
 
-## Entity with entity_picture attribute
-If an entity has the `entity_picture` attribute you can use it as media source for the screensaver.
-To do this, set `image_url` to `media-entity://<entity_id>`, replacing `<entity_id>` with the entity's name.
-When the entity's status changes, a new image is automatically loaded.
-Additionally, a new image is loaded after the configured `display_time` has elapsed.
-If you prefer not to load a new image when the entity state remains unchanged, set `media_entity_load_unchanged` to `false`.
+## Media Entity
 
-Example:
+### Images
+
+You can use an entity's `entity_picture` attribute as the media source for the screensaver.
+To do this, set the `image_url` to `media-entity-image://<entity_id>`, replacing `<entity_id>` with the actual entity ID.
+
+When the entity's state changes, a new image will automatically be displayed. A new image also loads after the specified `display_time` has passed.
+If you'd like to prevent image updates when the entity state remains the same, set `media_entity_load_unchanged` to `false`.
+
+**Example:**
 
 ```yaml
 display_time: 15
-image_url: media-entity://camera.my_camera_entity_id
+image_url: media-entity-image://camera.my_camera_entity_id
 media_entity_load_unchanged: true
 ```
 
-With the `entity_picture` you can combine this integration with the [Google Photos Integration](https://github.com/Daanoz/ha-google-photos) extension from [Daanoz](https://github.com/Daanoz) to display your photos.
+### Video Stream
 
-Example:
+If an entity provides a video stream, you can use it as the screensaver media source.
+To enable this, set `image_url` to `media-entity-video://<entity_id>`, replacing `<entity_id>` with the appropriate entity ID.
+
+**Example:**
 
 ```yaml
-image_url: media-entity://camera.google_photos_favorites_media
+image_url: media-entity-video://camera.my_camera_entity_id
+media_entity_load_unchanged: false
 ```
-
-See [Google Photos Integration README](https://github.com/Daanoz/ha-google-photos#lovelace-wall-panel) for details.
-
 
 ## Immich API
 Images and videos can be loaded from an Immich server,
