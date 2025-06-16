@@ -3168,8 +3168,8 @@ function initWallpanel() {
 			}
 
 			const sourceType = mediaSourceType();
-			if (sourceType === "media-entity-image") {
-				const mediaEntity = config.image_url.replace(/^media-entity-image:\/\//, "");
+			if (sourceType.startsWith("media-entity")) {
+				const mediaEntity = config.image_url.replace(/^media-entity-(image|video):\/\//, "");
 				const entity = this.hass.states[mediaEntity];
 				if (!entity) {
 					logger.error(`Media entity "${mediaEntity}" not available`);
