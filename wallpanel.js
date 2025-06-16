@@ -1798,7 +1798,14 @@ function initWallpanel() {
 
 		loadBackgroundImage(element) {
 			let srcMediaUrl = element.src;
-			if (element.tagName.toLowerCase() === "video") {
+			const tagName = element.tagName.toLowerCase();
+			if (tagName === "ha-camera-stream") {
+				const mediaElement = getHaCameraStreamPlayerAndVideo(element)[1];
+				if (!mediaElement || !mediaElement.poster) {
+					return;
+				}
+				srcMediaUrl = mediaElement.poster;
+			} else if (tagName === "video") {
 				// Capture the current frame of the video as a background image
 				const canvas = document.createElement("canvas");
 				canvas.width = element.videoWidth;
