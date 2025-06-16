@@ -3187,6 +3187,8 @@ function initWallpanel() {
 					logger.debug(`Media entity ${mediaEntity} state has changed`);
 				} else if (eventType == "entity_update") {
 					return;
+				} else if (eventType == "start" || eventType == "user_action") {
+					logger.debug(`Media entity ${mediaEntity} state unchanged, but eventType = ${eventType}`);
 				} else if (config.media_entity_load_unchanged) {
 					logger.debug(`Media entity ${mediaEntity} state unchanged, but media_entity_load_unchanged = true`);
 				} else {
