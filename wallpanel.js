@@ -1160,6 +1160,7 @@ function initWallpanel() {
 			this.screensaverContainer.style.width = "100vw";
 			this.screensaverContainer.style.height = "100vh";
 			this.screensaverContainer.style.background = "#000000";
+			this.screensaverContainer.style.overflow = "hidden";
 
 			this.imageOneContainer.removeAttribute("style");
 			this.imageOneContainer.style.opacity = 0;
@@ -5078,3 +5079,4 @@ EXIF.pretty = function (img) {
 EXIF.readFromBinaryFile = function (file) {
 	return findEXIFinJPEG(file);
 };
+
