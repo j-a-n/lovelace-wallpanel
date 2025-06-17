@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.52.0";
+const version = "4.52.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -2620,17 +2620,27 @@ function initWallpanel() {
 
 						if (personIds.length > 0) {
 							logger.debug("Searching asset metadata for persons: ", personIds);
-							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
-								method: "POST",
-								body: JSON.stringify({ personIds: personIds, withExif: true, size: config.media_list_max_size })
-							});
-							logger.debug(`Got immich API response`, searchResults);
-							if (!searchResults.assets.count) {
-								const msg = `No media items found in immich that contain all these people: ${personNames}`;
-								logger.warn(msg);
-								wp.showMessage("warning", "Warning", msg);
-							} else {
+							let page = 1;
+							while (true) {
+								logger.debug(`Fetching asset metadata page ${page}`);
+								const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
+									method: "POST",
+									body: JSON.stringify({ personIds: personIds, withExif: true, page: page, size: 1000 })
+								});
+								logger.debug(`Got immich API response`, searchResults);
+								if (!searchResults.assets.count) {
+									if (page == 1) {
+										const msg = `No media items found in immich that contain all these people: ${personNames}`;
+										logger.warn(msg);
+										wp.showMessage("warning", "Warning", msg);
+									}
+									break;
+								}
 								processAssets(searchResults.assets.items);
+								if (!searchResults.assets.nextPage) {
+									break;
+								}
+								page = searchResults.assets.nextPage;
 							}
 						}
 					}
@@ -2664,12 +2674,28 @@ function initWallpanel() {
 
 					if (tagIds.length > 0) {
 						logger.debug("Searching asset metadata for tags: ", tagIds);
-						const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
-							method: "POST",
-							body: JSON.stringify({ tagIds: tagIds, withExif: true, size: config.media_list_max_size })
-						});
-						logger.debug("Got immich API response", searchResults);
-						processAssets(searchResults.assets.items);
+						let page = 1;
+						while (true) {
+							logger.debug(`Fetching asset metadata page ${page}`);
+							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
+								method: "POST",
+								body: JSON.stringify({ tagIds: tagIds, withExif: true, page: page, size: 1000 })
+							});
+							logger.debug("Got immich API response", searchResults);
+							if (!searchResults.assets.count) {
+								if (page == 1) {
+									const msg = `No media items found in immich that contain these tags: ${tagNamesLower}`;
+									logger.warn(msg);
+									wp.showMessage("warning", "Warning", msg);
+								}
+								break;
+							}
+							processAssets(searchResults.assets.items);
+							if (!searchResults.assets.nextPage) {
+								break;
+							}
+							page = searchResults.assets.nextPage;
+						}
 					} else {
 						const msg = "No matching immich tags found or selected.";
 						logger.warn(msg);
