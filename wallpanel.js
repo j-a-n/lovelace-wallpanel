@@ -44,6 +44,7 @@ const defaultConfig = {
 	image_url_entity: "",
 	media_entity_load_unchanged: true,
 	iframe_load_unchanged: false,
+	iframe_interaction: false,
 	immich_api_key: "",
 	immich_album_names: [],
 	immich_shared_albums: true,
@@ -3257,10 +3258,12 @@ function initWallpanel() {
 			let curActiveContainer = this.imageOneContainer;
 			let newActiveContainer = this.imageTwoContainer;
 			let curMedia = this.imageOne;
+			let newMedia = this.imageTwo;
 			if (newElement == this.imageOne) {
 				curActiveContainer = this.imageTwoContainer;
 				newActiveContainer = this.imageOneContainer;
 				curMedia = this.imageTwo;
+				newMedia = this.imageOne;
 			}
 			logger.debug(`Switching active media to '${newActiveContainer.id}'`);
 
@@ -3269,6 +3272,12 @@ function initWallpanel() {
 			}
 			if (curActiveContainer.style.opacity != 0) {
 				curActiveContainer.style.opacity = 0;
+			}
+
+			if (newMedia.tagName.toLowerCase() == "iframe" && config.iframe_interaction) {
+				newMedia.style.pointerEvents = "auto";
+			} else {
+				newMedia.style.pointerEvents = "none";
 			}
 
 			this.setMediaDataInfo();
@@ -3642,6 +3651,10 @@ function initWallpanel() {
 						}
 					}
 				}
+			}
+
+			if (config.iframe_interaction && mediaSourceType() == "iframe") {
+				return;
 			}
 
 			if (config.content_interaction) {
