@@ -2,11 +2,11 @@
 A so-called Info Box can be displayed above the images.
 You can add badges, cards and whole dashboard views to this box.
 
-If you want to interact with the elements of the Info Box, as in the dashboard, you can set `card_interaction` to `true`.
+If you want to interact with the elements of the Info Box, as in the dashboard, you can set `content_interaction` to `true`.
 
 ```yaml
 wallpanel:
-  card_interaction: true
+  content_interaction: true
 ```
 
 ## Badges

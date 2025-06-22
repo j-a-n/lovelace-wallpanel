@@ -92,7 +92,7 @@ const defaultConfig = {
 	badges: [],
 	cards: [],
 	views: [],
-	card_interaction: false,
+	content_interaction: false,
 	profile: "",
 	profile_entity: "",
 	profiles: {}
@@ -545,7 +545,8 @@ function mergeConfig(target, ...sources) {
 		image_order: "media_order",
 		enabled_on_tabs: "enabled_on_views",
 		image_list_update_interval: "media_list_update_interval",
-		screensaver_stop_navigation_path: "screensaver_start_navigation_path"
+		screensaver_stop_navigation_path: "screensaver_start_navigation_path",
+		card_interaction: "content_interaction"
 	};
 
 	if (isObject(target) && isObject(source)) {
@@ -662,7 +663,7 @@ function updateConfig() {
 		logger.debug(`Profile set from entity state: ${profile}`);
 	}
 
-	if (config.card_interaction) {
+	if (config.content_interaction) {
 		config.stop_screensaver_on_mouse_move = false;
 	}
 
@@ -1309,7 +1310,7 @@ function initWallpanel() {
 			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
 			this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
 			this.messageContainer.style.visibility = this.screensaverRunning() ? "visible" : "hidden";
-			if (config.card_interaction) {
+			if (config.content_interaction) {
 				this.screensaverImageOverlay.style.pointerEvents = "none";
 			}
 
@@ -1628,7 +1629,7 @@ function initWallpanel() {
 					this.__views.push(viewElement);
 
 					const viewContainer = document.createElement("div");
-					if (config.card_interaction) {
+					if (config.content_interaction) {
 						viewElement.style.pointerEvents = "auto";
 					} else {
 						viewElement.style.pointerEvents = "none";
@@ -1673,7 +1674,7 @@ function initWallpanel() {
 					cardContainer.style.margin = "var(--wp-card-margin)";
 					cardContainer.style.backdropFilter = "var(--wp-card-backdrop-filter)";
 
-					if (config.card_interaction) {
+					if (config.content_interaction) {
 						cardContainer.style.pointerEvents = "auto";
 					} else {
 						cardContainer.style.pointerEvents = "none";
@@ -3643,7 +3644,7 @@ function initWallpanel() {
 				}
 			}
 
-			if (config.card_interaction) {
+			if (config.content_interaction) {
 				if (this.getMoreInfoDialog()) {
 					return;
 				}
@@ -5079,4 +5080,3 @@ EXIF.pretty = function (img) {
 EXIF.readFromBinaryFile = function (file) {
 	return findEXIFinJPEG(file);
 };
-

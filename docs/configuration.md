@@ -81,7 +81,7 @@ You can set the following configuration parameters for every individual Home Ass
 | badges                           | Badges to display in info box. Set to [] to show no badges at all. See [Badges](info-box.md#badges) for details.  | []         |
 | cards                            | Cards to display in info box. Set to [] to show no cards at all. See [Cards](info-box.md#cards) for details.      | []         |
 | views                            | Dashboard views to display in info box. Set to [] to show no views at all. See [Views](info-box.md#views) for details. | []         |
-| card_interaction                 | Allow interaction with the elements displayed in the info box?                                         | false      |
+| content_interaction              | Allow interaction with the elements displayed in the info box?                                         | false      |
 | profiles                         | See [Configuration profiles](#profiles) for details.                                                   | {}         |
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |            |
 | profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |            |
@@ -141,7 +141,7 @@ wallpanel:
   info_move_pattern: random
   info_move_interval: 0
   info_move_fade_duration: 2.0
-  card_interaction: true
+  content_interaction: true
   style:
     wallpanel-screensaver-info-box:
       font-size: 8vh
