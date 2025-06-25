@@ -3541,6 +3541,7 @@ function initWallpanel() {
 
 				html += '<a id="download_log" href="">Download log</a><br />';
 				html += `<b>Version:</b> ${version}<br/>`;
+				html += `<b>User-Agent:</b> ${navigator.userAgent}<br/>`;
 				html += `<b>Config:</b> ${JSON.stringify(conf)}<br/>`;
 				html += `<b>Fullscreen:</b> ${fullscreen}<br/>`;
 				html += `<b>Screensaver started at:</b> ${wallpanel.screensaverStartedAt}<br/>`;
