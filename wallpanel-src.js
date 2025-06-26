@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.54.0";
+const version = "4.54.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -832,14 +832,20 @@ function setSidebarVisibility(hidden) {
 	}
 
 	try {
-		const aside = elHaMain.shadowRoot.querySelector("ha-drawer").shadowRoot.querySelector("aside");
-		aside.style.display = hidden ? "none" : "";
-		if (hidden) {
-			elHaMain.style.setProperty("--mdc-drawer-width", "env(safe-area-inset-left)");
-		} else {
-			elHaMain.style.removeProperty("--mdc-drawer-width");
+		const drawer = elHaMain.shadowRoot.querySelector("ha-drawer");
+		if (drawer) {
+			const sidebar = drawer.shadowRoot.querySelector("aside");
+			if (sidebar) {
+				if (hidden) {
+					sidebar.style.maxWidth = "0px";
+					elHaMain.style.setProperty("--mdc-drawer-width", "env(safe-area-inset-left)");
+				} else {
+					sidebar.style.maxWidth = "";
+					elHaMain.style.removeProperty("--mdc-drawer-width");
+				}
+				window.dispatchEvent(new Event("resize"));
+			}
 		}
-		window.dispatchEvent(new Event("resize"));
 	} catch (e) {
 		logger.warn(e);
 	}
