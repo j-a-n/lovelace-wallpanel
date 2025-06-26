@@ -4,14 +4,16 @@
 # Install packages
 npm install
 
-# Show selected target browsers
-npx browserslist
-
 # Run linter
-npx eslint wallpanel.js
+npx eslint wallpanel-src.js
 
 # Automatically fix problems
-npx eslint --fix wallpanel.js
+npx eslint --fix wallpanel-src.js
+```
+
+# Babel
+```shell
+npx babel wallpanel-src.js --out-file wallpanel.js
 ```
 
 # Documentation
