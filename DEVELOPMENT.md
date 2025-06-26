@@ -12,6 +12,9 @@ npx eslint --fix wallpanel-src.js
 ```
 
 # Babel
+Set `browserslist` in `package.json`.
+See https://browsersl.ist/
+
 ```shell
 npx babel wallpanel-src.js --out-file wallpanel.js
 ```
