@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.54.1";
+const version = "4.54.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -97,6 +97,15 @@ const defaultConfig = {
 	profile: "",
 	profile_entity: "",
 	profiles: {}
+};
+const renamedConfigOptions = {
+	image_excludes: "exclude_filenames",
+	image_fit: "image_fit_landscape",
+	image_order: "media_order",
+	enabled_on_tabs: "enabled_on_views",
+	image_list_update_interval: "media_list_update_interval",
+	screensaver_stop_navigation_path: "screensaver_start_navigation_path",
+	card_interaction: "content_interaction"
 };
 
 let dashboardConfig = {};
@@ -540,25 +549,16 @@ function mergeConfig(target, ...sources) {
 	// https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
 	if (!sources.length) return target;
 	const source = sources.shift();
-	const renamedOptions = {
-		image_excludes: "exclude_filenames",
-		image_fit: "image_fit_landscape",
-		image_order: "media_order",
-		enabled_on_tabs: "enabled_on_views",
-		image_list_update_interval: "media_list_update_interval",
-		screensaver_stop_navigation_path: "screensaver_start_navigation_path",
-		card_interaction: "content_interaction"
-	};
 
 	if (isObject(target) && isObject(source)) {
 		for (let key in source) {
 			let val = source[key];
 
-			if (renamedOptions[key]) {
+			if (renamedConfigOptions[key]) {
 				logger.warn(
-					`The configuration option '${key}' has been renamed to '${renamedOptions[key]}'. Please update your wallpanel configuration accordingly.`
+					`The configuration option '${key}' has been renamed to '${renamedConfigOptions[key]}'. Please update your wallpanel configuration accordingly.`
 				);
-				key = renamedOptions[key];
+				key = renamedConfigOptions[key];
 			}
 
 			if (isObject(val)) {
@@ -801,7 +801,7 @@ function getDashboardWallpanelConfig(keys = []) {
 				keys = Object.keys(wallpanelConfig);
 			}
 			keys.forEach((key) => {
-				if (key in defaultConfig) {
+				if (key in defaultConfig || key in renamedConfigOptions) {
 					conf[key] = wallpanelConfig[key];
 				}
 			});
@@ -3969,7 +3969,7 @@ function startup() {
 					dashboardConfig = {};
 					if (data.wallpanel) {
 						for (const key in data.wallpanel) {
-							if (key in defaultConfig) {
+							if (key in defaultConfig || key in renamedConfigOptions) {
 								dashboardConfig[key] = data.wallpanel[key];
 							}
 						}
