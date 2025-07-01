@@ -10,7 +10,7 @@ const defaultConfig = {
 	debug: false,
 	wait_for_browser_mod_time: 0.25,
 	log_level_console: "info",
-	alert_errors: false,
+	alert_errors: true,
 	hide_toolbar: false,
 	keep_toolbar_space: false,
 	hide_toolbar_action_icons: false,
@@ -371,7 +371,7 @@ class ScreenWakeLock {
 				.catch((e) => {
 					this.enabled = false;
 					this.error = e;
-					logger.error(`Failed to request screen wakeLock: ${e}`);
+					logger.warning(`Failed to request screen wakeLock: ${e}`);
 				});
 		} else {
 			logger.debug("Starting video player");
@@ -389,7 +389,7 @@ class ScreenWakeLock {
 					.catch((error) => {
 						this.enabled = false;
 						this.error = error;
-						logger.error(`Failed to play video: ${error}`);
+						logger.warning(`Failed to play video: ${error}`);
 					});
 			}
 		}
@@ -2348,7 +2348,6 @@ function initWallpanel() {
 				} else {
 					const errorMsg = `Failed to update media list from ${config.image_url} after ${maxRetries} retries: ${error.message || stringify(error)}`;
 					logger.error(errorMsg);
-					wp.showMessage("error", "Error", errorMsg, 10000);
 				}
 			}
 			this.updatingMediaList = false;
@@ -2579,8 +2578,7 @@ function initWallpanel() {
 			function finalizeImageList() {
 				if (urls.length == 0) {
 					const msg = "No matching media assets found";
-					console.warn(msg);
-					wp.showMessage("warning", "Warning", msg);
+					logger.error(msg);
 				}
 				if (config.media_order == "random") {
 					urls = shuffleArray(urls);
@@ -2640,8 +2638,7 @@ function initWallpanel() {
 								if (!searchResults.assets.count) {
 									if (page == 1) {
 										const msg = `No media items found in immich that contain all these people: ${personNames}`;
-										logger.warn(msg);
-										wp.showMessage("warning", "Warning", msg);
+										logger.error(msg);
 									}
 									break;
 								}
@@ -2694,8 +2691,7 @@ function initWallpanel() {
 							if (!searchResults.assets.count) {
 								if (page == 1) {
 									const msg = `No media items found in immich that contain these tags: ${tagNamesLower}`;
-									logger.warn(msg);
-									wp.showMessage("warning", "Warning", msg);
+									logger.error(msg);
 								}
 								break;
 							}
@@ -2707,8 +2703,7 @@ function initWallpanel() {
 						}
 					} else {
 						const msg = "No matching immich tags found or selected.";
-						logger.warn(msg);
-						wp.showMessage("warning", "Warning", msg);
+						logger.error(msg);
 					}
 				} else {
 					// Default: Fetch albums
@@ -2737,8 +2732,7 @@ function initWallpanel() {
 						});
 					} else {
 						const msg = "No matching immich albums found or selected.";
-						logger.warn(msg);
-						wp.showMessage("warning", "Warning", msg);
+						logger.error(msg);
 					}
 				}
 
@@ -3066,7 +3060,6 @@ function initWallpanel() {
 				// Make sure the "Keep WiFi on during sleep" option is enabled.
 				// Set your WiFi connection to "not metered".
 				logger.error(`Failed to update media from ${element.mediaUrl}:`, error);
-				this.showMessage("error", "Error", `Failed to update media from ${element.mediaUrl}: ${error}`, 5000);
 			}
 			this.updatingMedia = false;
 			return element;
@@ -3199,7 +3192,6 @@ function initWallpanel() {
 				cleanupListeners();
 				if (activeElem === this.getActiveMediaElement()) {
 					logger.error(`Failed to play media "${activeElem.mediaUrl}" (src=${videoElement.src}):`, e);
-					wp.showMessage("error", "Error", `Failed to play media "${activeElem.mediaUrl}": ${e}`);
 				}
 			});
 		}
@@ -3391,7 +3383,7 @@ function initWallpanel() {
 				const wp = this;
 				setTimeout(function () {
 					if (wp.screensaverRunning() && !wp.screenWakeLock.enabled) {
-						logger.error(
+						logger.warning(
 							"Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD"
 						);
 						wp.showMessage(
