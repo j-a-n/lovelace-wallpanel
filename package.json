@@ -5,12 +5,24 @@
 		"@babel/core": "^7.27.7",
 		"@babel/preset-env": "^7.27.2",
 		"@eslint/js": "^9.19.0",
+		"@rollup/plugin-babel": "^6.0.4",
+		"@rollup/plugin-commonjs": "^28.0.6",
+		"@rollup/plugin-node-resolve": "^16.0.1",
 		"browserslist": "^4.24.4",
 		"eslint": "^9.19.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-compat": "^6.0.2",
 		"eslint-plugin-prettier": "^5.2.3",
 		"prettier": "3.4.2",
-		"prettier-eslint": "^16.3.0"
+		"prettier-eslint": "^16.3.0",
+		"rollup": "^2.79.2",
+		"rollup-plugin-terser": "^7.0.2"
+	},
+	"dependencies": {
+		"core-js": "^3.43.0",
+		"regenerator-runtime": "^0.14.1"
+	},
+	"scripts": {
+		"build": "rollup -c"
 	}
 }

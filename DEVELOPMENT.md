@@ -15,8 +15,10 @@ npx eslint --fix wallpanel-src.js
 Set `browserslist` in `package.json`.
 See https://browsersl.ist/
 
+# Build
+Generate a Babel-processed wallpanel.js with fetch and Promise polyfills included.
 ```shell
-npx babel wallpanel-src.js --out-file wallpanel.js
+npm run build
 ```
 
 # Documentation
