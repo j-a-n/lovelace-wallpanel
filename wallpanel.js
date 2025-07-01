@@ -36,7 +36,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
  * Released under the GNU General Public License v3.0
  */
 
-var version = "4.54.1";
+var version = "4.54.2";
 var defaultConfig = {
   enabled: false,
   enabled_on_views: [],
@@ -138,6 +138,15 @@ var defaultConfig = {
   profile: "",
   profile_entity: "",
   profiles: {}
+};
+var renamedConfigOptions = {
+  image_excludes: "exclude_filenames",
+  image_fit: "image_fit_landscape",
+  image_order: "media_order",
+  enabled_on_tabs: "enabled_on_views",
+  image_list_update_interval: "media_list_update_interval",
+  screensaver_stop_navigation_path: "screensaver_start_navigation_path",
+  card_interaction: "content_interaction"
 };
 var dashboardConfig = {};
 var config = {};
@@ -572,21 +581,12 @@ function mergeConfig(target) {
   // https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
   if (!sources.length) return target;
   var source = sources.shift();
-  var renamedOptions = {
-    image_excludes: "exclude_filenames",
-    image_fit: "image_fit_landscape",
-    image_order: "media_order",
-    enabled_on_tabs: "enabled_on_views",
-    image_list_update_interval: "media_list_update_interval",
-    screensaver_stop_navigation_path: "screensaver_start_navigation_path",
-    card_interaction: "content_interaction"
-  };
   if (isObject(target) && isObject(source)) {
     var _loop = function _loop() {
       var val = source[key];
-      if (renamedOptions[key]) {
-        logger.warn("The configuration option '".concat(key, "' has been renamed to '").concat(renamedOptions[key], "'. Please update your wallpanel configuration accordingly."));
-        key = renamedOptions[key];
+      if (renamedConfigOptions[key]) {
+        logger.warn("The configuration option '".concat(key, "' has been renamed to '").concat(renamedConfigOptions[key], "'. Please update your wallpanel configuration accordingly."));
+        key = renamedConfigOptions[key];
       }
       if (isObject(val)) {
         if (!target[key]) Object.assign(target, _defineProperty({}, key, {}));
@@ -808,7 +808,7 @@ function getDashboardWallpanelConfig() {
         keys = Object.keys(wallpanelConfig);
       }
       keys.forEach(function (key) {
-        if (key in defaultConfig) {
+        if (key in defaultConfig || key in renamedConfigOptions) {
           conf[key] = wallpanelConfig[key];
         }
       });
@@ -4424,7 +4424,7 @@ function startup() {
         dashboardConfig = {};
         if (data.wallpanel) {
           for (var key in data.wallpanel) {
-            if (key in defaultConfig) {
+            if (key in defaultConfig || key in renamedConfigOptions) {
               dashboardConfig[key] = data.wallpanel[key];
             }
           }
