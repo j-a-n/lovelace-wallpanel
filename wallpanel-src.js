@@ -3197,7 +3197,6 @@ function initWallpanel() {
 			}
 
 			// Start playing the media.
-			const wp = this;
 			videoElement.play().catch((e) => {
 				cleanupListeners();
 				if (activeElem === this.getActiveMediaElement()) {
