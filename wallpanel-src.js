@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.54.2";
+const version = "4.55.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -54,6 +54,7 @@ const defaultConfig = {
 	immich_resolution: "preview",
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
+	media_horizontal_align: "center", // left / center / right
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
 	media_order: "random", // sorted / random
@@ -3118,7 +3119,13 @@ function initWallpanel() {
 					logger.debug("Using available height");
 					setHeight = availHeight;
 					setWidth = Math.floor(width * ratioHeight);
-					setLeft = Math.floor((setWidth - availWidth) / -2);
+					if (config.media_horizontal_align == "left") {
+						setLeft = 0;
+					} else if (config.media_horizontal_align == "right") {
+						setLeft = availWidth - setWidth;
+					} else {
+						setLeft = Math.floor((setWidth - availWidth) / -2);
+					}
 					hiddenWidth = Math.max(setWidth - availWidth, 0);
 				}
 			} else if (tagName !== "iframe") {
