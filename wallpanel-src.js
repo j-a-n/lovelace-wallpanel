@@ -837,6 +837,9 @@ function setSidebarVisibility(hidden) {
 			const sidebar = drawer.shadowRoot.querySelector("aside");
 			if (sidebar) {
 				if (hidden) {
+					// Using style.display = hidden will cause the companion app to freeze
+					// See https://github.com/j-a-n/lovelace-wallpanel/issues/383
+					sidebar.style.opacity = 0;
 					sidebar.style.maxWidth = "0px";
 					elHaMain.style.setProperty("--mdc-drawer-width", "env(safe-area-inset-left)");
 				} else {
