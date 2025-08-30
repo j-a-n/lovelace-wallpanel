@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.55.0";
+const version = "4.55.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -844,6 +844,7 @@ function setSidebarVisibility(hidden) {
 					sidebar.style.maxWidth = "0px";
 					elHaMain.style.setProperty("--mdc-drawer-width", "env(safe-area-inset-left)");
 				} else {
+					sidebar.style.opacity = 1;
 					sidebar.style.maxWidth = "";
 					elHaMain.style.removeProperty("--mdc-drawer-width");
 				}
