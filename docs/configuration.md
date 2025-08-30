@@ -7,7 +7,9 @@ You can set the following configuration parameters for every individual Home Ass
 | enabled_on_views                 | Enable WallPanel on the named views (path) only. See [Enable WallPanel on specific Views](configuration.md#enable-wallpanel-on-specific-views) for details. | []   |
 | debug                            | Enable debug mode?                                                                                     | false     |
 | wait_for_browser_mod_time        | How long to wait for browser_mod to be available (in seconds)? This config attribute can only be set in the main configuration and not in profiles, user-specific or device-specific. | 0.25      |
-| log_level_console                | Log level to use for logging to the browser console (error / warn / info / debug).                     | info      |
+| log_level_console                | Log level to use for logging to the browser console (error / warning / info / debug).                  | info      |
+| log_level_system                 | Log level to use for logging to the HA system log (error / warning / info / debug).                    | warning   |
+| system_target_log_level          | Always use this log level when logging to the HA system log (error / warning / info / debug).          |           |
 | alert_errors                     | Display error messages in an alert box.                                                                | true      |
 | hide_toolbar                     | Hide the upper panel toolbar? Please see [FAQ](faq.md#dashboard-cannot-be-edited) how to edit your dashboard when toolbar is hidden. | false     |
 | hide_toolbar_on_subviews         | Hide the toolbar in subviews too?                                                                      | false     |

@@ -32,7 +32,7 @@ You should see a message like `🖼️ Wallpanel version x.y.z` if WallPanel has
 
 If not, please check if there are any error messages that give an indication of the problem.
 
-To confgure how much information WallPanel logs to the browser console, you can set the configuration option `log_level_console` to `error`, `warn`, `info` or `debug`.
+To confgure how much information WallPanel logs to the browser console, you can set the configuration option `log_level_console` to `error`, `warning`, `info` or `debug`.
 
 !!! example
     ```yaml
@@ -40,8 +40,17 @@ To confgure how much information WallPanel logs to the browser console, you can 
       log_level_console: debug
     ```
 
-## Home Assistant Log
-Please check the [Home Assistant Log](https://www.home-assistant.io/integrations/system_log/) for errors regarding WallPanel.
+## Home Assistant System Log
+You can configure the log level used for logging to the [Home Assistant System Log](https://www.home-assistant.io/integrations/system_log/).
+By default, the original log level is used for the System Log.
+If you’d like to map all log levels to a single target level, you can set the `system_target_log_level` option.
+
+!!! example
+    ```yaml
+    wallpanel:
+      log_level_system: debug
+      system_target_log_level: error
+    ```
 
 
 ## Debug mode

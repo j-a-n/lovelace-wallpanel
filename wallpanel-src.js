@@ -3,13 +3,15 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.55.1";
+const version = "4.56.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
 	debug: false,
 	wait_for_browser_mod_time: 0.25,
 	log_level_console: "info",
+	log_level_system: "warning",
+	system_target_log_level: "",
 	alert_errors: true,
 	hide_toolbar: false,
 	keep_toolbar_space: false,
@@ -233,7 +235,9 @@ function stringify(obj) {
 
 const logger = {
 	messages: [],
-	logLevel: "warn",
+	logLevelConsole: "warning",
+	logLevelSystem: "error",
+	systemTargetLogLevel: "",
 	addMessage: function (level, args) {
 		if (!config.debug) {
 			return;
@@ -262,6 +266,22 @@ const logger = {
 			logger.messages.shift();
 		}
 	},
+	systemLog(level, message) {
+		if (!elHass || !elHass.hass) {
+			return;
+		}
+		return elHass.hass.callService(
+			"system_log",
+			"write",
+			{
+				logger: `frontend.wallpanel${browserId ? "." + browserId : ""}`,
+				message: message,
+				level: logger.systemTargetLogLevel || level
+			},
+			undefined,
+			false
+		);
+	},
 	downloadMessages: function () {
 		const data = new Blob([stringify(logger.messages)], { type: "text/plain" });
 		const url = window.URL.createObjectURL(data);
@@ -274,31 +294,45 @@ const logger = {
 	purgeMessages: function () {
 		logger.messages = [];
 	},
-	log: function () {
-		console.log.apply(this, arguments);
-		logger.addMessage("info", arguments);
-	},
 	debug: function () {
-		if (["debug"].includes(logger.logLevel)) {
+		if (["debug"].includes(logger.logLevelConsole)) {
 			console.debug.apply(this, arguments);
+		}
+		if (["debug"].includes(logger.logLevelSystem)) {
+			logger.systemLog("debug", stringify(arguments));
 		}
 		logger.addMessage("debug", arguments);
 	},
 	info: function () {
-		if (["debug", "info"].includes(logger.logLevel)) {
+		if (["debug", "info"].includes(logger.logLevelConsole)) {
 			console.info.apply(this, arguments);
+		}
+		if (["debug", "info"].includes(logger.logLevelSystem)) {
+			logger.systemLog("info", stringify(arguments));
 		}
 		logger.addMessage("info", arguments);
 	},
-	warn: function () {
-		if (["debug", "info", "warn"].includes(logger.logLevel)) {
+	log: function () {
+		logger.info.apply(this, arguments);
+	},
+	warning: function () {
+		if (["debug", "info", "warning"].includes(logger.logLevelConsole)) {
 			console.warn.apply(this, arguments);
 		}
-		logger.addMessage("warn", arguments);
+		if (["debug", "info", "warning"].includes(logger.logLevelSystem)) {
+			logger.systemLog("warning", stringify(arguments));
+		}
+		logger.addMessage("warning", arguments);
+	},
+	warn: function () {
+		logger.warning.apply(this, arguments);
 	},
 	error: function () {
-		if (["debug", "info", "warn", "error"].includes(logger.logLevel)) {
+		if (["debug", "info", "warning", "error"].includes(logger.logLevelConsole)) {
 			console.error.apply(this, arguments);
+		}
+		if (["debug", "info", "warning", "error"].includes(logger.logLevelSystem)) {
+			logger.systemLog("error", stringify(arguments));
 		}
 		logger.addMessage("error", arguments);
 		if (config.alert_errors) {
@@ -309,6 +343,9 @@ const logger = {
 				alert(msg);
 			}
 		}
+	},
+	err: function () {
+		logger.error.apply(this, arguments);
 	}
 };
 
@@ -694,10 +731,25 @@ function updateConfig() {
 		config.show_images = false;
 	}
 
+	if (config.log_level_console == "err") {
+		config.log_level_console = "error";
+	} else if (config.log_level_console == "warn") {
+		config.log_level_console = "warning";
+	}
 	if (!oldConfig || !Object.keys(oldConfig).length) {
 		// Keep old log level to get log messages when navigating between different dashboards
-		logger.logLevel = config.log_level_console;
+		logger.logLevelConsole = config.log_level_console;
+		logger.logLevelConsole;
 	}
+
+	if (config.log_level_system == "err") {
+		config.log_level_system = "error";
+	} else if (config.log_level_system == "warn") {
+		config.log_level_system = "warning";
+	}
+	logger.logLevelSystem = config.log_level_system;
+	logger.systemTargetLogLevel = config.system_target_log_level;
+
 	logger.debug("Wallpanel config is now:", config);
 
 	if (wallpanel) {
