@@ -709,15 +709,25 @@ function updateConfig() {
 	}
 }
 
-function getActiveBrowserModPopup() {
+function getActiveBrowserModPopups() {
 	if (!browserId) {
 		return null;
 	}
-	const bmp = document.getElementsByTagName("browser-mod-popup");
-	if (!bmp || !bmp[0] || !bmp[0].shadowRoot || bmp[0].shadowRoot.children.length == 0) {
+	const popups = [];
+	elHass.shadowRoot.querySelectorAll(".browser_mod-card_mod").forEach((popup) => {
+		if (popup.shadowRoot && popup.shadowRoot.children.length > 0) {
+			popups.push(popup);
+		}
+	});
+	return popups;
+}
+
+function getActiveBrowserModPopup() {
+	const popups = getActiveBrowserModPopups();
+	if (popups.length == 0) {
 		return null;
 	}
-	return bmp[0];
+	return popups[0];
 }
 
 function isActive() {
@@ -3429,10 +3439,9 @@ function initWallpanel() {
 							}, 5000);
 						}
 						if (config.screensaver_stop_close_browser_mod_popup) {
-							const bmp = getActiveBrowserModPopup();
-							if (bmp) {
-								bmp.closeDialog();
-							}
+							getActiveBrowserModPopups().forEach((popup) => {
+								popup.closeDialog();
+							});
 						}
 					},
 					(config.fade_in_time + 1) * 1000
