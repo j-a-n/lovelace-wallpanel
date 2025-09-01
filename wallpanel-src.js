@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.56.0";
+const version = "4.56.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -762,10 +762,10 @@ function updateConfig() {
 }
 
 function getActiveBrowserModPopups() {
-	if (!browserId) {
-		return null;
-	}
 	const popups = [];
+	if (!browserId) {
+		return popups;
+	}
 	elHass.shadowRoot.querySelectorAll(".browser_mod-card_mod").forEach((popup) => {
 		if (popup.shadowRoot && popup.shadowRoot.children.length > 0) {
 			popups.push(popup);
@@ -2043,25 +2043,37 @@ function initWallpanel() {
 				window.addEventListener(
 					eventName,
 					(event) => {
-						wp.handleInteractionEvent(event);
+						try {
+							wp.handleInteractionEvent(event);
+						} catch (error) {
+							logger.error(error.stack);
+						}
 					},
 					{ capture: true }
 				);
 			});
 			window.addEventListener("resize", () => {
-				const width = this.screensaverContainer.clientWidth;
-				const height = this.screensaverContainer.clientHeight;
-				if (wp.screensaverRunning() && (wp.currentWidth != width || wp.currentHeight != height)) {
-					logger.debug(`Size changed from ${wp.currentWidth}x${wp.currentHeight} to ${width}x${height}`);
-					wp.currentWidth = width;
-					wp.currentHeight = height;
-					wp.updateShadowStyle();
-					wp.setMediaDimensions();
+				try {
+					const width = this.screensaverContainer.clientWidth;
+					const height = this.screensaverContainer.clientHeight;
+					if (wp.screensaverRunning() && (wp.currentWidth != width || wp.currentHeight != height)) {
+						logger.debug(`Size changed from ${wp.currentWidth}x${wp.currentHeight} to ${width}x${height}`);
+						wp.currentWidth = width;
+						wp.currentHeight = height;
+						wp.updateShadowStyle();
+						wp.setMediaDimensions();
+					}
+				} catch (error) {
+					logger.error(error.stack);
 				}
 			});
 			window.addEventListener("hass-more-info", () => {
-				if (wp.screensaverRunning()) {
-					wp.moreInfoDialogToForeground();
+				try {
+					if (wp.screensaverRunning()) {
+						wp.moreInfoDialogToForeground();
+					}
+				} catch (error) {
+					logger.error(error.stack);
 				}
 			});
 			const infoBoxResizeObserver = new ResizeObserver(() => {
@@ -4046,7 +4058,11 @@ function startup() {
 }
 
 console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
-waitForEnv(startup);
+try {
+	waitForEnv(startup);
+} catch (error) {
+	logger.error(error.stack);
+}
 
 /**
  * https://github.com/exif-js/exif-js
