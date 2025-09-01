@@ -776,7 +776,7 @@ function getActiveBrowserModPopups() {
 
 function getActiveBrowserModPopup() {
 	const popups = getActiveBrowserModPopups();
-	if (popups.length == 0) {
+	if (!popups || popups.length == 0) {
 		return null;
 	}
 	return popups[0];
