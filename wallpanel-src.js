@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.56.1";
+const version = "4.56.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -3961,7 +3961,7 @@ function waitForEnv(callback, startTime = null) {
 	const pl = getHaPanelLovelace();
 	if (!pl || !pl.lovelace || !pl.lovelace.config || !pl.lovelace.config) {
 		if (startupSeconds >= 5.0) {
-			logger.error(`Wallpanel startup failed after ${startupSeconds} seconds, lovelace config not found.`);
+			logger.info(`No lovelace config found after ${startupSeconds} seconds`);
 			return;
 		}
 		setTimeout(waitForEnv, 100, callback, startTime);
