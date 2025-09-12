@@ -143,3 +143,13 @@ style:
     '--secondary-text-color': '#dddddd'
     filter: 'drop-shadow(0px 0px 3px rgb(17, 17, 17)) drop-shadow(0px 0px 8px rgb(30, 30, 30))'
 ```
+
+## Alternative transparent style with card background blur
+```yaml
+style:
+  wallpanel-screensaver-info-box-content:
+    background-color: '#0000'
+    '--ha-card-background': 'color-mix(in srgb, var(--card-background-color) 30%, #0000'
+    '--ha-card-backdrop-filter': blur(15px)
+```
+![Blur style](blur-style.png)
