@@ -768,9 +768,13 @@ function getActiveBrowserModPopups() {
 	if (!browserId) {
 		return popups;
 	}
-	elHass.shadowRoot.querySelectorAll(".browser_mod-card_mod").forEach((popup) => {
-		if (popup.shadowRoot && popup.shadowRoot.children.length > 0) {
-			popups.push(popup);
+	elHass.shadowRoot.querySelectorAll("*").forEach((el) => {
+		if (
+			el.tagName.toLowerCase().startsWith("browser-mod-popup") &&
+			el.shadowRoot &&
+			el.shadowRoot.children.length > 0
+		) {
+			popups.push(el);
 		}
 	});
 	return popups;
