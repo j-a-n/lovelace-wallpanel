@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.56.2";
+const version = "4.56.3";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -44,6 +44,7 @@ const defaultConfig = {
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_url_entity: "",
+	force_load_media_with_fetch: false,
 	media_entity_load_unchanged: true,
 	iframe_load_unchanged: false,
 	iframe_interaction: false,
@@ -2835,6 +2836,9 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
+			if (config.force_load_media_with_fetch) {
+				useFetch = true;
+			}
 			// Setting the src attribute works better than fetch because cross-origin requests aren't blocked
 			const loadMediaWithElement = async (elem) => {
 				const tagName = elem.tagName.toLowerCase();
