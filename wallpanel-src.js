@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.57.0";
+const version = "4.57.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -704,9 +704,7 @@ function updateConfig() {
 		logger.debug(`Profile set from entity state: ${profile}`);
 	}
 
-	if (config.content_interaction) {
-		config.stop_screensaver_on_mouse_move = false;
-	}
+	config.stop_screensaver_on_mouse_move = !config.content_interaction;
 
 	if (config.image_url) {
 		config.image_url = config.image_url.replace(/^media-entity:\/\//, "media-entity-image://");
@@ -1411,9 +1409,7 @@ function initWallpanel() {
 			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
 			this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
 			this.messageContainer.style.visibility = this.screensaverRunning() ? "visible" : "hidden";
-			if (config.content_interaction) {
-				this.screensaverImageOverlay.style.pointerEvents = "none";
-			}
+			this.screensaverImageOverlay.style.pointerEvents = config.content_interaction ? "none" : "auto";
 
 			if (config.info_animation_duration_x) {
 				this.infoBoxPosX.style.animation = `moveX ${config.info_animation_duration_x}s ${config.info_animation_timing_function_x} infinite alternate`;
