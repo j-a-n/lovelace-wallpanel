@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.56.3";
+const version = "4.57.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -993,6 +993,7 @@ function enterFullscreen() {
 	logger.debug("Enter fullscreen");
 	// Will need user input event to work
 	const el = document.documentElement;
+
 	if (el.requestFullscreen) {
 		el.requestFullscreen().then(
 			() => {
@@ -1008,6 +1009,26 @@ function enterFullscreen() {
 		el.msRequestFullscreen();
 	} else if (el.webkitRequestFullscreen) {
 		el.webkitRequestFullscreen();
+	}
+}
+
+function exitFullscreen() {
+	logger.debug("Exit fullscreen");
+	if (document.exitFullscreen) {
+		document.exitFullscreen().then(
+			() => {
+				logger.debug("Successfully exited fullscreen");
+			},
+			(error) => {
+				logger.error("Failed to exit fullscreen:", error);
+			}
+		);
+	} else if (document.mozCancelFullScreen) {
+		document.mozCancelFullScreen();
+	} else if (document.msRequestFullscreen) {
+		document.msRequestFullscreen();
+	} else if (document.webkitExitFullscreen) {
+		document.webkitExitFullscreen();
 	}
 }
 
@@ -3436,9 +3457,6 @@ function initWallpanel() {
 			if (config.keep_screen_on_time > 0 && !this.screenWakeLock.enabled) {
 				this.screenWakeLock.enable();
 			}
-			if (config.fullscreen && !fullscreen) {
-				enterFullscreen();
-			}
 		}
 
 		async startScreensaver() {
@@ -3871,6 +3889,9 @@ function activateWallpanel() {
 	}
 	setToolbarVisibility(hideToolbar, hideActionItems);
 	setSidebarVisibility(config.hide_sidebar);
+	if (config.fullscreen && !fullscreen) {
+		enterFullscreen();
+	}
 }
 
 function deactivateWallpanel() {
@@ -3880,6 +3901,9 @@ function deactivateWallpanel() {
 	}
 	setToolbarVisibility(false, false);
 	setSidebarVisibility(false);
+	if (fullscreen) {
+		exitFullscreen();
+	}
 }
 
 function reconfigure() {
