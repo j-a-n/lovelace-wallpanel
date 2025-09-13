@@ -57,6 +57,7 @@ const defaultConfig = {
 	immich_resolution: "preview",
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
+	caclulate_media_size: true,
 	media_horizontal_align: "center", // left / center / right
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
@@ -3149,6 +3150,9 @@ function initWallpanel() {
 		}
 
 		setMediaDimensions() {
+			if (!config.caclulate_media_size) {
+				return;
+			}
 			const activeElem = this.getActiveMediaElement();
 			const mediaElem = this.getActiveMediaElement(true);
 			logger.debug("Setting dimensions for media element", activeElem);
