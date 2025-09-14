@@ -236,3 +236,13 @@ image_url: iframe+https://projects.sntosh.in/clock/
 !!! info
     Not all websites can be used in an iframe.
     A website can set an X-Frame-Options HTTP header to prevent it from being used in an iframe.
+
+
+## Embed external content
+You can also embed external content in a HTML embed element.
+Simply prefix `embed+` to the URL of the source you want to embed:
+
+For example:
+```yaml
+image_url: embed+https://external.source.test/embed.pdf
+```
