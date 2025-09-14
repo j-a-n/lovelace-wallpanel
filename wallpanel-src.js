@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.57.1";
+const version = "4.58.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -842,6 +842,7 @@ function mediaSourceType() {
 	if (config.image_url.startsWith("https://api.unsplash")) return "unsplash-api";
 	if (config.image_url.startsWith("immich+")) return "immich-api";
 	if (config.image_url.startsWith("iframe+")) return "iframe";
+	if (config.image_url.startsWith("embed+")) return "embed";
 	return "url";
 }
 
@@ -2422,6 +2423,8 @@ function initWallpanel() {
 				let url = config.image_url;
 				if (sourceType == "iframe") {
 					url = url.replace(/^iframe\+/, "");
+				} else if (sourceType == "embed") {
+					url = url.replace(/^embed\+/, "");
 				}
 				this.mediaList = [url];
 				if (callback) {
@@ -2864,7 +2867,7 @@ function initWallpanel() {
 			// Setting the src attribute works better than fetch because cross-origin requests aren't blocked
 			const loadMediaWithElement = async (elem) => {
 				const tagName = elem.tagName.toLowerCase();
-				const loadEventName = { img: "load", video: "loadeddata", iframe: "load" }[tagName];
+				const loadEventName = { img: "load", video: "loadeddata", iframe: "load", embed: "load" }[tagName];
 				if (!loadEventName) {
 					throw new Error(`Unsupported element tag "${elem.tagName}"`);
 				}
@@ -3080,6 +3083,10 @@ function initWallpanel() {
 			return await this.updateMediaFromUrl(element, element.mediaUrl, "iframe");
 		}
 
+		async updateMediaFromMediaEmbed(element) {
+			return await this.updateMediaFromUrl(element, element.mediaUrl, "embed");
+		}
+
 		async updateMediaFromOtherSrc(element) {
 			element.mediaUrl = this.fillPlaceholders(element.mediaUrl);
 			return await this.updateMediaFromUrl(element, element.mediaUrl);
@@ -3117,6 +3124,8 @@ function initWallpanel() {
 					element = await this.updateMediaFromMediaEntity(element);
 				} else if (mediaSourceType() == "iframe") {
 					element = await this.updateMediaFromMediaIframe(element);
+				} else if (mediaSourceType() == "embed") {
+					element = await this.updateMediaFromMediaEmbed(element);
 				} else {
 					element = await this.updateMediaFromOtherSrc(element);
 				}
@@ -3232,7 +3241,7 @@ function initWallpanel() {
 					}
 					hiddenWidth = Math.max(setWidth - availWidth, 0);
 				}
-			} else if (tagName !== "iframe") {
+			} else if (tagName !== "iframe" && tagName !== "embed") {
 				logger.warn("Size not available for media element", mediaElem);
 			}
 			logger.debug(
@@ -3342,7 +3351,7 @@ function initWallpanel() {
 			this.lastMediaUpdate = Date.now();
 			const activeElement = this.getActiveMediaElement();
 			if (
-				sourceType === "iframe" &&
+				(sourceType === "iframe" || sourceType === "embed") &&
 				!config.iframe_load_unchanged &&
 				this.getNextMediaURL(false) == activeElement.mediaUrl
 			) {
