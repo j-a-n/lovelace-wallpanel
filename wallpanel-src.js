@@ -3911,7 +3911,7 @@ function deactivateWallpanel() {
 	}
 	setToolbarVisibility(false, false);
 	setSidebarVisibility(false);
-	if (fullscreen && (!config.keep_fullscreen)) {
+	if (fullscreen && !config.keep_fullscreen) {
 		exitFullscreen();
 	}
 }
