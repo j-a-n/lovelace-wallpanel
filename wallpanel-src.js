@@ -19,6 +19,7 @@ const defaultConfig = {
 	hide_toolbar_on_subviews: false,
 	hide_sidebar: false,
 	fullscreen: false,
+	keep_fullscreen: true,
 	z_index: 1000,
 	idle_time: 15,
 	fade_in_time: 3.0,
@@ -3910,7 +3911,7 @@ function deactivateWallpanel() {
 	}
 	setToolbarVisibility(false, false);
 	setSidebarVisibility(false);
-	if (fullscreen) {
+	if (fullscreen && (!config.keep_fullscreen)) {
 		exitFullscreen();
 	}
 }

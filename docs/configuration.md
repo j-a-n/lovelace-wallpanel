@@ -17,7 +17,8 @@ You can set the following configuration parameters for every individual Home Ass
 | hide_toolbar_action_icons        | Hide action items in the toolbar?                                                                      | false     |
 | hide_sidebar                     | Hide the navigation sidebar?                                                                           | false     |
 | fullscreen                       | Set browser window to fullscreen? <br>*Due to browser restrictions you will need to interact with the screen once to activate fullscreen mode after loading the dashboard page.* | false   |
-| z_index                          | Wallpanels base CSS z-index.                          | 1000        |
+| keep_fullscreen                  | Keep fullscreen active if the wallpanel is deactivated, for instance when disabled in a view.          | true      |
+| z_index                          | Wallpanels base CSS z-index.                                                                           | 1000      |
 | idle_time                        | Time in seconds after which the screensaver will start (0 = screensaver disabled).                     | 15        |
 | fade_in_time                     | Screensaver fade-in time in seconds.                                                                   | 3.0       |
 | fade_out_time_motion_detected    | Screensaver fade-out time in seconds when the screensaver is stopped because motion is detected.       | 1.0       |
