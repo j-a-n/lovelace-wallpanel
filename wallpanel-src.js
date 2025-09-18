@@ -2537,7 +2537,7 @@ function initWallpanel() {
 					method: "GET",
 					headers: { Accept: "application/json" }
 				};
-				if (typeof AbortSignal !== "undefined") {
+				if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "undefined") {
 					logger.debug("Using AbortSignal");
 					options.signal = AbortSignal.timeout(10000); // 10 seconds timeout
 				}
@@ -2577,7 +2577,7 @@ function initWallpanel() {
 			};
 			const mergedOptions = { ...defaultOptions, ...options };
 			mergedOptions.headers = { ...defaultOptions.headers, ...options.headers };
-			if (typeof AbortSignal !== "undefined") {
+			if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "undefined") {
 				logger.debug("Using AbortSignal");
 				mergedOptions.signal = AbortSignal.timeout(10000); // 10 seconds timeout
 			}
