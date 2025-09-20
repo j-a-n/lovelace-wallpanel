@@ -3472,6 +3472,9 @@ function initWallpanel() {
 			if (config.keep_screen_on_time > 0 && !this.screenWakeLock.enabled) {
 				this.screenWakeLock.enable();
 			}
+			if (config.fullscreen && !fullscreen) {
+				enterFullscreen();
+			}
 		}
 
 		async startScreensaver() {
