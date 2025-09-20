@@ -1413,6 +1413,10 @@ function initWallpanel() {
 			this.messageContainer.style.visibility = this.screensaverRunning() ? "visible" : "hidden";
 			this.screensaverImageOverlay.style.pointerEvents = config.content_interaction ? "none" : "auto";
 
+			const show_info = config.show_image_info && Boolean(config.image_info_template);
+			this.imageOneInfoContainer.style.display = show_info ? "block" : "none";
+			this.imageTwoInfoContainer.style.display = show_info ? "block" : "none";
+
 			if (config.info_animation_duration_x) {
 				this.infoBoxPosX.style.animation = `moveX ${config.info_animation_duration_x}s ${config.info_animation_timing_function_x} infinite alternate`;
 			} else {
@@ -2245,6 +2249,15 @@ function initWallpanel() {
 		}
 
 		setMediaDataInfo(mediaElement = null) {
+			const show_info = config.show_image_info && Boolean(config.image_info_template);
+			this.imageOneInfoContainer.style.display = show_info ? "block" : "none";
+			this.imageTwoInfoContainer.style.display = show_info ? "block" : "none";
+			if (!show_info) {
+				this.imageOneInfo.innerHTML = "";
+				this.imageTwoInfo.innerHTML = "";
+				return;
+			}
+
 			if (!mediaElement) {
 				mediaElement = this.getActiveMediaElement();
 			}
@@ -2269,14 +2282,6 @@ function initWallpanel() {
 			}
 
 			if (infoElements.length == 0) {
-				return;
-			}
-
-			if (!config.show_image_info || !config.image_info_template) {
-				infoElements.forEach((infoElement) => {
-					infoElement.innerHTML = "";
-					infoElement.style.display = "none";
-				});
 				return;
 			}
 
@@ -2311,7 +2316,7 @@ function initWallpanel() {
 			}
 			logger.debug("Media info:", mediaInfo);
 
-			let html = config.image_info_template;
+			let html = config.image_info_template || "";
 			if (html == "analyze") {
 				html = "";
 				function iterateOverKeys(obj, prefix = "") {
