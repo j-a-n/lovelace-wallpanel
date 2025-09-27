@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.58.1";
+const version = "4.58.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -119,7 +119,6 @@ let config = {};
 let currentLocation = null;
 let activePanel = null;
 let activeTab = null;
-let fullscreen = false;
 let wallpanel = null;
 let skipDisableScreensaverOnLocationChanged = false;
 const classStyles = {
@@ -981,17 +980,15 @@ function navigate(path, keepSearch = true) {
 	);
 }
 
-document.addEventListener("fullscreenerror", () => {
-	logger.error("Failed to enter fullscreen");
-});
-
-document.addEventListener("fullscreenchange", () => {
-	if (typeof document.webkitCurrentFullScreenElement !== "undefined") {
-		fullscreen = Boolean(document.webkitCurrentFullScreenElement);
-	} else if (typeof document.fullscreenElement !== "undefined") {
-		fullscreen = Boolean(document.fullscreenElement);
+function isFullscreen() {
+	if (typeof document.fullscreenElement !== "undefined") {
+		return Boolean(document.fullscreenElement);
 	}
-});
+	if (typeof document.webkitCurrentFullScreenElement !== "undefined") {
+		return Boolean(document.webkitCurrentFullScreenElement);
+	}
+	return false;
+}
 
 function enterFullscreen() {
 	logger.debug("Enter fullscreen");
@@ -3472,7 +3469,7 @@ function initWallpanel() {
 			if (config.keep_screen_on_time > 0 && !this.screenWakeLock.enabled) {
 				this.screenWakeLock.enable();
 			}
-			if (config.fullscreen && !fullscreen) {
+			if (config.fullscreen && !isFullscreen()) {
 				enterFullscreen();
 			}
 		}
@@ -3668,7 +3665,7 @@ function initWallpanel() {
 				html += `<b>Version:</b> ${version}<br/>`;
 				html += `<b>User-Agent:</b> ${navigator.userAgent}<br/>`;
 				html += `<b>Config:</b> ${JSON.stringify(conf)}<br/>`;
-				html += `<b>Fullscreen:</b> ${fullscreen}<br/>`;
+				html += `<b>Fullscreen:</b> ${isFullscreen()}<br/>`;
 				html += `<b>Screensaver started at:</b> ${wallpanel.screensaverStartedAt}<br/>`;
 				html += `<b>Screen wake lock:</b> enabled=${this.screenWakeLock.enabled} native=${this.screenWakeLock.nativeWakeLockSupported} lock=${this.screenWakeLock._lock} player=${this.screenWakeLock._player} error=${this.screenWakeLock.error}<br/>`;
 				if (this.screenWakeLock._player) {
@@ -3907,7 +3904,7 @@ function activateWallpanel() {
 	}
 	setToolbarVisibility(hideToolbar, hideActionItems);
 	setSidebarVisibility(config.hide_sidebar);
-	if (config.fullscreen && !fullscreen) {
+	if (config.fullscreen && !isFullscreen()) {
 		enterFullscreen();
 	}
 }
@@ -3919,7 +3916,7 @@ function deactivateWallpanel() {
 	}
 	setToolbarVisibility(false, false);
 	setSidebarVisibility(false);
-	if (fullscreen && !config.keep_fullscreen) {
+	if (!config.keep_fullscreen && isFullscreen()) {
 		exitFullscreen();
 	}
 }
