@@ -2628,6 +2628,11 @@ function initWallpanel() {
 				}
 			}
 
+			async function getExifInfo (assetId) {
+				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`);
+				return asset.exifInfo;
+			}
+			
 			function processAssets(assets, folderName = null) {
 				assets.forEach((asset) => {
 					logger.debug("Processing immich asset", asset);
@@ -2774,6 +2779,12 @@ function initWallpanel() {
 						})
 						.forEach((memory) => {
 							logger.debug("Processing memory:", memory);
+							memory.assets.forEach((asset) => {
+								if(!asset.exifInfo){
+									const exifInfo = getExifInfo(asset.id)
+									asset.exifInfo = exifInfo;
+								}
+							})
 							processAssets(memory.assets);
 						});
 				} else if (config.immich_tag_names && config.immich_tag_names.length) {
