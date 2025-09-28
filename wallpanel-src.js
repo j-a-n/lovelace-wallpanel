@@ -2628,6 +2628,11 @@ function initWallpanel() {
 				}
 			}
 
+			async function getExifInfo (assetId) {
+				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`);
+				return asset.exifInfo;
+			}
+			
 			function processAssets(assets, folderName = null) {
 				assets.forEach((asset) => {
 					logger.debug("Processing immich asset", asset);
@@ -2766,16 +2771,28 @@ function initWallpanel() {
 					const allMemories = await wp._immichFetch(`${apiUrl}/memories?type=on_this_day`);
 					logger.debug(`Got immich API response`, allMemories);
 					const now = new Date();
-					allMemories
-						.filter((memory) => {
-							const showAt = new Date(memory.showAt);
-							const hideAt = new Date(memory.hideAt);
-							return now >= showAt && now <= hideAt;
-						})
-						.forEach((memory) => {
+					const visibleMemories = allMemories.filter((memory) => {
+						const showAt = new Date(memory.showAt);
+						const hideAt = new Date(memory.hideAt);
+						return now >= showAt && now <= hideAt;
+					});
+
+					await Promise.all(
+						visibleMemories.map(async (memory) => {
 							logger.debug("Processing memory:", memory);
+
+							await Promise.all(
+								memory.assets.map(async (asset) => {
+									if (!asset.exifInfo) {
+										const exifInfo = await getExifInfo(asset.id);
+										asset.exifInfo = exifInfo;
+									}
+								})
+							);
+
 							processAssets(memory.assets);
-						});
+						})
+					);
 				} else if (config.immich_tag_names && config.immich_tag_names.length) {
 					const tagNamesLower = config.immich_tag_names.map((v) => v.toLowerCase());
 					logger.debug("Fetching immich tags");
