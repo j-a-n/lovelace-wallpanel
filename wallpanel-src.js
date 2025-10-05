@@ -56,6 +56,7 @@ const defaultConfig = {
 	immich_persons: [],
 	immich_memories: false,
 	immich_resolution: "preview",
+	immich_exclude_tags: [],
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
 	caclulate_media_size: true,
@@ -2609,6 +2610,7 @@ function initWallpanel() {
 				throw new Error("immich_api_key not configured");
 			}
 			const wp = this;
+			const assetApiCache = {}
 			const screenOrientation =
 				this.screensaverContainer.clientWidth >= this.screensaverContainer.clientHeight ? "landscape" : "portrait";
 			let exclude_media_orientation = config.exclude_media_orientation;
@@ -2628,9 +2630,22 @@ function initWallpanel() {
 				}
 			}
 
+			async function getMoreAssetDataFromApi (assetId) {
+				if (!assetApiCache[assetId]) {
+					const data = await wp._immichFetch(`${apiUrl}/assets/${assetId}`);
+					assetApiCache[assetId] = data;
+				}
+				return assetApiCache[assetId];
+			}
+
 			async function getExifInfo (assetId) {
-				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`);
-				return asset.exifInfo;
+				const exifInfo = await getMoreAssetDataFromApi(assetId).exifInfo;
+				return exifInfo;
+			}
+
+			async function getTags (assetId) {
+				const tags = await getMoreAssetDataFromApi(assetId).tags;
+				return tags;
 			}
 			
 			function processAssets(assets, folderName = null) {
@@ -2651,6 +2666,12 @@ function initWallpanel() {
 							logger.debug(`Media item excluded by regex "${exclude}"`);
 							return;
 						}
+					}
+
+					const tags = getTags(assetId);
+					if (config.immich_exclude_tag_names && tags.some(tag => config.immich_exclude_tag_names.includes(tag))) {
+						logger.debug(`Media item excluded due to tag(s): ${tags.filter(tag => config.immich_exclude_tag_names.includes(tag)).join(', ')}`);
+						return;
 					}
 
 					if (
