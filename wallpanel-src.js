@@ -60,6 +60,7 @@ const defaultConfig = {
 	image_fit_portrait: "contain", // cover / contain
 	caclulate_media_size: true,
 	media_horizontal_align: "center", // left / center / right
+	media_vertical_align: "middle", // top / middle  / bottom
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
 	media_order: "random", // sorted / random
@@ -3247,12 +3248,20 @@ function initWallpanel() {
 				logger.debug(`Diff is ${diffWidth}x${diffHeight}`);
 				if ((mediaFit == "contain" && diffWidth < diffHeight) || (mediaFit == "cover" && diffWidth >= diffHeight)) {
 					logger.debug("Using available width");
+					console.error("Using available width");
 					setWidth = availWidth;
 					setHeight = Math.floor(height * ratioWidth);
-					setTop = Math.floor((setHeight - availHeight) / -2);
+					if (config.media_vertical_align == "top") {
+						setTop = 0;
+					} else if (config.media_vertical_align == "bottom") {
+						setTop = availHeight - setHeight;
+					} else {
+						setTop = Math.floor((setHeight - availHeight) / -2);
+					}
 					hiddenHeight = Math.max(setHeight - availHeight, 0);
 				} else {
 					logger.debug("Using available height");
+					console.error("Using available height");
 					setHeight = availHeight;
 					setWidth = Math.floor(width * ratioHeight);
 					if (config.media_horizontal_align == "left") {

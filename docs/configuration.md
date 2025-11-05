@@ -60,6 +60,7 @@ You can set the following configuration parameters for every individual Home Ass
 | image_fit_landscape              | How to adjust a media item in landscape mode to fit the available space (cover or contain).            | cover      |
 | image_fit_portrait               | How to adjust a media item in portrait mode to fit the available space (cover or contain).             | contain    |
 | media_horizontal_align           | Determines how media items are aligned horizontally on the screen (left, center, or right).            | center     |
+| media_vertical_align             | Determines how media items are aligned vertically on the screen (top, middle, or bottom).              | middle     |
 | caclulate_media_size             | Calculate media container sizes.                                                                       | true       |
 | image_background                 | Possible values are `color` and `image`. When set to `image`, a snapshot from the current media item is used as the background, covering the entire screen. To customize its appearance, apply styles using the `wallpanel-screensaver-image-background` class. | color |
 | media_list_update_interval       | When using a local media source, the media list is updated at this interval.                           | 3600       |
@@ -136,7 +137,7 @@ wallpanel:
   image_fit_landscape: cover
   media_list_update_interval: 3600
   media_order: 'sorted'
-  image_excludes: []
+  exclude_filenames: []
   show_image_info: false
   fetch_address_data: true
   image_info_template: '${address.town|address.city!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long}'
