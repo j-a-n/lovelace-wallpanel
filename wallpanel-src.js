@@ -1001,7 +1001,7 @@ function enterFullscreen() {
 				logger.debug("Successfully requested fullscreen");
 			},
 			(error) => {
-				logger.error("Failed to enter fullscreen:", error);
+				logger.debug("Failed to enter fullscreen:", error);
 			}
 		);
 	} else if (el.mozRequestFullScreen) {
@@ -1021,7 +1021,7 @@ function exitFullscreen() {
 				logger.debug("Successfully exited fullscreen");
 			},
 			(error) => {
-				logger.error("Failed to exit fullscreen:", error);
+				logger.debug("Failed to exit fullscreen:", error);
 			}
 		);
 	} else if (document.mozCancelFullScreen) {
