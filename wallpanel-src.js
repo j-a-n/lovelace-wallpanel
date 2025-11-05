@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.58.2";
+const version = "4.59.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -1404,9 +1404,12 @@ function initWallpanel() {
 			this.debugBox.style.visibility = config.debug ? "visible" : "hidden";
 			this.debugBox.style.pointerEvents = config.debug ? "auto" : "none";
 			//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
-			this.style.transition = `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out`;
-			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
-			this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
+			this.style.transition =
+				config.fade_in_time > 0 ? `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out` : "";
+			this.imageOneContainer.style.transition =
+				config.crossfade_time > 0 ? `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out` : "";
+			this.imageTwoContainer.style.transition =
+				config.crossfade_time > 0 ? `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out` : "";
 			this.messageContainer.style.visibility = this.screensaverRunning() ? "visible" : "hidden";
 			this.screensaverImageOverlay.style.pointerEvents = config.content_interaction ? "none" : "auto";
 
@@ -2625,11 +2628,11 @@ function initWallpanel() {
 				}
 			}
 
-			async function getExifInfo (assetId) {
+			async function getExifInfo(assetId) {
 				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`);
 				return asset.exifInfo;
 			}
-			
+
 			function processAssets(assets, folderName = null) {
 				assets.forEach((asset) => {
 					logger.debug("Processing immich asset", asset);
@@ -3378,10 +3381,16 @@ function initWallpanel() {
 				return;
 			}
 
-			let crossfadeMillis = eventType == "user_action" ? 250 : Math.round(config.crossfade_time * 1000);
-			if (eventType == "start") {
-				crossfadeMillis = 0;
+			let crossfadeMillis = 0;
+			if (eventType != "start") {
+				if (config.crossfade_time > 0) {
+					crossfadeMillis = Math.round(config.crossfade_time * 1000);
+				}
+				if (eventType == "user_action" && crossfadeMillis > 250) {
+					crossfadeMillis = 250;
+				}
 			}
+
 			const updateElement = this.getInactiveMediaElement();
 			const element = await this.updateMedia(updateElement);
 			if (!element) {
