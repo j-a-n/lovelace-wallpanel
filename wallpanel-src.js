@@ -273,17 +273,24 @@ const logger = {
 		if (!elHass || !elHass.hass) {
 			return;
 		}
-		return elHass.hass.callService(
-			"system_log",
-			"write",
-			{
-				logger: `frontend.wallpanel${browserId ? "." + browserId : ""}`,
-				message: message,
-				level: logger.systemTargetLogLevel || level
-			},
-			undefined,
-			false
-		);
+		elHass.hass
+			.callService(
+				"system_log",
+				"write",
+				{
+					logger: `frontend.wallpanel${browserId ? "." + browserId : ""}`,
+					message: message,
+					level: logger.systemTargetLogLevel || level
+				},
+				undefined,
+				false
+			)
+			.then(
+				(result) => {},
+				(error) => {
+					// Prevent uncaught error
+				}
+			);
 	},
 	downloadMessages: function () {
 		const data = new Blob([stringify(logger.messages)], { type: "text/plain" });
