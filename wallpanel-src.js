@@ -3678,15 +3678,27 @@ function initWallpanel() {
 				if (this.imageOneContainer.style.visibility != "visible") {
 					this.imageOneContainer.style.visibility = "visible";
 				}
+				if (this.imageOne.style.visibility != "visible") {
+					this.imageOne.style.visibility = "visible";
+				}
 				if (this.imageTwoContainer.style.visibility != "visible") {
 					this.imageTwoContainer.style.visibility = "visible";
+				}
+				if (this.imageTwo.style.visibility != "visible") {
+					this.imageTwo.style.visibility = "visible";
 				}
 			} else {
 				if (this.imageOneContainer.style.visibility != "hidden") {
 					this.imageOneContainer.style.visibility = "hidden";
 				}
+				if (this.imageOne.style.visibility != "hidden") {
+					this.imageOne.style.visibility = "hidden";
+				}
 				if (this.imageTwoContainer.style.visibility != "hidden") {
 					this.imageTwoContainer.style.visibility = "hidden";
+				}
+				if (this.imageTwo.style.visibility != "hidden") {
+					this.imageTwo.style.visibility = "hidden";
 				}
 			}
 
