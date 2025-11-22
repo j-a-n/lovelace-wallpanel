@@ -3844,23 +3844,31 @@ function initWallpanel() {
 				}
 			}
 
-			if (isClick) {
-				evt.preventDefault();
-			}
-			evt.stopImmediatePropagation();
-
 			let switchMedia = "";
 			if (swipe) {
 				switchMedia = swipe == "left" ? "backwards" : "forwards";
+				evt.stopImmediatePropagation();
 			} else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
 				let right = 0.0;
 				let bottom = 0.0;
+				const pos = this.screensaverContainer.getBoundingClientRect();
 				if (x) {
-					right = (this.screensaverContainer.clientWidth - x) / this.screensaverContainer.clientWidth;
+					right = (pos.right - x) / this.screensaverContainer.clientWidth;
 				}
 				if (y) {
-					bottom = (this.screensaverContainer.clientHeight - y) / this.screensaverContainer.clientHeight;
+					bottom = (pos.bottom - y) / this.screensaverContainer.clientHeight;
 				}
+				logger.debug("Event position screensaver:", x, y, pos.left, pos.right, pos.top, pos.bottom);
+				if (bottom > 1.0 || bottom < 0.0 || right > 1.0 || right < 0.0) {
+					// Outside the screensaver
+					return;
+				}
+
+				if (isClick) {
+					evt.preventDefault();
+				}
+				evt.stopImmediatePropagation();
+
 				if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
 					if (isClick) {
 						switchMedia = "forwards";
