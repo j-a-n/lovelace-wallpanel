@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.59.1";
+const version = "4.60.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -18,6 +18,7 @@ const defaultConfig = {
 	hide_toolbar_action_icons: false,
 	hide_toolbar_on_subviews: false,
 	hide_sidebar: false,
+	close_more_info_dialog_time: 0.0,
 	fullscreen: false,
 	keep_fullscreen: true,
 	z_index: 1000,
@@ -1078,6 +1079,7 @@ function initWallpanel() {
 			this.lastEnergyCollectionUpdate = 0;
 			this.screensaverStopNavigationPathTimeout = null;
 			this.disable_screensaver_on_browser_mod_popup_function = null;
+			this.moreInfoDialogOpenedAt = 0;
 
 			this.screenWakeLock = new ScreenWakeLock();
 			this.cameraMotionDetection = new CameraMotionDetection();
@@ -3699,6 +3701,20 @@ function initWallpanel() {
 				}
 				if (this.imageTwo.style.visibility != "hidden") {
 					this.imageTwo.style.visibility = "hidden";
+				}
+			}
+
+			if (config.close_more_info_dialog_time > 0) {
+				const dialog = this.getMoreInfoDialog();
+				if (dialog) {
+					const now = new Date();
+					if (!this.moreInfoDialogOpenedAt) {
+						this.moreInfoDialogOpenedAt = now;
+					} else if (now - this.moreInfoDialogOpenedAt >= config.close_more_info_dialog_time * 1000) {
+						dialog.close();
+					}
+				} else {
+					this.moreInfoDialogOpenedAt = 0;
 				}
 			}
 
