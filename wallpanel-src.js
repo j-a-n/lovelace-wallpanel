@@ -295,7 +295,7 @@ const logger = {
 	},
 	downloadMessages: function () {
 		const data = new Blob([stringify(logger.messages)], { type: "text/plain" });
-		const url = window.URL.createObjectURL(data);
+		const url = URL.createObjectURL(data);
 		const el = document.createElement("a");
 		el.href = url;
 		el.target = "_blank";
@@ -2324,6 +2324,9 @@ function initWallpanel() {
 					mediaInfo.image.folderName = parts[parts.length - 2];
 				}
 			}
+			mediaInfo.mediaPosition = this.mediaIndex + 1;
+			mediaInfo.mediaCount = this.mediaList.length;
+			
 			logger.debug("Media info:", mediaInfo);
 
 			let html = config.image_info_template || "";
