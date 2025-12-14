@@ -2326,7 +2326,7 @@ function initWallpanel() {
 			}
 			mediaInfo.mediaPosition = this.mediaIndex + 1;
 			mediaInfo.mediaCount = this.mediaList.length;
-			
+
 			logger.debug("Media info:", mediaInfo);
 
 			let html = config.image_info_template || "";
@@ -3877,7 +3877,7 @@ function initWallpanel() {
 
 			let switchMedia = "";
 			if (swipe) {
-				switchMedia = swipe == "left" ? "backwards" : "forwards";
+				switchMedia = swipe == "left" ? "forwards" : "backwards";
 				evt.stopImmediatePropagation();
 			} else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
 				let right = 0.0;
