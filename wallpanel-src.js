@@ -2928,19 +2928,30 @@ function initWallpanel() {
 					elem.onerror = onError;
 				});
 				if (useFetch) {
-					headers = headers || {};
-					const response = await fetch(url, { headers: headers });
-					logger.debug("Got respone", response);
-					if (!response.ok) {
-						throw new Error(`Failed to load ${elem.tagName} "${url}": ${response}`);
-					}
-					// The object URL created by URL.createObjectURL() must be released
-					// using URL.revokeObjectURL() to free the associated memory again.
-					if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
-						URL.revokeObjectURL(elem.src);
-					}
-					const blob = await response.blob();
-					elem.src = window.URL.createObjectURL(blob);
+					fetch(url, { headers: headers })
+						.then((response) => {
+							const reader = response.body.getReader();
+							return new ReadableStream({
+								start(controller) {
+									return pump();
+									function pump() {
+										return reader.read().then(({ done, value }) => {
+											// When no more data needs to be consumed, close the stream
+											if (done) {
+												controller.close();
+												return;
+											}
+											// Enqueue the next data chunk into our target stream
+											controller.enqueue(value);
+											return pump();
+										});
+									}
+								}
+							});
+						})
+						.then((stream) => new Response(stream))
+						.then((response) => response.blob())
+						.then((blob) => (elem.src = URL.createObjectURL(blob)));
 				} else {
 					elem.src = url;
 				}
