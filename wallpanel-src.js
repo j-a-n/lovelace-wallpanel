@@ -56,6 +56,7 @@ const defaultConfig = {
 	immich_tag_names: [],
 	immich_persons: [],
 	immich_memories: false,
+	immich_favorites: false,
 	immich_resolution: "preview",
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
@@ -2806,6 +2807,29 @@ function initWallpanel() {
 							processAssets(memory.assets);
 						})
 					);
+				} else if (config.immich_favorites) {
+					logger.debug("Search for favorites in asset metadata");
+					let page = 1;
+					while (true) {
+						logger.debug(`Fetching asset metadata page ${page}`);
+						const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
+							method: "POST",
+							body: JSON.stringify({ isFavorite: true, withExif: true, page: page, size: 1000 })
+						});
+						logger.debug("Got immich API response", searchResults);
+						if (!searchResults.assets.count) {
+							if (page == 1) {
+								const msg = "No favorite media items found in immich";
+								logger.error(msg);
+							}
+							break;
+						}
+						processAssets(searchResults.assets.items);
+						if (!searchResults.assets.nextPage) {
+							break;
+						}
+						page = searchResults.assets.nextPage;
+					}
 				} else if (config.immich_tag_names && config.immich_tag_names.length) {
 					const tagNamesLower = config.immich_tag_names.map((v) => v.toLowerCase());
 					logger.debug("Fetching immich tags");

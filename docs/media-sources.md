@@ -225,6 +225,13 @@ immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_memories: true
 ```
 
+Example showing immich favorites:
+```yaml
+image_url: immich+https://immich.your.domain/api
+immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_favorites: true
+```
+
 ## Website as iframe
 You can also display a website in an iframe.
 Just add the prefix `iframe+` to the URL of the website you want to show:

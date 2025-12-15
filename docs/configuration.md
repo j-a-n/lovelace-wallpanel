@@ -49,12 +49,13 @@ You can set the following configuration parameters for every individual Home Ass
 | iframe_load_unchanged            | Should an iframe be reloaded once its display time has expired, even if its URL remains the same?      | false     |
 | iframe_interaction               | Allow interaction with the iframe content?                                                             | false     |
 | immich_api_key                   | API key that is used for authentication at the [immich API](media-sources.md#immich-api)               |           |
-| immich_shared_albums             | Show images of shared immich albums?                                                                   | true      |
-| immich_album_names               | Only show images from these immich albums.                                                             | []        |
-| immich_tag_names                 | Only show images with this tags.                                                                       | []        |
-| immich_persons                   | Only show images with this persons.                                                                    | []        |
-| immich_memories                  | Only show today memories.                                                                              | false     |
-| immich_resolution                | The resolution to use for loading images from immich (possible values are: `preview` / `original`).    | preview   |
+| immich_shared_albums             | Display media from shared Immich albums.                                                               | true      |
+| immich_album_names               | Display media only from the specified Immich albums.                                                   | []        |
+| immich_tag_names                 | Display media only with the specified tags.                                                            | []        |
+| immich_persons                   | Display media only featuring the specified people.                                                     | []        |
+| immich_memories                  | Display only today’s memories.                                                                         | false     |
+| immich_favorites                 | Display only media marked as favorite.                                                                 | false     |
+| immich_resolution                | The resolution to use for loading media from immich (possible values are: `preview` / `original`).     | preview   |
 | exclude_filenames                | List of regular expressions for excluding files and directories from media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_types              | List of media types to exlcude media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_orientation        | Media orientation to exlcude. See [Media Sources](media-sources.md#exclude-files) for details.         |            |
