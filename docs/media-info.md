@@ -34,6 +34,8 @@ The following placeholders can also be used:
 * `image.relativePath`: The path to the current media item, relative to the `image_url` configuration parameter.
 * `image.folderName`: The name of the folder containing the media file.
 * `image.filename`: The name of the media file.
+* `mediaCount`: Total number of media files available.
+* `mediaPosition`: Position of the current file in the list of media files.
 
 !!! tip
     Set `image_info_template: analyze` to show all available attributes.

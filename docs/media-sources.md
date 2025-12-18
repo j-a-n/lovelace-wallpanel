@@ -67,7 +67,8 @@ It was previously named `image_excludes`.
 **Example**
 ```yaml
 exclude_filenames:
-  - '\\.tif$'
+  - '\.heic$'
+  - '\.[tT][iI][fF][fF]?$'
   - '/@eaDir'
 ```
 
@@ -222,6 +223,13 @@ Example showing immich memories:
 image_url: immich+https://immich.your.domain/api
 immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_memories: true
+```
+
+Example showing immich favorites:
+```yaml
+image_url: immich+https://immich.your.domain/api
+immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_favorites: true
 ```
 
 ## Website as iframe

@@ -30,6 +30,7 @@ You can set the following configuration parameters for every individual Home Ass
 | keep_screen_on_time              | Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).                         | 0         |
 | black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled).              | 0         |
 | control_reactivation_time        | Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped. | 1.0       |
+| close_more_info_dialog_time      | Automatically close more-info dialogs after the specified number of seconds (0 = disabled).            | 0         |
 | stop_screensaver_on_mouse_move   | Stop screensaver on mouse movement?                                                                    | true      |
 | stop_screensaver_on_mouse_click  | Stop screensaver on mouse click / display touch?                                                       | true      |
 | stop_screensaver_on_location_change | Stop screensaver on navigation (location-changed events)?                                           | true      |
@@ -48,19 +49,21 @@ You can set the following configuration parameters for every individual Home Ass
 | iframe_load_unchanged            | Should an iframe be reloaded once its display time has expired, even if its URL remains the same?      | false     |
 | iframe_interaction               | Allow interaction with the iframe content?                                                             | false     |
 | immich_api_key                   | API key that is used for authentication at the [immich API](media-sources.md#immich-api)               |           |
-| immich_shared_albums             | Show images of shared immich albums?                                                                   | true      |
-| immich_album_names               | Only show images from these immich albums.                                                             | []        |
+| immich_shared_albums             | Display media from shared Immich albums.                                                               | true      |
+| immich_album_names               | Display media only from the specified Immich albums.                                                   | []        |
 | immich_exclude_tag_names         | List of tags for excluding files from media sources.                                                   | []        |
-| immich_tag_names                 | Only show images with this tags.                                                                       | []        |
-| immich_persons                   | Only show images with this persons.                                                                    | []        |
-| immich_memories                  | Only show today memories.                                                                              | false     |
-| immich_resolution                | The resolution to use for loading images from immich (possible values are: `preview` / `original`).    | preview   |
+| immich_tag_names                 | Display media only with the specified tags.                                                            | []        |
+| immich_persons                   | Display media only featuring the specified people.                                                     | []        |
+| immich_memories                  | Display only today’s memories.                                                                         | false     |
+| immich_favorites                 | Display only media marked as favorite.                                                                 | false     |
+| immich_resolution                | The resolution to use for loading media from immich (possible values are: `preview` / `original`).     | preview   |
 | exclude_filenames                | List of regular expressions for excluding files and directories from media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_types              | List of media types to exlcude media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_orientation        | Media orientation to exlcude. See [Media Sources](media-sources.md#exclude-files) for details.         |            |
 | image_fit_landscape              | How to adjust a media item in landscape mode to fit the available space (cover or contain).            | cover      |
 | image_fit_portrait               | How to adjust a media item in portrait mode to fit the available space (cover or contain).             | contain    |
 | media_horizontal_align           | Determines how media items are aligned horizontally on the screen (left, center, or right).            | center     |
+| media_vertical_align             | Determines how media items are aligned vertically on the screen (top, middle, or bottom).              | middle     |
 | caclulate_media_size             | Calculate media container sizes.                                                                       | true       |
 | image_background                 | Possible values are `color` and `image`. When set to `image`, a snapshot from the current media item is used as the background, covering the entire screen. To customize its appearance, apply styles using the `wallpanel-screensaver-image-background` class. | color |
 | media_list_update_interval       | When using a local media source, the media list is updated at this interval.                           | 3600       |
@@ -137,7 +140,7 @@ wallpanel:
   image_fit_landscape: cover
   media_list_update_interval: 3600
   media_order: 'sorted'
-  image_excludes: []
+  exclude_filenames: []
   show_image_info: false
   fetch_address_data: true
   image_info_template: '${address.town|address.city!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long}'
