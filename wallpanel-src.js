@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.60.0";
+const version = "4.60.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -47,6 +47,7 @@ const defaultConfig = {
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
 	image_url_entity: "",
 	force_load_media_with_fetch: false,
+	stream_load_media: false,
 	media_entity_load_unchanged: true,
 	iframe_load_unchanged: false,
 	iframe_interaction: false,
@@ -2952,30 +2953,46 @@ function initWallpanel() {
 					elem.onerror = onError;
 				});
 				if (useFetch) {
-					fetch(url, { headers: headers })
-						.then((response) => {
-							const reader = response.body.getReader();
-							return new ReadableStream({
-								start(controller) {
-									return pump();
-									function pump() {
-										return reader.read().then(({ done, value }) => {
-											// When no more data needs to be consumed, close the stream
-											if (done) {
-												controller.close();
-												return;
-											}
-											// Enqueue the next data chunk into our target stream
-											controller.enqueue(value);
-											return pump();
-										});
+					if (config.stream_load_media) {
+						fetch(url, { headers: headers })
+							.then((response) => {
+								const reader = response.body.getReader();
+								return new ReadableStream({
+									start(controller) {
+										return pump();
+										function pump() {
+											return reader.read().then(({ done, value }) => {
+												// When no more data needs to be consumed, close the stream
+												if (done) {
+													controller.close();
+													return;
+												}
+												// Enqueue the next data chunk into our target stream
+												controller.enqueue(value);
+												return pump();
+											});
+										}
 									}
-								}
-							});
-						})
-						.then((stream) => new Response(stream))
-						.then((response) => response.blob())
-						.then((blob) => (elem.src = URL.createObjectURL(blob)));
+								});
+							})
+							.then((stream) => new Response(stream))
+							.then((response) => response.blob())
+							.then((blob) => (elem.src = URL.createObjectURL(blob)));
+					} else {
+						headers = headers || {};
+						const response = await fetch(url, { headers: headers });
+						logger.debug("Got respone", response);
+						if (!response.ok) {
+							throw new Error(`Failed to load ${elem.tagName} "${url}": ${response}`);
+						}
+						// The object URL created by URL.createObjectURL() must be released
+						// using URL.revokeObjectURL() to free the associated memory again.
+						if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
+							URL.revokeObjectURL(elem.src);
+						}
+						const blob = await response.blob();
+						elem.src = URL.createObjectURL(blob);
+					}
 				} else {
 					elem.src = url;
 				}
