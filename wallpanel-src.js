@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.58.1";
+const version = "4.60.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -18,6 +18,7 @@ const defaultConfig = {
 	hide_toolbar_action_icons: false,
 	hide_toolbar_on_subviews: false,
 	hide_sidebar: false,
+	close_more_info_dialog_time: 0.0,
 	fullscreen: false,
 	keep_fullscreen: true,
 	z_index: 1000,
@@ -55,12 +56,14 @@ const defaultConfig = {
 	immich_tag_names: [],
 	immich_persons: [],
 	immich_memories: false,
-    immich_memories_additional_api_keys: [],
+  immich_memories_additional_api_keys: [],
+	immich_favorites: false,
 	immich_resolution: "preview",
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
 	caclulate_media_size: true,
 	media_horizontal_align: "center", // left / center / right
+	media_vertical_align: "middle", // top / middle  / bottom
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
 	media_order: "random", // sorted / random
@@ -120,7 +123,6 @@ let config = {};
 let currentLocation = null;
 let activePanel = null;
 let activeTab = null;
-let fullscreen = false;
 let wallpanel = null;
 let skipDisableScreensaverOnLocationChanged = false;
 const classStyles = {
@@ -274,21 +276,28 @@ const logger = {
 		if (!elHass || !elHass.hass) {
 			return;
 		}
-		return elHass.hass.callService(
-			"system_log",
-			"write",
-			{
-				logger: `frontend.wallpanel${browserId ? "." + browserId : ""}`,
-				message: message,
-				level: logger.systemTargetLogLevel || level
-			},
-			undefined,
-			false
-		);
+		elHass.hass
+			.callService(
+				"system_log",
+				"write",
+				{
+					logger: `frontend.wallpanel${browserId ? "." + browserId : ""}`,
+					message: message,
+					level: logger.systemTargetLogLevel || level
+				},
+				undefined,
+				false
+			)
+			.then(
+				(result) => {},
+				(error) => {
+					// Prevent uncaught error
+				}
+			);
 	},
 	downloadMessages: function () {
 		const data = new Blob([stringify(logger.messages)], { type: "text/plain" });
-		const url = window.URL.createObjectURL(data);
+		const url = URL.createObjectURL(data);
 		const el = document.createElement("a");
 		el.href = url;
 		el.target = "_blank";
@@ -982,17 +991,15 @@ function navigate(path, keepSearch = true) {
 	);
 }
 
-document.addEventListener("fullscreenerror", () => {
-	logger.error("Failed to enter fullscreen");
-});
-
-document.addEventListener("fullscreenchange", () => {
-	if (typeof document.webkitCurrentFullScreenElement !== "undefined") {
-		fullscreen = Boolean(document.webkitCurrentFullScreenElement);
-	} else if (typeof document.fullscreenElement !== "undefined") {
-		fullscreen = Boolean(document.fullscreenElement);
+function isFullscreen() {
+	if (typeof document.fullscreenElement !== "undefined") {
+		return Boolean(document.fullscreenElement);
 	}
-});
+	if (typeof document.webkitCurrentFullScreenElement !== "undefined") {
+		return Boolean(document.webkitCurrentFullScreenElement);
+	}
+	return false;
+}
 
 function enterFullscreen() {
 	logger.debug("Enter fullscreen");
@@ -1005,7 +1012,7 @@ function enterFullscreen() {
 				logger.debug("Successfully requested fullscreen");
 			},
 			(error) => {
-				logger.error("Failed to enter fullscreen:", error);
+				logger.debug("Failed to enter fullscreen:", error);
 			}
 		);
 	} else if (el.mozRequestFullScreen) {
@@ -1025,7 +1032,7 @@ function exitFullscreen() {
 				logger.debug("Successfully exited fullscreen");
 			},
 			(error) => {
-				logger.error("Failed to exit fullscreen:", error);
+				logger.debug("Failed to exit fullscreen:", error);
 			}
 		);
 	} else if (document.mozCancelFullScreen) {
@@ -1074,6 +1081,7 @@ function initWallpanel() {
 			this.lastEnergyCollectionUpdate = 0;
 			this.screensaverStopNavigationPathTimeout = null;
 			this.disable_screensaver_on_browser_mod_popup_function = null;
+			this.moreInfoDialogOpenedAt = 0;
 
 			this.screenWakeLock = new ScreenWakeLock();
 			this.cameraMotionDetection = new CameraMotionDetection();
@@ -1408,9 +1416,12 @@ function initWallpanel() {
 			this.debugBox.style.visibility = config.debug ? "visible" : "hidden";
 			this.debugBox.style.pointerEvents = config.debug ? "auto" : "none";
 			//this.screensaverContainer.style.transition = `opacity ${Math.round(config.fade_in_time*1000)}ms ease-in-out`;
-			this.style.transition = `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out`;
-			this.imageOneContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
-			this.imageTwoContainer.style.transition = `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out`;
+			this.style.transition =
+				config.fade_in_time > 0 ? `opacity ${Math.round(config.fade_in_time * 1000)}ms ease-in-out` : "";
+			this.imageOneContainer.style.transition =
+				config.crossfade_time > 0 ? `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out` : "";
+			this.imageTwoContainer.style.transition =
+				config.crossfade_time > 0 ? `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out` : "";
 			this.messageContainer.style.visibility = this.screensaverRunning() ? "visible" : "hidden";
 			this.screensaverImageOverlay.style.pointerEvents = config.content_interaction ? "none" : "auto";
 
@@ -2315,6 +2326,9 @@ function initWallpanel() {
 					mediaInfo.image.folderName = parts[parts.length - 2];
 				}
 			}
+			mediaInfo.mediaPosition = this.mediaIndex + 1;
+			mediaInfo.mediaCount = this.mediaList.length;
+
 			logger.debug("Media info:", mediaInfo);
 
 			let html = config.image_info_template || "";
@@ -2629,11 +2643,11 @@ function initWallpanel() {
 				}
 			}
 
-			async function getExifInfo (assetId, options = {}) {
+			async function getExifInfo(assetId, options = {}) {
 				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`, options);
 				return asset.exifInfo;
 			}
-			
+
 			function processAssets(assets, folderName = null) {
 				assets.forEach((asset) => {
 					logger.debug("Processing immich asset", asset);
@@ -2812,7 +2826,30 @@ function initWallpanel() {
                                 })
                         )}
                     ));
-				} else if (config.immich_tag_names && config.immich_tag_names.length) {
+				} else if (config.immich_favorites) {
+					logger.debug("Search for favorites in asset metadata");
+					let page = 1;
+					while (true) {
+						logger.debug(`Fetching asset metadata page ${page}`);
+						const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
+							method: "POST",
+							body: JSON.stringify({ isFavorite: true, withExif: true, page: page, size: 1000 })
+						});
+						logger.debug("Got immich API response", searchResults);
+						if (!searchResults.assets.count) {
+							if (page == 1) {
+								const msg = "No favorite media items found in immich";
+								logger.error(msg);
+							}
+							break;
+						}
+						processAssets(searchResults.assets.items);
+						if (!searchResults.assets.nextPage) {
+							break;
+						}
+						page = searchResults.assets.nextPage;
+					}
+        } else if (config.immich_tag_names && config.immich_tag_names.length) {
 					const tagNamesLower = config.immich_tag_names.map((v) => v.toLowerCase());
 					logger.debug("Fetching immich tags");
 					const allTags = await wp._immichFetch(`${apiUrl}/tags`);
@@ -2934,19 +2971,30 @@ function initWallpanel() {
 					elem.onerror = onError;
 				});
 				if (useFetch) {
-					headers = headers || {};
-					const response = await fetch(url, { headers: headers });
-					logger.debug("Got respone", response);
-					if (!response.ok) {
-						throw new Error(`Failed to load ${elem.tagName} "${url}": ${response}`);
-					}
-					// The object URL created by URL.createObjectURL() must be released
-					// using URL.revokeObjectURL() to free the associated memory again.
-					if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
-						URL.revokeObjectURL(elem.src);
-					}
-					const blob = await response.blob();
-					elem.src = window.URL.createObjectURL(blob);
+					fetch(url, { headers: headers })
+						.then((response) => {
+							const reader = response.body.getReader();
+							return new ReadableStream({
+								start(controller) {
+									return pump();
+									function pump() {
+										return reader.read().then(({ done, value }) => {
+											// When no more data needs to be consumed, close the stream
+											if (done) {
+												controller.close();
+												return;
+											}
+											// Enqueue the next data chunk into our target stream
+											controller.enqueue(value);
+											return pump();
+										});
+									}
+								}
+							});
+						})
+						.then((stream) => new Response(stream))
+						.then((response) => response.blob())
+						.then((blob) => (elem.src = URL.createObjectURL(blob)));
 				} else {
 					elem.src = url;
 				}
@@ -3268,7 +3316,13 @@ function initWallpanel() {
 					logger.debug("Using available width");
 					setWidth = availWidth;
 					setHeight = Math.floor(height * ratioWidth);
-					setTop = Math.floor((setHeight - availHeight) / -2);
+					if (config.media_vertical_align == "top") {
+						setTop = 0;
+					} else if (config.media_vertical_align == "bottom") {
+						setTop = availHeight - setHeight;
+					} else {
+						setTop = Math.floor((setHeight - availHeight) / -2);
+					}
 					hiddenHeight = Math.max(setHeight - availHeight, 0);
 				} else {
 					logger.debug("Using available height");
@@ -3400,10 +3454,16 @@ function initWallpanel() {
 				return;
 			}
 
-			let crossfadeMillis = eventType == "user_action" ? 250 : Math.round(config.crossfade_time * 1000);
-			if (eventType == "start") {
-				crossfadeMillis = 0;
+			let crossfadeMillis = 0;
+			if (eventType != "start") {
+				if (config.crossfade_time > 0) {
+					crossfadeMillis = Math.round(config.crossfade_time * 1000);
+				}
+				if (eventType == "user_action" && crossfadeMillis > 250) {
+					crossfadeMillis = 250;
+				}
 			}
+
 			const updateElement = this.getInactiveMediaElement();
 			const element = await this.updateMedia(updateElement);
 			if (!element) {
@@ -3508,7 +3568,7 @@ function initWallpanel() {
 			if (config.keep_screen_on_time > 0 && !this.screenWakeLock.enabled) {
 				this.screenWakeLock.enable();
 			}
-			if (config.fullscreen && !fullscreen) {
+			if (config.fullscreen && !isFullscreen()) {
 				enterFullscreen();
 			}
 		}
@@ -3677,15 +3737,41 @@ function initWallpanel() {
 				if (this.imageOneContainer.style.visibility != "visible") {
 					this.imageOneContainer.style.visibility = "visible";
 				}
+				if (this.imageOne.style.visibility != "visible") {
+					this.imageOne.style.visibility = "visible";
+				}
 				if (this.imageTwoContainer.style.visibility != "visible") {
 					this.imageTwoContainer.style.visibility = "visible";
+				}
+				if (this.imageTwo.style.visibility != "visible") {
+					this.imageTwo.style.visibility = "visible";
 				}
 			} else {
 				if (this.imageOneContainer.style.visibility != "hidden") {
 					this.imageOneContainer.style.visibility = "hidden";
 				}
+				if (this.imageOne.style.visibility != "hidden") {
+					this.imageOne.style.visibility = "hidden";
+				}
 				if (this.imageTwoContainer.style.visibility != "hidden") {
 					this.imageTwoContainer.style.visibility = "hidden";
+				}
+				if (this.imageTwo.style.visibility != "hidden") {
+					this.imageTwo.style.visibility = "hidden";
+				}
+			}
+
+			if (config.close_more_info_dialog_time > 0) {
+				const dialog = this.getMoreInfoDialog();
+				if (dialog) {
+					const now = new Date();
+					if (!this.moreInfoDialogOpenedAt) {
+						this.moreInfoDialogOpenedAt = now;
+					} else if (now - this.moreInfoDialogOpenedAt >= config.close_more_info_dialog_time * 1000) {
+						dialog.close();
+					}
+				} else {
+					this.moreInfoDialogOpenedAt = 0;
 				}
 			}
 
@@ -3704,7 +3790,7 @@ function initWallpanel() {
 				html += `<b>Version:</b> ${version}<br/>`;
 				html += `<b>User-Agent:</b> ${navigator.userAgent}<br/>`;
 				html += `<b>Config:</b> ${JSON.stringify(conf)}<br/>`;
-				html += `<b>Fullscreen:</b> ${fullscreen}<br/>`;
+				html += `<b>Fullscreen:</b> ${isFullscreen()}<br/>`;
 				html += `<b>Screensaver started at:</b> ${wallpanel.screensaverStartedAt}<br/>`;
 				html += `<b>Screen wake lock:</b> enabled=${this.screenWakeLock.enabled} native=${this.screenWakeLock.nativeWakeLockSupported} lock=${this.screenWakeLock._lock} player=${this.screenWakeLock._player} error=${this.screenWakeLock.error}<br/>`;
 				if (this.screenWakeLock._player) {
@@ -3843,23 +3929,31 @@ function initWallpanel() {
 				}
 			}
 
-			if (isClick) {
-				evt.preventDefault();
-			}
-			evt.stopImmediatePropagation();
-
 			let switchMedia = "";
 			if (swipe) {
-				switchMedia = swipe == "left" ? "backwards" : "forwards";
+				switchMedia = swipe == "left" ? "forwards" : "backwards";
+				evt.stopImmediatePropagation();
 			} else if (evt instanceof MouseEvent || evt instanceof TouchEvent) {
 				let right = 0.0;
 				let bottom = 0.0;
+				const pos = this.screensaverContainer.getBoundingClientRect();
 				if (x) {
-					right = (this.screensaverContainer.clientWidth - x) / this.screensaverContainer.clientWidth;
+					right = (pos.right - x) / this.screensaverContainer.clientWidth;
 				}
 				if (y) {
-					bottom = (this.screensaverContainer.clientHeight - y) / this.screensaverContainer.clientHeight;
+					bottom = (pos.bottom - y) / this.screensaverContainer.clientHeight;
 				}
+				logger.debug("Event position screensaver:", x, y, pos.left, pos.right, pos.top, pos.bottom);
+				if (bottom > 1.0 || bottom < 0.0 || right > 1.0 || right < 0.0) {
+					// Outside the screensaver
+					return;
+				}
+
+				if (isClick) {
+					evt.preventDefault();
+				}
+				evt.stopImmediatePropagation();
+
 				if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
 					if (isClick) {
 						switchMedia = "forwards";
@@ -3943,7 +4037,7 @@ function activateWallpanel() {
 	}
 	setToolbarVisibility(hideToolbar, hideActionItems);
 	setSidebarVisibility(config.hide_sidebar);
-	if (config.fullscreen && !fullscreen) {
+	if (config.fullscreen && !isFullscreen()) {
 		enterFullscreen();
 	}
 }
@@ -3955,7 +4049,7 @@ function deactivateWallpanel() {
 	}
 	setToolbarVisibility(false, false);
 	setSidebarVisibility(false);
-	if (fullscreen && !config.keep_fullscreen) {
+	if (!config.keep_fullscreen && isFullscreen()) {
 		exitFullscreen();
 	}
 }
