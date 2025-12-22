@@ -57,6 +57,7 @@ const defaultConfig = {
 	immich_tag_names: [],
 	immich_persons: [],
 	immich_memories: false,
+  immich_memories_additional_api_keys: [],
 	immich_favorites: false,
 	immich_resolution: "preview",
 	image_fit_landscape: "cover", // cover / contain
@@ -2643,8 +2644,8 @@ function initWallpanel() {
 				}
 			}
 
-			async function getExifInfo(assetId) {
-				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`);
+			async function getExifInfo(assetId, options = {}) {
+				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`, options);
 				return asset.exifInfo;
 			}
 
@@ -2701,6 +2702,7 @@ function initWallpanel() {
 						filename: asset.originalFileName,
 						folderName: folderName
 					};
+                    info["apiKey"] = asset.apiKey
 					mediaInfo[url] = info;
 					urls.push(url);
 				});
@@ -2782,32 +2784,49 @@ function initWallpanel() {
 						}
 					}
 				} else if (config.immich_memories) {
-					logger.debug("Fetching immich memories (on_this_day)");
-					const allMemories = await wp._immichFetch(`${apiUrl}/memories?type=on_this_day`);
-					logger.debug(`Got immich API response`, allMemories);
-					const now = new Date();
-					const visibleMemories = allMemories.filter((memory) => {
-						const showAt = new Date(memory.showAt);
-						const hideAt = new Date(memory.hideAt);
-						return now >= showAt && now <= hideAt;
-					});
+					const apiKeys = [
+						config.immich_api_key,
+						...config.immich_memories_additional_api_keys
+					]
 
-					await Promise.all(
-						visibleMemories.map(async (memory) => {
-							logger.debug("Processing memory:", memory);
+                    await Promise.all(
+                        apiKeys.map(async (apiKey) => {
+                            logger.debug("Fetching immich memories (on_this_day)");
+                            let options = null
+                            if (apiKey) {
+                                options = {
+                                    headers: {
+                                        "x-api-key": apiKey
+                                    }
+                                }
+                            }
+                            const allMemories = await wp._immichFetch(`${apiUrl}/memories?type=on_this_day`, options);
+                            logger.debug(`Got immich API response`, allMemories);
+                            const now = new Date();
+                            const visibleMemories = allMemories.filter((memory) => {
+                                const showAt = new Date(memory.showAt);
+                                const hideAt = new Date(memory.hideAt);
+                                return now >= showAt && now <= hideAt;
+                            });
 
-							await Promise.all(
-								memory.assets.map(async (asset) => {
-									if (!asset.exifInfo) {
-										const exifInfo = await getExifInfo(asset.id);
-										asset.exifInfo = exifInfo;
-									}
-								})
-							);
+                            await Promise.all(
+                                visibleMemories.map(async (memory) => {
+                                    logger.debug("Processing memory:", memory);
 
-							processAssets(memory.assets);
-						})
-					);
+                                    await Promise.all(
+                                        memory.assets.map(async (asset) => {
+                                            if (!asset.exifInfo) {
+                                                const exifInfo = await getExifInfo(asset.id, options);
+                                                asset.exifInfo = exifInfo;
+                                            }
+                                            asset.apiKey = apiKey
+                                        })
+                                    );
+
+                                    processAssets(memory.assets);
+                                })
+                        )}
+                    ));
 				} else if (config.immich_favorites) {
 					logger.debug("Search for favorites in asset metadata");
 					let page = 1;
@@ -2831,7 +2850,7 @@ function initWallpanel() {
 						}
 						page = searchResults.assets.nextPage;
 					}
-				} else if (config.immich_tag_names && config.immich_tag_names.length) {
+        } else if (config.immich_tag_names && config.immich_tag_names.length) {
 					const tagNamesLower = config.immich_tag_names.map((v) => v.toLowerCase());
 					logger.debug("Fetching immich tags");
 					const allTags = await wp._immichFetch(`${apiUrl}/tags`);
@@ -3073,13 +3092,13 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromImmichAPI(element) {
-			const mediaInfo = mediaInfoCache.get(element.mediaUrl) || {};
+            const mediaInfo = mediaInfoCache.get(element.mediaUrl) || {};
 			const mediaType = mediaInfo["mediaType"] == "video" ? "video" : "img";
 			return await this.updateMediaFromUrl(
 				element,
 				element.mediaUrl,
 				mediaType,
-				{ "x-api-key": config.immich_api_key },
+				{ "x-api-key": mediaInfo.apiKey || config.immich_api_key },
 				true
 			);
 		}
