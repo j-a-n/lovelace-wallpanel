@@ -51,6 +51,7 @@ You can set the following configuration parameters for every individual Home Ass
 | immich_api_key                   | API key that is used for authentication at the [immich API](media-sources.md#immich-api)               |           |
 | immich_shared_albums             | Display media from shared Immich albums.                                                               | true      |
 | immich_album_names               | Display media only from the specified Immich albums.                                                   | []        |
+| immich_exclude_tag_names         | List of tags for excluding files from media sources.                                                   | []        |
 | immich_tag_names                 | Display media only with the specified tags.                                                            | []        |
 | immich_persons                   | Display media only featuring the specified people.                                                     | []        |
 | immich_memories                  | Display only today’s memories.                                                                         | false     |
@@ -294,4 +295,3 @@ https://hass:8123/dashboard-test/1
 ```
 
 If you leave the list empty, WallPanel will be enabled on all views by default.
-
