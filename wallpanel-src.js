@@ -1,9 +1,9 @@
 /**
- * (C) 2020-2025 by Jan Schneider (oss@janschneider.net)
+ * (C) 2020-2026 by Jan Schneider (oss@janschneider.net)
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.60.1";
+const version = "4.61.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -33,6 +33,7 @@ const defaultConfig = {
 	keep_screen_on_time: 0,
 	black_screen_after_time: 0,
 	control_reactivation_time: 1.0,
+	disable_context_menu: false,
 	screensaver_start_navigation_path: "",
 	screensaver_stop_close_browser_mod_popup: false,
 	screensaver_entity: "",
@@ -98,6 +99,7 @@ const defaultConfig = {
 	camera_motion_detection_capture_height: 48,
 	camera_motion_detection_capture_interval: 0.3,
 	camera_motion_detection_capture_visible: false,
+	theme: "",
 	custom_css: "",
 	style: {},
 	badges: [],
@@ -123,6 +125,7 @@ let config = {};
 let currentLocation = null;
 let activePanel = null;
 let activeTab = null;
+let wallpanelContainer = null;
 let wallpanel = null;
 let skipDisableScreensaverOnLocationChanged = false;
 const classStyles = {
@@ -288,12 +291,9 @@ const logger = {
 				undefined,
 				false
 			)
-			.then(
-				(result) => {},
-				(error) => {
-					// Prevent uncaught error
-				}
-			);
+			.catch(() => {
+				// Prevent uncaught error
+			});
 	},
 	downloadMessages: function () {
 		const data = new Blob([stringify(logger.messages)], { type: "text/plain" });
@@ -630,12 +630,20 @@ function mergeConfig(target, ...sources) {
 					logger.debug(`Replace ${match} with ${state}`);
 					return state;
 				}
-				if (typeof val === "string" || val instanceof String) {
-					val = val.replace("${browser_id}", browserId ? browserId : "browser-id-unset");
-					val = val.replace(/\$\{entity:\s*([^}]+\.[^}]+)\}/g, replacer);
+				function processValue(val) {
+					if (typeof val === "string" || val instanceof String) {
+						val = val.replace("${browser_id}", browserId ? browserId : "browser-id-unset");
+						val = val.replace(/\$\{entity:\s*([^}]+\.[^}]+)\}/g, replacer);
+					}
+					if (typeof target[key] === "boolean") {
+						val = ["true", "on", "yes", "1"].includes(val.toString());
+					}
+					return val;
 				}
-				if (typeof target[key] === "boolean") {
-					val = ["true", "on", "yes", "1"].includes(val.toString());
+				if (Array.isArray(val)) {
+					val = val.map((v) => processValue(v));
+				} else {
+					val = processValue(val);
 				}
 				Object.assign(target, { [key]: val });
 			}
@@ -1045,11 +1053,14 @@ function exitFullscreen() {
 }
 
 function initWallpanel() {
+	const HuiViewContainer = customElements.get("hui-view-container");
 	const HuiView = customElements.get("hui-view");
-	if (!HuiView) {
-		const error = "Failed to get hui-view from customElements";
+	if (!HuiViewContainer || !HuiView) {
+		const error = "Failed to get hui-view-container / hui-view from customElements";
 		throw new Error(error);
 	}
+
+	class WallpanelViewContainer extends HuiViewContainer {}
 
 	class WallpanelView extends HuiView {
 		constructor() {
@@ -1094,6 +1105,8 @@ function initWallpanel() {
 
 			elHass.provideHass(this);
 			setInterval(this.timer.bind(this), 1000);
+
+			wallpanelContainer.hass = this.__hass;
 		}
 
 		// Whenever the state changes, a new `hass` object is set.
@@ -2093,6 +2106,11 @@ function initWallpanel() {
 					{ capture: true }
 				);
 			});
+			window.addEventListener("contextmenu", (event) => {
+				if (config.disable_context_menu && wp.screensaverRunning()) {
+					event.preventDefault();
+				}
+			});
 			window.addEventListener("resize", () => {
 				try {
 					const width = this.screensaverContainer.clientWidth;
@@ -2131,6 +2149,12 @@ function initWallpanel() {
 
 		reconfigure(oldConfig) {
 			const oldConfigAvailable = oldConfig && Object.keys(oldConfig).length > 0;
+
+			if (config.theme) {
+				logger.info("Apply theme", config.theme);
+				wallpanelContainer.theme = config.theme;
+				wallpanelContainer._applyTheme();
+			}
 
 			this.updateStyle();
 			if (this.screensaverRunning()) {
@@ -4007,11 +4031,16 @@ function initWallpanel() {
 		}
 	}
 
+	if (!customElements.get("wallpanel-view-container")) {
+		customElements.define("wallpanel-view-container", WallpanelViewContainer);
+	}
 	if (!customElements.get("wallpanel-view")) {
 		customElements.define("wallpanel-view", WallpanelView);
 	}
+	wallpanelContainer = document.createElement("wallpanel-view-container");
 	wallpanel = document.createElement("wallpanel-view");
-	elHaMain.shadowRoot.appendChild(wallpanel);
+	wallpanelContainer.appendChild(wallpanel);
+	elHaMain.shadowRoot.appendChild(wallpanelContainer);
 }
 
 function activateWallpanel() {
