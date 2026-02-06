@@ -2165,19 +2165,23 @@ function initWallpanel() {
 				wallpanel.moveInfoBox(0, 0);
 			}
 
+			const sourceChange =
+				oldConfig.image_url != config.image_url ||
+				(mediaSourceType() == "immich-api" &&
+					(config.immich_shared_albums != oldConfig.immich_shared_albums ||
+						config.immich_memories != oldConfig.immich_memories ||
+						config.immich_favorites != oldConfig.immich_favorites ||
+						JSON.stringify(config.immich_album_names) != JSON.stringify(oldConfig.immich_album_names) ||
+						JSON.stringify(config.immich_tag_names) != JSON.stringify(oldConfig.immich_tag_names) ||
+						JSON.stringify(config.immich_persons) != JSON.stringify(oldConfig.immich_persons)));
 			if (
 				config.show_images &&
-				(!this.mediaList ||
-					!this.mediaList.length ||
-					!oldConfigAvailable ||
-					!oldConfig.show_images ||
-					oldConfig.image_url != config.image_url)
+				(!this.mediaList || !this.mediaList.length || !oldConfigAvailable || !oldConfig.show_images || sourceChange)
 			) {
 				const wp = this;
 				const switchMedia = this.screensaverRunning() && oldConfigAvailable;
 
-				const imgUrlChanged = oldConfig.image_url != config.image_url;
-				if (imgUrlChanged) {
+				if (sourceChange) {
 					this.mediaList = [];
 					this.mediaIndex = -1;
 				}
@@ -2186,7 +2190,7 @@ function initWallpanel() {
 					if (switchMedia) {
 						wp.switchActiveMedia("reconfigure");
 					}
-				}, imgUrlChanged);
+				}, sourceChange);
 			}
 
 			if (config.disable_screensaver_on_browser_mod_popup_func) {
