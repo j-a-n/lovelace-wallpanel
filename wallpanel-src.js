@@ -93,12 +93,15 @@ const defaultConfig = {
 	image_animation_ken_burns_duration: 0,
 	image_animation_ken_burns_animations: ["simple"], // simple / experimental
 	camera_motion_detection_enabled: false,
+	camera_motion_detection_stop_screensaver: true,
+	camera_motion_detection_set_entity: "",
 	camera_motion_detection_facing_mode: "user",
 	camera_motion_detection_threshold: 5,
 	camera_motion_detection_capture_width: 64,
 	camera_motion_detection_capture_height: 48,
 	camera_motion_detection_capture_interval: 0.3,
 	camera_motion_detection_capture_visible: false,
+	camera_motion_detection_motion_stop_delay: 2.0,
 	theme: "",
 	custom_css: "",
 	style: {},
@@ -472,6 +475,10 @@ class CameraMotionDetection {
 		this.threshold = this.width * this.height * 0.05;
 		this.captureInterval = 300;
 
+		this.motionActive = false;
+		this.motionStopDelay = 2000; // ms (default)
+		this.motionStopTimeout = null;
+
 		this.videoElement = document.createElement("video");
 		this.videoElement.setAttribute("id", "wallpanelMotionDetectionVideo");
 		this.videoElement.style.display = "none";
@@ -487,10 +494,13 @@ class CameraMotionDetection {
 
 	capture() {
 		let diffPixels = 0;
+
 		this.context.globalCompositeOperation = "difference";
 		this.context.drawImage(this.videoElement, 0, 0, this.width, this.height);
+
 		const diffImageData = this.context.getImageData(0, 0, this.width, this.height);
 		const rgba = diffImageData.data;
+
 		for (let i = 0; i < rgba.length; i += 4) {
 			const pixelDiff = rgba[i] + rgba[i + 1] + rgba[i + 2];
 			if (pixelDiff >= 256) {
@@ -500,10 +510,32 @@ class CameraMotionDetection {
 				}
 			}
 		}
-		if (diffPixels >= this.threshold) {
-			logger.debug("Motion detetcted:", diffPixels, this.threshold);
-			wallpanel.motionDetected();
+
+		const motionDetected = diffPixels >= this.threshold;
+
+		if (motionDetected) {
+			// Motion started or continues
+			if (!this.motionActive) {
+				logger.debug("Motion started");
+				this.motionActive = true;
+				wallpanel.motionDetected();
+			}
+
+			// Cancel any pending stop
+			if (this.motionStopTimeout) {
+				clearTimeout(this.motionStopTimeout);
+				this.motionStopTimeout = null;
+			}
+		} else if (this.motionActive && !this.motionStopTimeout) {
+			// Motion might have stopped — debounce it
+			this.motionStopTimeout = setTimeout(() => {
+				logger.debug("Motion stopped");
+				this.motionActive = false;
+				this.motionStopTimeout = null;
+				wallpanel.motionStopped();
+			}, this.motionStopDelay);
 		}
+
 		this.context.globalCompositeOperation = "source-over";
 		this.context.drawImage(this.videoElement, 0, 0, this.width, this.height);
 	}
@@ -524,6 +556,7 @@ class CameraMotionDetection {
 		this.height = config.camera_motion_detection_capture_height;
 		this.threshold = this.width * this.height * config.camera_motion_detection_threshold * 0.01;
 		this.captureInterval = config.camera_motion_detection_capture_interval * 1000;
+		this.motionStopDelay = config.camera_motion_detection_motion_stop_delay * 1000;
 
 		this.videoElement.width = this.width;
 		this.videoElement.height = this.height;
@@ -3850,8 +3883,33 @@ function initWallpanel() {
 			this.switchActiveMedia("user_action");
 		}
 
+		setCameraMotionDetectionEntityState(state) {
+			const entity = config.camera_motion_detection_set_entity;
+			if (!entity || !this.__hass.states[entity]) return;
+			logger.debug("Updating camera motion detection entity", entity, state);
+			this.__hass
+				.callService("input_boolean", state ? "turn_on" : "turn_off", {
+					entity_id: entity
+				})
+				.then(
+					(result) => {
+						logger.debug(result);
+					},
+					(error) => {
+						logger.error("Failed to set camera motion detection entity state:", error);
+					}
+				);
+		}
+
 		motionDetected() {
-			this.stopScreensaver(config.fade_out_time_motion_detected);
+			if (config.camera_motion_detection_stop_screensaver) {
+				this.stopScreensaver(config.fade_out_time_motion_detected);
+			}
+			this.setCameraMotionDetectionEntityState(true);
+		}
+
+		motionStopped() {
+			this.setCameraMotionDetectionEntityState(false);
 		}
 
 		handleInteractionEvent(evt) {
