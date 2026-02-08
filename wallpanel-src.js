@@ -52,10 +52,11 @@ const defaultConfig = {
 	media_entity_load_unchanged: true,
 	iframe_load_unchanged: false,
 	iframe_interaction: false,
-	immich_api_key: "",
+	immich_api_keys: [],
 	immich_album_names: [],
 	immich_shared_albums: true,
 	immich_tag_names: [],
+	immich_exclude_tag_names: [],
 	immich_persons: [],
 	immich_memories: false,
 	immich_favorites: false,
@@ -120,7 +121,8 @@ const renamedConfigOptions = {
 	enabled_on_tabs: "enabled_on_views",
 	image_list_update_interval: "media_list_update_interval",
 	screensaver_stop_navigation_path: "screensaver_start_navigation_path",
-	card_interaction: "content_interaction"
+	card_interaction: "content_interaction",
+	immich_api_key: "immich_api_keys"
 };
 
 let dashboardConfig = {};
@@ -637,12 +639,14 @@ function mergeConfig(target, ...sources) {
 	if (isObject(target) && isObject(source)) {
 		for (let key in source) {
 			let val = source[key];
-
 			if (renamedConfigOptions[key]) {
 				logger.warn(
 					`The configuration option '${key}' has been renamed to '${renamedConfigOptions[key]}'. Please update your wallpanel configuration accordingly.`
 				);
 				key = renamedConfigOptions[key];
+			}
+			if (key == "immich_api_keys" && !Array.isArray(val)) {
+				val = [val];
 			}
 
 			if (isObject(val)) {
@@ -2648,10 +2652,10 @@ function initWallpanel() {
 			}
 		}
 
-		async _immichFetch(url, options = {}) {
+		async _immichFetch(url, apiKey, options = {}) {
 			const defaultOptions = {
 				headers: {
-					"x-api-key": config.immich_api_key,
+					"x-api-key": apiKey,
 					"Content-Type": "application/json",
 					Accept: "application/json"
 				}
@@ -2681,8 +2685,8 @@ function initWallpanel() {
 		}
 
 		async updateMediaListFromImmichAPI() {
-			if (!config.immich_api_key) {
-				throw new Error("immich_api_key not configured");
+			if (!config.immich_api_keys || !config.immich_api_keys.length) {
+				throw new Error("No immich_api_key configured");
 			}
 			const wp = this;
 			const screenOrientation =
@@ -2704,12 +2708,23 @@ function initWallpanel() {
 				}
 			}
 
-			async function getExifInfo(assetId) {
-				const asset = await wp._immichFetch(`${apiUrl}/assets/${assetId}`);
-				return asset.exifInfo;
+			async function fetchAssetInfo(assets, apiKey) {
+				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
+				await Promise.all(
+					assets.map(async (asset) => {
+						if (!asset.exifInfo || (fetchTags && !asset.tags)) {
+							logger.debug(`Fetching asset info for ${asset.id}`);
+							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
+							asset.exifInfo = assetInfo.exifInfo;
+							asset.tags = assetInfo.tags.map((v) => v.value);
+						}
+					})
+				);
 			}
 
-			function processAssets(assets, folderName = null) {
+			async function processAssets(assets, apiKey, folderName = null) {
+				await fetchAssetInfo(assets, apiKey);
+
 				assets.forEach((asset) => {
 					logger.debug("Processing immich asset", asset);
 					const assetType = asset.type.toLowerCase();
@@ -2725,6 +2740,14 @@ function initWallpanel() {
 					for (const exclude of excludeRegExp) {
 						if (exclude.test(asset.originalFileName)) {
 							logger.debug(`Media item excluded by regex "${exclude}"`);
+							return;
+						}
+					}
+
+					if (config.immich_exclude_tag_names && config.immich_exclude_tag_names.length) {
+						const matchingTags = asset.tags.filter((tag) => config.immich_exclude_tag_names.includes(tag));
+						if (matchingTags.length > 0) {
+							logger.debug(`Media item excluded due to tag(s): ${matchingTags.join(", ")}`);
 							return;
 						}
 					}
@@ -2755,15 +2778,21 @@ function initWallpanel() {
 							resolution = "thumbnail?size=preview";
 						}
 					}
+
 					const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+					if (urls.indexOf(url) >= 0) {
+						return;
+					}
+					urls.push(url);
+
 					const info = asset.exifInfo || {};
+					info["immichApiKey"] = apiKey;
 					info["mediaType"] = assetType;
 					info["image"] = {
 						filename: asset.originalFileName,
 						folderName: folderName
 					};
 					mediaInfo[url] = info;
-					urls.push(url);
 				});
 			}
 
@@ -2788,178 +2817,174 @@ function initWallpanel() {
 			}
 
 			try {
-				if (config.immich_persons && config.immich_persons.length) {
-					const orPersonNames = config.immich_persons.map((entry) =>
-						(Array.isArray(entry) ? entry : [entry]).map((v) => v.toLowerCase())
-					);
-					const personNameToId = {};
-					let allPeople = [];
-					let page = 1;
-					let hasNextPage = true;
+				for (const apiKey of config.immich_api_keys) {
+					console.debug(`Using immich API key ${apiKey}`);
+					if (config.immich_persons && config.immich_persons.length) {
+						logger.debug("Searching for assets based on persons");
+						const orPersonNames = config.immich_persons.map((entry) =>
+							(Array.isArray(entry) ? entry : [entry]).map((v) => v.toLowerCase())
+						);
+						const personNameToId = {};
+						let allPeople = [];
+						let page = 1;
+						let hasNextPage = true;
 
-					// Fetch all people first
-					while (hasNextPage) {
-						const peopleData = await wp._immichFetch(`${apiUrl}/people?size=1000&page=${page}`);
-						allPeople = allPeople.concat(peopleData.people);
-						hasNextPage = peopleData.hasNextPage;
-						page++;
-					}
-					allPeople.forEach((person) => {
-						personNameToId[person.name.toLowerCase()] = person.id;
-					});
-
-					// Fetch assets for each person/group criteria
-					for (const personNames of orPersonNames) {
-						const personIds = personNames
-							.map((name) => personNameToId[name])
-							.filter((id) => {
-								if (!id) logger.error(`Person not found in immich: ${name}`);
-								return !!id;
-							});
-
-						if (personIds.length > 0) {
-							logger.debug("Searching asset metadata for persons: ", personIds);
-							let page = 1;
-							while (true) {
-								logger.debug(`Fetching asset metadata page ${page}`);
-								const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
-									method: "POST",
-									body: JSON.stringify({ personIds: personIds, withExif: true, page: page, size: 1000 })
-								});
-								logger.debug(`Got immich API response`, searchResults);
-								if (!searchResults.assets.count) {
-									if (page == 1) {
-										const msg = `No media items found in immich that contain all these people: ${personNames}`;
-										logger.error(msg);
-									}
-									break;
-								}
-								processAssets(searchResults.assets.items);
-								if (!searchResults.assets.nextPage) {
-									break;
-								}
-								page = searchResults.assets.nextPage;
-							}
+						// Fetch all people first
+						while (hasNextPage) {
+							const peopleData = await wp._immichFetch(`${apiUrl}/people?size=1000&page=${page}`, apiKey);
+							allPeople = allPeople.concat(peopleData.people);
+							hasNextPage = peopleData.hasNextPage;
+							page++;
 						}
-					}
-				} else if (config.immich_memories) {
-					logger.debug("Fetching immich memories (on_this_day)");
-					const allMemories = await wp._immichFetch(`${apiUrl}/memories?type=on_this_day`);
-					logger.debug(`Got immich API response`, allMemories);
-					const now = new Date();
-					const visibleMemories = allMemories.filter((memory) => {
-						const showAt = new Date(memory.showAt);
-						const hideAt = new Date(memory.hideAt);
-						return now >= showAt && now <= hideAt;
-					});
-
-					await Promise.all(
-						visibleMemories.map(async (memory) => {
-							logger.debug("Processing memory:", memory);
-
-							await Promise.all(
-								memory.assets.map(async (asset) => {
-									if (!asset.exifInfo) {
-										const exifInfo = await getExifInfo(asset.id);
-										asset.exifInfo = exifInfo;
-									}
-								})
-							);
-
-							processAssets(memory.assets);
-						})
-					);
-				} else if (config.immich_favorites) {
-					logger.debug("Search for favorites in asset metadata");
-					let page = 1;
-					while (true) {
-						logger.debug(`Fetching asset metadata page ${page}`);
-						const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
-							method: "POST",
-							body: JSON.stringify({ isFavorite: true, withExif: true, page: page, size: 1000 })
+						allPeople.forEach((person) => {
+							personNameToId[person.name.toLowerCase()] = person.id;
 						});
-						logger.debug("Got immich API response", searchResults);
-						if (!searchResults.assets.count) {
-							if (page == 1) {
-								const msg = "No favorite media items found in immich";
-								logger.error(msg);
-							}
-							break;
-						}
-						processAssets(searchResults.assets.items);
-						if (!searchResults.assets.nextPage) {
-							break;
-						}
-						page = searchResults.assets.nextPage;
-					}
-				} else if (config.immich_tag_names && config.immich_tag_names.length) {
-					const tagNamesLower = config.immich_tag_names.map((v) => v.toLowerCase());
-					logger.debug("Fetching immich tags");
-					const allTags = await wp._immichFetch(`${apiUrl}/tags`);
-					logger.debug(`Got immich API response`, allTags);
-					const tagIds = allTags
-						.filter((tag) => {
-							const include = tagNamesLower.includes(tag.name.toLowerCase());
-							logger.debug(`${include ? "Adding" : "Skipping"} tag: ${tag.name}`);
-							return include;
-						})
-						.map((tag) => tag.id);
 
-					if (tagIds.length > 0) {
-						logger.debug("Searching asset metadata for tags: ", tagIds);
+						// Fetch assets for each person/group criteria
+						for (const personNames of orPersonNames) {
+							const personIds = personNames
+								.map((name) => personNameToId[name])
+								.filter((id) => {
+									if (!id) logger.error(`Person not found in immich: ${name}`);
+									return !!id;
+								});
+
+							if (personIds.length > 0) {
+								logger.debug("Searching asset metadata for persons: ", personIds);
+								let page = 1;
+								while (true) {
+									logger.debug(`Fetching asset metadata page ${page}`);
+									const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
+										method: "POST",
+										body: JSON.stringify({ personIds: personIds, withExif: true, page: page, size: 1000 })
+									});
+									logger.debug(`Got immich API response`, searchResults);
+									if (!searchResults.assets.count) {
+										if (page == 1) {
+											const msg = `No media items found in immich that contain all these people: ${personNames}`;
+											logger.error(msg);
+										}
+										break;
+									}
+									await processAssets(searchResults.assets.items, apiKey);
+									if (!searchResults.assets.nextPage) {
+										break;
+									}
+									page = searchResults.assets.nextPage;
+								}
+							}
+						}
+					} else if (config.immich_memories) {
+						logger.debug("Fetching immich memories (on_this_day)");
+						const allMemories = await wp._immichFetch(`${apiUrl}/memories?type=on_this_day`, apiKey);
+						logger.debug(`Got immich API response`, allMemories);
+						const now = new Date();
+						const visibleMemories = allMemories.filter((memory) => {
+							const showAt = new Date(memory.showAt);
+							const hideAt = new Date(memory.hideAt);
+							return now >= showAt && now <= hideAt;
+						});
+						logger.debug(`Found ${visibleMemories.length} visible memories`);
+
+						await Promise.all(
+							visibleMemories.map(async (memory) => {
+								logger.debug("Processing memory:", memory);
+								await processAssets(memory.assets, apiKey);
+							})
+						);
+					} else if (config.immich_favorites) {
+						logger.debug("Search for favorites in asset metadata");
 						let page = 1;
 						while (true) {
 							logger.debug(`Fetching asset metadata page ${page}`);
-							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, {
+							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
 								method: "POST",
-								body: JSON.stringify({ tagIds: tagIds, withExif: true, page: page, size: 1000 })
+								body: JSON.stringify({ isFavorite: true, withExif: true, page: page, size: 1000 })
 							});
 							logger.debug("Got immich API response", searchResults);
 							if (!searchResults.assets.count) {
 								if (page == 1) {
-									const msg = `No media items found in immich that contain these tags: ${tagNamesLower}`;
+									const msg = "No favorite media items found in immich";
 									logger.error(msg);
 								}
 								break;
 							}
-							processAssets(searchResults.assets.items);
+							await processAssets(searchResults.assets.items, apiKey);
 							if (!searchResults.assets.nextPage) {
 								break;
 							}
 							page = searchResults.assets.nextPage;
 						}
-					} else {
-						const msg = "No matching immich tags found or selected.";
-						logger.error(msg);
-					}
-				} else {
-					// Default: Fetch albums
-					const albumNamesLower = (config.immich_album_names || []).map((v) => v.toLowerCase());
-					logger.debug(`Fetching immich albums (shared=${config.immich_shared_albums})`);
-					const allAlbums = await wp._immichFetch(`${apiUrl}/albums?shared=${config.immich_shared_albums}`);
-					logger.debug("Got immich API response", allAlbums);
+					} else if (config.immich_tag_names && config.immich_tag_names.length) {
+						logger.debug("Searching for assets based on tag names");
+						const tagNamesLower = config.immich_tag_names.map((v) => v.toLowerCase());
+						logger.debug("Fetching immich tags");
+						const allTags = await wp._immichFetch(`${apiUrl}/tags`, apiKey);
+						logger.debug(`Got immich API response`, allTags);
+						const tagIds = allTags
+							.filter((tag) => {
+								const include = tagNamesLower.includes(tag.name.toLowerCase());
+								logger.debug(`${include ? "Adding" : "Skipping"} tag: ${tag.name}`);
+								return include;
+							})
+							.map((tag) => tag.id);
 
-					const albumIdsToFetch = allAlbums
-						.filter((album) => {
-							const include = !albumNamesLower.length || albumNamesLower.includes(album.albumName.toLowerCase());
-							logger.debug(`${include ? "Adding" : "Skipping"} album: ${album.albumName}`);
-							return include;
-						})
-						.map((album) => album.id);
-
-					if (albumIdsToFetch.length > 0) {
-						const albumDetailPromises = albumIdsToFetch.map((albumId) => {
-							logger.debug("Fetching album metadata: ", albumId);
-							return wp._immichFetch(`${apiUrl}/albums/${albumId}`);
-						});
-						const albumDetailsList = await Promise.all(albumDetailPromises);
-						albumDetailsList.forEach((albumDetails) => {
-							logger.debug(`Got immich album details`, albumDetails);
-							processAssets(albumDetails.assets, albumDetails.albumName);
-						});
+						if (tagIds.length > 0) {
+							logger.debug("Searching asset metadata for tags: ", tagIds);
+							let page = 1;
+							while (true) {
+								logger.debug(`Fetching asset metadata page ${page}`);
+								const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
+									method: "POST",
+									body: JSON.stringify({ tagIds: tagIds, withExif: true, page: page, size: 1000 })
+								});
+								logger.debug("Got immich API response", searchResults);
+								if (!searchResults.assets.count) {
+									if (page == 1) {
+										const msg = `No media items found in immich that contain these tags: ${tagNamesLower}`;
+										logger.error(msg);
+									}
+									break;
+								}
+								await processAssets(searchResults.assets.items, apiKey);
+								if (!searchResults.assets.nextPage) {
+									break;
+								}
+								page = searchResults.assets.nextPage;
+							}
+						} else {
+							const msg = "No matching immich tags found or selected.";
+							logger.error(msg);
+						}
 					} else {
-						const msg = "No matching immich albums found or selected.";
-						logger.error(msg);
+						logger.debug("Searching for assets based on albums");
+						// Default: Fetch albums
+						const albumNamesLower = (config.immich_album_names || []).map((v) => v.toLowerCase());
+						logger.debug(`Fetching immich albums (shared=${config.immich_shared_albums})`);
+						const allAlbums = await wp._immichFetch(`${apiUrl}/albums?shared=${config.immich_shared_albums}`, apiKey);
+						logger.debug("Got immich API response", allAlbums);
+
+						const albumIdsToFetch = allAlbums
+							.filter((album) => {
+								const include = !albumNamesLower.length || albumNamesLower.includes(album.albumName.toLowerCase());
+								logger.debug(`${include ? "Adding" : "Skipping"} album: ${album.albumName}`);
+								return include;
+							})
+							.map((album) => album.id);
+
+						if (albumIdsToFetch.length > 0) {
+							const albumDetailPromises = albumIdsToFetch.map((albumId) => {
+								logger.debug("Fetching album metadata: ", albumId);
+								return wp._immichFetch(`${apiUrl}/albums/${albumId}`, apiKey);
+							});
+							const albumDetailsList = await Promise.all(albumDetailPromises);
+							albumDetailsList.forEach(async (albumDetails) => {
+								logger.debug(`Got immich album details`, albumDetails);
+								await processAssets(albumDetails.assets, apiKey, albumDetails.albumName);
+							});
+						} else {
+							logger.debug("No matching immich albums found or selected.");
+						}
 					}
 				}
 
@@ -3140,7 +3165,7 @@ function initWallpanel() {
 				element,
 				element.mediaUrl,
 				mediaType,
-				{ "x-api-key": config.immich_api_key },
+				{ "x-api-key": mediaInfo["immichApiKey"] },
 				true
 			);
 		}
