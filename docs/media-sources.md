@@ -178,7 +178,8 @@ traefik.http.routers.immich.middlewares=immich-cors
 To access the Immich API, first generate an [API key](https://immich.app/docs/features/command-line-interface/#obtain-the-api-key).
 
 Then you can configure WallPanel to use the Immich API.
-You need to set the `image_url` to `immich+<your api url>` and enter the API key in `immich_api_key`.
+You need to set the `image_url` to `immich+<your api url>` and add the API key to `immich_api_keys`.
+Multiple API keys can be added to use multiple accounts on the same server.
 With the config option `immich_shared_albums` (`true` / `false`) you can include or exclude shared albums.
 To restrict the media items to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
 Alternatively you can configure a list of tag names in `immich_tag_names`.
@@ -189,7 +190,8 @@ With the config option `immich_resolution` (`preview` / `original`) you can sele
 Example using album names:
 ```yaml
 image_url: immich+https://immich.your.domain/api
-immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_api_keys:
+  - 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_shared_albums: false
 immich_album_names:
   - Tokio
@@ -200,7 +202,8 @@ immich_resolution: preview
 Example using tag names:
 ```yaml
 image_url: immich+https://immich.your.domain/api
-immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_api_keys:
+  - 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_tag_names:
   - Family
   - Friends
@@ -210,7 +213,8 @@ immich_resolution: original
 Example of media elements that contain certain persons:
 ```yaml
 image_url: immich+https://immich.your.domain/api
-immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_api_keys:
+  - 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_persons:
   - Alice
   - Bob
@@ -221,14 +225,16 @@ This will show media items containing either Alice, Bob or John and Jane.
 Example showing immich memories:
 ```yaml
 image_url: immich+https://immich.your.domain/api
-immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_api_keys:
+  - 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_memories: true
 ```
 
 Example showing immich favorites:
 ```yaml
 image_url: immich+https://immich.your.domain/api
-immich_api_key: 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
+immich_api_keys:
+  - 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_favorites: true
 ```
 

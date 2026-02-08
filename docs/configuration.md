@@ -41,6 +41,7 @@ You can set the following configuration parameters for every individual Home Ass
 | screensaver_start_navigation_path | Path to navigate to (e.g., /lovelace/default_view) when screensaver is started. Use a complete path to avoid redirects which will stop the screensaver. |           |
 | screensaver_stop_close_browser_mod_popup | Close the active browser mod popup when screensaver is stopped?                                | false     |
 | screensaver_entity               | An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |        |
+| disable_context_menu             | Disable context menu while screensaver is running?                                                     | false     |
 | show_images                      | Show images if screensaver is active?                                                                  | true      |
 | image_url                        | Fetch screensaver media files from this URL. See [Media Sources](media-sources.md) for details.        | See [Media Sources](media-sources.md) |
 | force_load_media_with_fetch      | Enforce media loading through `fetch()` instead of setting the elements `src` attribute.               | false     |
@@ -48,10 +49,11 @@ You can set the following configuration parameters for every individual Home Ass
 | media_entity_load_unchanged      | Should a new image be fetched from the entity after the display time has expired, even if the entity's state remains unchanged? | true      |
 | iframe_load_unchanged            | Should an iframe be reloaded once its display time has expired, even if its URL remains the same?      | false     |
 | iframe_interaction               | Allow interaction with the iframe content?                                                             | false     |
-| immich_api_key                   | API key that is used for authentication at the [immich API](media-sources.md#immich-api)               |           |
+| immich_api_keys                  | API keys that are used for authentication at the [immich API](media-sources.md#immich-api)             | []        |
 | immich_shared_albums             | Display media from shared Immich albums.                                                               | true      |
 | immich_album_names               | Display media only from the specified Immich albums.                                                   | []        |
 | immich_tag_names                 | Display media only with the specified tags.                                                            | []        |
+| immich_exclude_tag_names         | Exclude media with the specified tags.                                                                 | []        |
 | immich_persons                   | Display media only featuring the specified people.                                                     | []        |
 | immich_memories                  | Display only today’s memories.                                                                         | false     |
 | immich_favorites                 | Display only media marked as favorite.                                                                 | false     |
@@ -87,6 +89,7 @@ You can set the following configuration parameters for every individual Home Ass
 | info_move_pattern                | Movement pattern of the info box at a specified interval (possible values are: random / corners).      | random     |
 | info_move_interval               | Interval of movement of the info box in seconds (0 = no movement).                                     | 0          |
 | info_move_fade_duration          | Duration of the fade-in and fade-out animation of the info box in case of movement (0 = no animation). | 2.0        |
+| theme                            | Specifies the Home Assistant theme to apply to the info box. Defaults to the theme defined in the user profile. |            |
 | style                            | Additional CSS styles for WallPanel elements.                                                          | {}         |
 | badges                           | Badges to display in info box. Set to [] to show no badges at all. See [Badges](info-box.md#badges) for details.  | []         |
 | cards                            | Cards to display in info box. Set to [] to show no cards at all. See [Cards](info-box.md#cards) for details.      | []         |
@@ -96,8 +99,11 @@ You can set the following configuration parameters for every individual Home Ass
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |            |
 | profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |            |
 | camera_motion_detection_enabled          | Activate camera based motion detection? Screensaver is stopped when movement is detected See [Camera motion detection](camera-motion-detection.md) for details. | false      |
+| camera_motion_detection_stop_screensaver | Stop screensaver when motion is detected?                                                      | true       |
+| camera_motion_detection_set_entity       | An entity of type 'input_boolean' to update with the motion detection state (on = motion detected, off = no motion detected). | | 
 | camera_motion_detection_facing_mode      | Which camera to use (user / environment / left / right).                                       | user       |
 | camera_motion_detection_threshold        | If this many percent of the pixels change between two images, this is counted as movement.     | 5          |
+| camera_motion_detection_motion_stop_delay | The time in seconds to wait after motion stops before resetting the state to no motion detected. | 2.0     |
 | camera_motion_detection_capture_width    | Width of the images captured by the camera in pixels.                                          | 64         |
 | camera_motion_detection_capture_height   | Height of the images captured by the camera in pixels.                                         | 48         |
 | camera_motion_detection_capture_interval | Interval in seconds at which images are captured by the camera.                                | 0.3        |

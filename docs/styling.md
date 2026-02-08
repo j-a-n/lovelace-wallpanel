@@ -1,4 +1,13 @@
 # Styling
+You can use the `theme` configuration option to specify the theme for the WallPanel Info Box.
+
+**Example**
+
+```yaml
+wallpanel:
+  theme: Frosted Glass
+```
+
 You can customize the style of every WallPanel element.
 
 The most important element IDs are:
