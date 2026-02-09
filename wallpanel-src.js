@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.61.0";
+const version = "4.61.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -2725,7 +2725,7 @@ function initWallpanel() {
 			async function processAssets(assets, apiKey, folderName = null) {
 				await fetchAssetInfo(assets, apiKey);
 
-				assets.forEach((asset) => {
+				for (const asset of assets) {
 					logger.debug("Processing immich asset", asset);
 					const assetType = asset.type.toLowerCase();
 					if (!["image", "video"].includes(assetType)) {
@@ -2793,7 +2793,7 @@ function initWallpanel() {
 						folderName: folderName
 					};
 					mediaInfo[url] = info;
-				});
+				}
 			}
 
 			function finalizeImageList() {
@@ -2978,10 +2978,10 @@ function initWallpanel() {
 								return wp._immichFetch(`${apiUrl}/albums/${albumId}`, apiKey);
 							});
 							const albumDetailsList = await Promise.all(albumDetailPromises);
-							albumDetailsList.forEach(async (albumDetails) => {
+							for (const albumDetails of albumDetailsList) {
 								logger.debug(`Got immich album details`, albumDetails);
 								await processAssets(albumDetails.assets, apiKey, albumDetails.albumName);
-							});
+							}
 						} else {
 							logger.debug("No matching immich albums found or selected.");
 						}
