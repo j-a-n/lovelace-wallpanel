@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.62.0";
+const version = "4.62.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -674,7 +674,7 @@ function mergeConfig(target, ...sources) {
 					}
 					if (typeof target[key] === "boolean") {
 						val = ["true", "on", "yes", "1"].includes(val.toString());
-					} else if (Array.isArray(target[key]) && !Array.isArray(val)) {
+					} else if (Array.isArray(target[key]) && typeof val === "string") {
 						val = val.split(",").map((item) => item.trim());
 					}
 					return val;
