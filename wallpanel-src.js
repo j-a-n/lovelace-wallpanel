@@ -2738,28 +2738,34 @@ function initWallpanel() {
 
 				for (const asset of assets) {
 					logger.debug("Processing immich asset", asset);
+
 					const assetType = asset.type.toLowerCase();
 					if (!["image", "video"].includes(assetType)) {
 						logger.debug("Neither image nor video, skipping");
-						return;
-					}
-					if (config.exclude_media_types && config.exclude_media_types.includes(assetType)) {
-						logger.debug(`Media type "${assetType}" excluded`);
-						return;
+						continue;
 					}
 
+					if (config.exclude_media_types && config.exclude_media_types.includes(assetType)) {
+						logger.debug(`Media type "${assetType}" excluded`);
+						continue;
+					}
+
+					const excludedByRegExp = false;
 					for (const exclude of excludeRegExp) {
 						if (exclude.test(asset.originalFileName)) {
 							logger.debug(`Media item excluded by regex "${exclude}"`);
-							return;
+							excludedByRegExp = true;
 						}
+					}
+					if (excludedByRegExp) {
+						continue;
 					}
 
 					if (config.immich_exclude_tag_names && config.immich_exclude_tag_names.length) {
 						const matchingTags = asset.tags.filter((tag) => config.immich_exclude_tag_names.includes(tag));
 						if (matchingTags.length > 0) {
 							logger.debug(`Media item excluded due to tag(s): ${matchingTags.join(", ")}`);
-							return;
+							continue;
 						}
 					}
 
@@ -2777,7 +2783,7 @@ function initWallpanel() {
 						}
 						if (orientation === exclude_media_orientation) {
 							logger.debug(`Media item with orientation "${orientation}" excluded`);
-							return;
+							continue;
 						}
 					}
 
@@ -2792,7 +2798,7 @@ function initWallpanel() {
 
 					const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
 					if (urls.indexOf(url) >= 0) {
-						return;
+						continue;
 					}
 					urls.push(url);
 
