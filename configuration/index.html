@@ -1,0 +1,1916 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://j-a-n.github.io/lovelace-wallpanel/configuration/">
+      
+      
+        <link rel="prev" href="../quick-start/">
+      
+      
+        <link rel="next" href="../browser-mod/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Configuration - WallPanel Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="WallPanel Documentation" class="md-header__button md-logo" aria-label="WallPanel Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WallPanel Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/j-a-n/lovelace-wallpanel" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../quick-start/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quick Start
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Configuration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../browser-mod/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Browser Mod
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../screensaver/" class="md-tabs__link">
+          
+  
+  
+  Screensaver
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../styling/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Styling
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../camera-motion-detection/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Motion Detection
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../other-configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Other Configuration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../troubleshooting/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Troubleshooting
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../credits/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Cedits
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../additional-resources/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Additional Resources
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="WallPanel Documentation" class="md-nav__button md-logo" aria-label="WallPanel Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    WallPanel Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/j-a-n/lovelace-wallpanel" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#home-assistant-dashboard-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Home Assistant Dashboard configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#url-query-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        URL query parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dynamic-configuration-using-placeholders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamic configuration using placeholders
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profiles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#activating-a-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activating a Profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enable-wallpanel-on-specific-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable WallPanel on specific Views
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-mod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser Mod
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screensaver
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Screensaver
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../screensaver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screensaver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../media-sources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Media Sources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../media-info/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Media Info
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../info-box/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Info Box
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../styling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Styling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../camera-motion-detection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Motion Detection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../other-configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../credits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cedits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../additional-resources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Additional Resources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="configuration">Configuration</h1>
+<p>You can set the following configuration parameters for every individual Home Assistant Dashboard:</p>
+<table>
+<thead>
+<tr>
+<th>Config</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>enabled</td>
+<td>Enable WallPanel? <br><em>You will need to set this to </em><em>true</em><em> to activate the wall panel for the dashboard.</em></td>
+<td>false</td>
+</tr>
+<tr>
+<td>enabled_on_views</td>
+<td>Enable WallPanel on the named views (path) only. See <a href="./#enable-wallpanel-on-specific-views">Enable WallPanel on specific Views</a> for details.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>debug</td>
+<td>Enable debug mode?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>wait_for_browser_mod_time</td>
+<td>How long to wait for browser_mod to be available (in seconds)? This config attribute can only be set in the main configuration and not in profiles, user-specific or device-specific.</td>
+<td>0.25</td>
+</tr>
+<tr>
+<td>log_level_console</td>
+<td>Log level to use for logging to the browser console (error / warning / info / debug).</td>
+<td>info</td>
+</tr>
+<tr>
+<td>log_level_system</td>
+<td>Log level to use for logging to the HA system log (error / warning / info / debug).</td>
+<td>warning</td>
+</tr>
+<tr>
+<td>system_target_log_level</td>
+<td>Always use this log level when logging to the HA system log (error / warning / info / debug).</td>
+<td></td>
+</tr>
+<tr>
+<td>alert_errors</td>
+<td>Display error messages in an alert box.</td>
+<td>true</td>
+</tr>
+<tr>
+<td>hide_toolbar</td>
+<td>Hide the upper panel toolbar? Please see <a href="../faq/#dashboard-cannot-be-edited">FAQ</a> how to edit your dashboard when toolbar is hidden.</td>
+<td>false</td>
+</tr>
+<tr>
+<td>hide_toolbar_on_subviews</td>
+<td>Hide the toolbar in subviews too?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>keep_toolbar_space</td>
+<td>If the toolbar is hidden, should the space where the toolbar is normally located remain empty?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>hide_toolbar_action_icons</td>
+<td>Hide action items in the toolbar?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>hide_sidebar</td>
+<td>Hide the navigation sidebar?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>fullscreen</td>
+<td>Set browser window to fullscreen? <br><em>Due to browser restrictions you will need to interact with the screen once to activate fullscreen mode after loading the dashboard page.</em></td>
+<td>false</td>
+</tr>
+<tr>
+<td>keep_fullscreen</td>
+<td>Keep fullscreen active if the wallpanel is deactivated, for instance when disabled in a view.</td>
+<td>true</td>
+</tr>
+<tr>
+<td>z_index</td>
+<td>Wallpanels base CSS z-index.</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>idle_time</td>
+<td>Time in seconds after which the screensaver will start (0 = screensaver disabled).</td>
+<td>15</td>
+</tr>
+<tr>
+<td>fade_in_time</td>
+<td>Screensaver fade-in time in seconds.</td>
+<td>3.0</td>
+</tr>
+<tr>
+<td>fade_out_time_motion_detected</td>
+<td>Screensaver fade-out time in seconds when the screensaver is stopped because motion is detected.</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>fade_out_time_screensaver_entity</td>
+<td>Screensaver fade-out time in seconds when the screensaver is turned off by the screensaver entity.</td>
+<td>3.0</td>
+</tr>
+<tr>
+<td>fade_out_time_browser_mod_popup</td>
+<td>Screensaver fade-out time in seconds when the screensaver is stopped because of an browser mod popup.</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>fade_out_time_interaction</td>
+<td>Screensaver fade-out time in seconds when the screensaver is stopped because of user input.</td>
+<td>0.3</td>
+</tr>
+<tr>
+<td>crossfade_time</td>
+<td>Crossfade duration in seconds for screensaver images.</td>
+<td>3.0</td>
+</tr>
+<tr>
+<td>display_time</td>
+<td>Duration in seconds after which the next screensaver image will be shown.</td>
+<td>15.0</td>
+</tr>
+<tr>
+<td>keep_screen_on_time</td>
+<td>Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).</td>
+<td>0</td>
+</tr>
+<tr>
+<td>black_screen_after_time</td>
+<td>Time in seconds after which the screensaver will show just a black screen (0 = disabled).</td>
+<td>0</td>
+</tr>
+<tr>
+<td>control_reactivation_time</td>
+<td>Time in seconds for which interaction with the dashboard is disabled after the screensaver is stopped.</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>close_more_info_dialog_time</td>
+<td>Automatically close more-info dialogs after the specified number of seconds (0 = disabled).</td>
+<td>0</td>
+</tr>
+<tr>
+<td>stop_screensaver_on_mouse_move</td>
+<td>Stop screensaver on mouse movement?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>stop_screensaver_on_mouse_click</td>
+<td>Stop screensaver on mouse click / display touch?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>stop_screensaver_on_location_change</td>
+<td>Stop screensaver on navigation (location-changed events)?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>stop_screensaver_on_key_down</td>
+<td>Stop screensaver on key press?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>disable_screensaver_on_browser_mod_popup</td>
+<td>Disable screensaver if a browser mod popup is active?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>disable_screensaver_on_browser_mod_popup_func</td>
+<td>Javascript function to determine whether to disable screensaver based on active browser mod popup (see <a href="../browser-mod/#browser-mod-popups">Browser Mod Popups</a>)</td>
+<td></td>
+</tr>
+<tr>
+<td>disable_screensaver_when_assist_active</td>
+<td>Disable screensaver if assist dialog is active?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>screensaver_start_navigation_path</td>
+<td>Path to navigate to (e.g., /lovelace/default_view) when screensaver is started. Use a complete path to avoid redirects which will stop the screensaver.</td>
+<td></td>
+</tr>
+<tr>
+<td>screensaver_stop_close_browser_mod_popup</td>
+<td>Close the active browser mod popup when screensaver is stopped?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>screensaver_entity</td>
+<td>An entity of type 'input_boolean' to reflect and change the screensaver state (on = started, off = stopped). If browser_mod is installed, <code>${browser_id}</code> will be replaced with Browser ID (see <a href="../browser-mod/#placeholder-browser_id">Browser Mod</a>).</td>
+<td></td>
+</tr>
+<tr>
+<td>disable_context_menu</td>
+<td>Disable context menu while screensaver is running?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>show_images</td>
+<td>Show images if screensaver is active?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>image_url</td>
+<td>Fetch screensaver media files from this URL. See <a href="../media-sources/">Media Sources</a> for details.</td>
+<td>See <a href="../media-sources/">Media Sources</a></td>
+</tr>
+<tr>
+<td>force_load_media_with_fetch</td>
+<td>Enforce media loading through <code>fetch()</code> instead of setting the elements <code>src</code> attribute.</td>
+<td>false</td>
+</tr>
+<tr>
+<td>image_url_entity</td>
+<td>An entity of type 'input_text' in which the URL of the current screen saver image is stored. If browser_mod is installed, <code>${browser_id}</code> will be replaced with Browser ID (see <a href="../browser-mod/#placeholder-browser_id">Browser Mod</a>).</td>
+<td></td>
+</tr>
+<tr>
+<td>media_entity_load_unchanged</td>
+<td>Should a new image be fetched from the entity after the display time has expired, even if the entity's state remains unchanged?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>iframe_load_unchanged</td>
+<td>Should an iframe be reloaded once its display time has expired, even if its URL remains the same?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>iframe_interaction</td>
+<td>Allow interaction with the iframe content?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>immich_api_keys</td>
+<td>API keys that are used for authentication at the <a href="../media-sources/#immich-api">immich API</a></td>
+<td>[]</td>
+</tr>
+<tr>
+<td>immich_shared_albums</td>
+<td>Display media from shared Immich albums.</td>
+<td>true</td>
+</tr>
+<tr>
+<td>immich_album_names</td>
+<td>Display media only from the specified Immich albums.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>immich_tag_names</td>
+<td>Display media only with the specified tags.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>immich_exclude_tag_names</td>
+<td>Exclude media with the specified tags.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>immich_persons</td>
+<td>Display media only featuring the specified people.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>immich_memories</td>
+<td>Display only today’s memories.</td>
+<td>false</td>
+</tr>
+<tr>
+<td>immich_favorites</td>
+<td>Display only media marked as favorite.</td>
+<td>false</td>
+</tr>
+<tr>
+<td>immich_resolution</td>
+<td>The resolution to use for loading media from immich (possible values are: <code>preview</code> / <code>original</code>).</td>
+<td>preview</td>
+</tr>
+<tr>
+<td>exclude_filenames</td>
+<td>List of regular expressions for excluding files and directories from media sources. See <a href="../media-sources/#exclude-files">Media Sources</a> for details.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>exclude_media_types</td>
+<td>List of media types to exlcude media sources. See <a href="../media-sources/#exclude-files">Media Sources</a> for details.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>exclude_media_orientation</td>
+<td>Media orientation to exlcude. See <a href="../media-sources/#exclude-files">Media Sources</a> for details.</td>
+<td></td>
+</tr>
+<tr>
+<td>image_fit_landscape</td>
+<td>How to adjust a media item in landscape mode to fit the available space (cover or contain).</td>
+<td>cover</td>
+</tr>
+<tr>
+<td>image_fit_portrait</td>
+<td>How to adjust a media item in portrait mode to fit the available space (cover or contain).</td>
+<td>contain</td>
+</tr>
+<tr>
+<td>media_horizontal_align</td>
+<td>Determines how media items are aligned horizontally on the screen (left, center, or right).</td>
+<td>center</td>
+</tr>
+<tr>
+<td>media_vertical_align</td>
+<td>Determines how media items are aligned vertically on the screen (top, middle, or bottom).</td>
+<td>middle</td>
+</tr>
+<tr>
+<td>caclulate_media_size</td>
+<td>Calculate media container sizes.</td>
+<td>true</td>
+</tr>
+<tr>
+<td>image_background</td>
+<td>Possible values are <code>color</code> and <code>image</code>. When set to <code>image</code>, a snapshot from the current media item is used as the background, covering the entire screen. To customize its appearance, apply styles using the <code>wallpanel-screensaver-image-background</code> class.</td>
+<td>color</td>
+</tr>
+<tr>
+<td>media_list_update_interval</td>
+<td>When using a local media source, the media list is updated at this interval.</td>
+<td>3600</td>
+</tr>
+<tr>
+<td>media_list_max_size</td>
+<td>The maximum number of media items to fetch from the media source.</td>
+<td>500</td>
+</tr>
+<tr>
+<td>media_order</td>
+<td>The order in which the images are displayed (possible values are: sorted / random).</td>
+<td>random</td>
+</tr>
+<tr>
+<td>image_animation_ken_burns</td>
+<td>Apply a Ken Burns effect (panning and zooming) to the images?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>image_animation_ken_burns_zoom</td>
+<td>Zoom level for the Ken Burns effect.</td>
+<td>1.3</td>
+</tr>
+<tr>
+<td>image_animation_ken_burns_delay</td>
+<td>Start Ken Burns effect with a delay (in seconds).</td>
+<td>0</td>
+</tr>
+<tr>
+<td>image_animation_ken_burns_duration</td>
+<td>Specifies the duration of the Ken Burns effect in seconds. If set to 0, the <code>display_time</code> value is used instead.</td>
+<td>0</td>
+</tr>
+<tr>
+<td>video_loop</td>
+<td>Loop video until <code>display_time</code> is reached? Otherwise, immediately switch to the next media at the end of the video playback.</td>
+<td>false</td>
+</tr>
+<tr>
+<td>video_volume</td>
+<td>Volume of videos being played (0=0%, 1=100%).</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>show_image_info</td>
+<td>Show image info (EXIF / API) on top of image? Only available for local jpeg images containing EXIF data and images from the new Unsplash API. The config name was <code>show_exif_info</code> before version 4.7.</td>
+<td>false</td>
+</tr>
+<tr>
+<td>show_progress_bar</td>
+<td>Show animated progress bar towards next image being displayed?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>fetch_address_data</td>
+<td>Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>image_info_template</td>
+<td>Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The config name was <code>exif_info_template</code> before version 4.7.</td>
+<td>${DateTimeOriginal}</td>
+</tr>
+<tr>
+<td>touch_zone_size_next_image</td>
+<td>Size of the area on the right side of the screen at which a click will show the next image (as a percentage of the total screen width, 0 = disabled).</td>
+<td>15</td>
+</tr>
+<tr>
+<td>touch_zone_size_previous_image</td>
+<td>Size of the area on the left side of the screen at which a click will show the previous image (as a percentage of the total screen width, 0 = disabled).</td>
+<td>15</td>
+</tr>
+<tr>
+<td>info_animation_duration_x</td>
+<td>Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).</td>
+<td>0</td>
+</tr>
+<tr>
+<td>info_animation_duration_y</td>
+<td>Animation duration in seconds for the movement of the info box in y-direction (0 = no animation).</td>
+<td>0</td>
+</tr>
+<tr>
+<td>info_animation_timing_function_x</td>
+<td>The CSS timing-function to use for the animation of the info box movement in x-direction.</td>
+<td>ease</td>
+</tr>
+<tr>
+<td>info_animation_timing_function_y</td>
+<td>The CSS timing-function to use for the animation of the info box movement in y-direction.</td>
+<td>ease</td>
+</tr>
+<tr>
+<td>info_move_pattern</td>
+<td>Movement pattern of the info box at a specified interval (possible values are: random / corners).</td>
+<td>random</td>
+</tr>
+<tr>
+<td>info_move_interval</td>
+<td>Interval of movement of the info box in seconds (0 = no movement).</td>
+<td>0</td>
+</tr>
+<tr>
+<td>info_move_fade_duration</td>
+<td>Duration of the fade-in and fade-out animation of the info box in case of movement (0 = no animation).</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>theme</td>
+<td>Specifies the Home Assistant theme to apply to the info box. Defaults to the theme defined in the user profile.</td>
+<td></td>
+</tr>
+<tr>
+<td>style</td>
+<td>Additional CSS styles for WallPanel elements.</td>
+<td>{}</td>
+</tr>
+<tr>
+<td>badges</td>
+<td>Badges to display in info box. Set to [] to show no badges at all. See <a href="../info-box/#badges">Badges</a> for details.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>cards</td>
+<td>Cards to display in info box. Set to [] to show no cards at all. See <a href="../info-box/#cards">Cards</a> for details.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>views</td>
+<td>Dashboard views to display in info box. Set to [] to show no views at all. See <a href="../info-box/#views">Views</a> for details.</td>
+<td>[]</td>
+</tr>
+<tr>
+<td>content_interaction</td>
+<td>Allow interaction with the elements displayed in the info box?</td>
+<td>false</td>
+</tr>
+<tr>
+<td>profiles</td>
+<td>See <a href="#profiles">Configuration profiles</a> for details.</td>
+<td>{}</td>
+</tr>
+<tr>
+<td>profile</td>
+<td>Configuration profile to activate. If browser_mod is installed, <code>${browser_id}</code> will be replaced with Browser ID (see <a href="../browser-mod/#placeholder-browser_id">Browser Mod</a>).</td>
+<td></td>
+</tr>
+<tr>
+<td>profile_entity</td>
+<td>An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, <code>${browser_id}</code> will be replaced with Browser ID (see <a href="../browser-mod/#placeholder-browser_id">Browser Mod</a>).</td>
+<td></td>
+</tr>
+<tr>
+<td>camera_motion_detection_enabled</td>
+<td>Activate camera based motion detection? Screensaver is stopped when movement is detected See <a href="../camera-motion-detection/">Camera motion detection</a> for details.</td>
+<td>false</td>
+</tr>
+<tr>
+<td>camera_motion_detection_stop_screensaver</td>
+<td>Stop screensaver when motion is detected?</td>
+<td>true</td>
+</tr>
+<tr>
+<td>camera_motion_detection_set_entity</td>
+<td>An entity of type 'input_boolean' to update with the motion detection state (on = motion detected, off = no motion detected).</td>
+<td></td>
+</tr>
+<tr>
+<td>camera_motion_detection_facing_mode</td>
+<td>Which camera to use (user / environment / left / right).</td>
+<td>user</td>
+</tr>
+<tr>
+<td>camera_motion_detection_threshold</td>
+<td>If this many percent of the pixels change between two images, this is counted as movement.</td>
+<td>5</td>
+</tr>
+<tr>
+<td>camera_motion_detection_motion_stop_delay</td>
+<td>The time in seconds to wait after motion stops before resetting the state to no motion detected.</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>camera_motion_detection_capture_width</td>
+<td>Width of the images captured by the camera in pixels.</td>
+<td>64</td>
+</tr>
+<tr>
+<td>camera_motion_detection_capture_height</td>
+<td>Height of the images captured by the camera in pixels.</td>
+<td>48</td>
+</tr>
+<tr>
+<td>camera_motion_detection_capture_interval</td>
+<td>Interval in seconds at which images are captured by the camera.</td>
+<td>0.3</td>
+</tr>
+<tr>
+<td>camera_motion_detection_capture_visible</td>
+<td>Should the captured images be displayed on the user interface for debugging?</td>
+<td>false</td>
+</tr>
+</tbody>
+</table>
+<h2 id="home-assistant-dashboard-configuration">Home Assistant Dashboard configuration</h2>
+<p>You can add the configuration to your Home Assistant Dashboard configuration yaml (raw config).</p>
+<ul>
+<li>Click Overview in your sidebar.</li>
+<li>Click the three dots menu (top-right) and click on Edit Dashboard.</li>
+<li>Click the three dots menu again and click on Raw configuration editor.</li>
+<li>Add the <code>wallpanel</code> configuration above anything else.</li>
+</ul>
+<p><strong>Short example</strong>:
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">hide_toolbar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">hide_sidebar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">fullscreen</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div></p>
+<p><strong>Extended example</strong>:
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">enabled_on_views</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default_view</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">debug</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">hide_toolbar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">hide_sidebar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">fullscreen</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">idle_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">keep_screen_on_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">86400</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">black_screen_after_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7200</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">control_reactivation_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">screensaver_start_navigation_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/lovelace/default_view</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="nt">image_url</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;http://picsum.photos/${width}/${height}?random=${timestamp}&#39;</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="nt">image_fit_landscape</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cover</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">media_list_update_interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span><span class="nt">media_order</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;sorted&#39;</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="nt">exclude_filenames</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">  </span><span class="nt">show_image_info</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">  </span><span class="nt">fetch_address_data</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">  </span><span class="nt">image_info_template</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;${address.town|address.city!prefix=!suffix=</span><span class="nv"> </span><span class="s">//</span><span class="nv"> </span><span class="s">}${DateTimeOriginal!options=year:numeric,month:long}&#39;</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">  </span><span class="nt">screensaver_entity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input_boolean.wallpanel_screensaver</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">  </span><span class="nt">info_animation_duration_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">  </span><span class="nt">info_animation_duration_y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">11</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">  </span><span class="nt">info_animation_timing_function_x</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;ease-in-out&#39;</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">  </span><span class="nt">info_animation_timing_function_y</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;ease-in-out&#39;</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">  </span><span class="nt">info_move_pattern</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">random</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">  </span><span class="nt">info_move_interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">  </span><span class="nt">info_move_fade_duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="w">  </span><span class="nt">content_interaction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">  </span><span class="nt">style</span><span class="p">:</span>
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="w">    </span><span class="nt">wallpanel-screensaver-info-box</span><span class="p">:</span>
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="w">      </span><span class="nt">font-size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8vh</span>
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="w">      </span><span class="nt">font-weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">600</span>
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="w">      </span><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;#eeeeee&#39;</span>
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="w">      </span><span class="nt">text-shadow</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;-2px</span><span class="nv"> </span><span class="s">-2px</span><span class="nv"> </span><span class="s">0</span><span class="nv"> </span><span class="s">#03a9f4,</span><span class="nv"> </span><span class="s">2px</span><span class="nv"> </span><span class="s">-2px</span><span class="nv"> </span><span class="s">0</span><span class="nv"> </span><span class="s">#03a9f4,</span><span class="nv"> </span><span class="s">-2px</span><span class="nv"> </span><span class="s">2px</span><span class="nv"> </span><span class="s">0</span><span class="nv"> </span><span class="s">#03a9f4,</span><span class="nv"> </span><span class="s">2px</span><span class="nv"> </span><span class="s">2px</span><span class="nv"> </span><span class="s">0</span><span class="nv"> </span><span class="s">#03a9f4&#39;</span>
+</span></code></pre></div></p>
+<h2 id="url-query-parameters">URL query parameters</h2>
+<p>It is also possible to pass configuration parameters in the query string.
+These parameters (<strong>wp_&lt;parameter&gt;</strong>) will override the corresponding properties in the yaml configuration.
+Use JSON syntax for the values.</p>
+<p><strong>Example</strong>:
+<code>http://hass:8123/lovelace/default_view?wp_hide_sidebar=false</code></p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Please note that the URL parameters may be lost when navigating in the Home Assistant interface.
+Therefore, this option should not normally be used.</p>
+</div>
+<h2 id="dynamic-configuration-using-placeholders">Dynamic configuration using placeholders</h2>
+<p>The WallPanel configuration can be changed dynamically by using input_text or input_select helpers.
+Placeholders can be used in the yaml configuration, which are replaced by the state value of the corresponding entity.
+These placeholders have the form <code>${entity:&lt;entity-id&gt;}</code>, where <code>&lt;entity-id&gt;</code> must be replaced by the ID of an existing HA entity.
+Whenever the state of such an entity changes, the configuration is updated immediately.</p>
+<p>For the example, an input_select helper named <code>wallpanel_image_url</code> must be created in HA.
+The enity ID of the helper will be <code>input_select.wallpanel_image_url</code> by default.
+A placeholder can now be inserted in the yaml configuration:
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">image_url</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;${entity:input_select.wallpanel_image_url}&#39;</span>
+</span></code></pre></div>
+Whenever the state of the entity is changed manually or by automation, the configuration is updated accordingly.</p>
+<p>It is also possible to dynamically change only a part of the configuration value:
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">image_url</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&amp;query=${entity:input_text.wallpanel_unsplash_query}&#39;</span>
+</span></code></pre></div></p>
+<p>If Browser Mod is available, you can also use the <code>${browser_id}</code> placeholder:
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">screensaver_entity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input_boolean.${browser_id}_wallpanel_screensaver</span>
+</span></code></pre></div>
+See <a href="../browser-mod/#placeholder-browser_id">Browser Mod - Placeholder ${browser_id}</a> for details.</p>
+<h2 id="profiles">Profiles</h2>
+<p>With profiles you can easily switch between different configurations.
+Each profile is defined under the <code>profiles</code> attribute, while settings outside of a profile serve as the default configuration.</p>
+<p><strong>Example</strong></p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">idle_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">style</span><span class="p">:</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nt">wallpanel-screensaver-overlay</span><span class="p">:</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">background</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;#00000000&#39;</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">profiles</span><span class="p">:</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">night</span><span class="p">:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">idle_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">style</span><span class="p">:</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="nt">wallpanel-screensaver-overlay</span><span class="p">:</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">          </span><span class="nt">background</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;#000000bb&#39;</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="nt">black</span><span class="p">:</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">      </span><span class="nt">black_screen_after_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="nt">user.jane</span><span class="p">:</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="nt">device.e9a2c86e_5526f1ee</span><span class="p">:</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">      </span><span class="nt">idle_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">      </span><span class="nt">screensaver_entity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input_boolean.kitchen_wallpanel_screensaver</span>
+</span></code></pre></div>
+<p>In this example, there are four additional profiles: <code>night</code>, <code>black</code>, <code>user.jane</code> and <code>device.e9a2c86e_5526f1ee</code>.
+When a profile is activated, its settings override the default configuration.</p>
+<h3 id="activating-a-profile">Activating a Profile</h3>
+<p>There are several ways to activate a profile:</p>
+<p><strong>1. Automatic Activation for User Profiles</strong></p>
+<p>A user profile is automatically applied if it matches the logged-in user.</p>
+<ul>
+<li>The name of a user profile must begin with <code>user.</code>, followed by a user ID or display name (usernames are not supported).</li>
+<li>The display name of the logged-in user is converted to lowercase, and spaces are replaced with underscores (<code>_</code>). For example, <code>Jane Doe</code> would be converted to <code>jane_doe</code>.</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The ID of a user can be found when you click on a user entry in Settings =&gt; Persons =&gt; <a href="https://my.home-assistant.io/redirect/users/">Users</a></p>
+</div>
+<p><strong>2. Automatic Activation for Device Profiles</strong></p>
+<p>A device profile is activated if it matches the Browser Mod Browser ID.</p>
+<ul>
+<li>The profile name must begin with <code>device.</code>, followed by the Browser ID configured in Browser Mod.</li>
+<li>Any hyphens (<code>-</code>) in the Browser ID are replaced with underscores (<code>_</code>).</li>
+</ul>
+<p>For more details, refer to <a href="../browser-mod/">Integration with Browser Mod</a>.</p>
+<p><strong>3. Dynamic Activation via an Input Helper</strong></p>
+<p>Profiles can be dynamically switched using an <code>input_text</code> or <code>input_select</code> helper.</p>
+<ul>
+<li>In the example, an <code>input_text</code> helper named <code>wallpanel_profile</code> must be created in Home Assistant.</li>
+<li>The profile can then be changed by updating <code>input_text.wallpanel_profile</code> manually or through automation (e.g., based on time).</li>
+<li>Setting it to a valid profile name applies that profile immediately. Any value that does not match a defined profile will revert to the default settings.</li>
+</ul>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">profile_entity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input_text.wallpanel_profile</span>
+</span></code></pre></div>
+<p><strong>4. Manual Activation via Configuration</strong></p>
+<p>You can specify a profile directly in the wallpanel configuration, although this method is rarely needed.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">wallpanel</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">profile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">night</span>
+</span></code></pre></div>
+<p><strong>5. Activation via Query String Parameter</strong></p>
+<p>A profile can be selected using a URL parameter:
+<code>http://hass:8123/lovelace/default_view?wp_profile=night</code></p>
+<h2 id="enable-wallpanel-on-specific-views">Enable WallPanel on specific Views</h2>
+<p>To enable WallPanel only on specific views, use the <code>enabled_on_views</code> configuration option.</p>
+<p>This option accepts a list of view paths where WallPanel should be active. You can find the path in your dashboard’s YAML configuration or directly from the browser URL.</p>
+<p>For example, in the URL below, the path of the view is <code>1</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>https://hass:8123/dashboard-test/1
+</span></code></pre></div>
+<p>If you leave the list empty, WallPanel will be enabled on all views by default.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.features", "toc.integrate", "navigation.top", "search.suggest", "search.hightlight", "content.tabs.link", "content.code.annotation", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
