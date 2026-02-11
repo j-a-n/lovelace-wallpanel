@@ -2818,7 +2818,7 @@ function initWallpanel() {
 
 			try {
 				for (const apiKey of config.immich_api_keys) {
-					console.debug(`Using immich API key ${apiKey}`);
+					logger.debug(`Using immich API key ${apiKey}`);
 					if (config.immich_persons && config.immich_persons.length) {
 						logger.debug("Searching for assets based on persons");
 						const orPersonNames = config.immich_persons.map((entry) =>
