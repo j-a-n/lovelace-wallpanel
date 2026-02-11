@@ -2187,6 +2187,17 @@ function initWallpanel() {
 		reconfigure(oldConfig) {
 			const oldConfigAvailable = oldConfig && Object.keys(oldConfig).length > 0;
 
+			if (
+				oldConfigAvailable &&
+				(oldConfig.hide_toolbar != config.hide_toolbar ||
+					oldConfig.hide_toolbar_action_icons != config.hide_toolbar_action_icons ||
+					oldConfig.hide_toolbar_on_subviews != config.hide_toolbar_on_subviews ||
+					oldConfig.hide_sidebar != config.hide_sidebar ||
+					oldConfig.fullscreen != config.fullscreen)
+			) {
+				activateWallpanel();
+			}
+
 			if (config.theme) {
 				logger.info("Apply theme", config.theme);
 				wallpanelContainer.theme = config.theme;
