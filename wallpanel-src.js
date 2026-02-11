@@ -762,7 +762,9 @@ function updateConfig() {
 		logger.debug(`Profile set from entity state: ${profile}`);
 	}
 
-	config.stop_screensaver_on_mouse_move = !config.content_interaction;
+	if (config.content_interaction) {
+		config.stop_screensaver_on_mouse_move = false;
+	}
 
 	if (config.image_url) {
 		config.image_url = config.image_url.replace(/^media-entity:\/\//, "media-entity-image://");
