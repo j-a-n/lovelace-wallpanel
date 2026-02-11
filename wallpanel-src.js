@@ -2754,7 +2754,7 @@ function initWallpanel() {
 						continue;
 					}
 
-					const excludedByRegExp = false;
+					let excludedByRegExp = false;
 					for (const exclude of excludeRegExp) {
 						if (exclude.test(asset.originalFileName)) {
 							logger.debug(`Media item excluded by regex "${exclude}"`);
@@ -5252,10 +5252,12 @@ function readEXIFData(file, start) {
 	if (tags.GPSInfoIFDPointer) {
 		gpsData = readTags(file, tiffOffset, tiffOffset + tags.GPSInfoIFDPointer, GPSTags, bigEnd);
 		for (tag in gpsData) {
-			switch (tag) {
-				case "GPSVersionID":
+			if (tag == "GPSVersionID") {
+				try {
 					gpsData[tag] = gpsData[tag][0] + "." + gpsData[tag][1] + "." + gpsData[tag][2] + "." + gpsData[tag][3];
-					break;
+				} catch {
+					// Prevent uncaught error
+				}
 			}
 			tags[tag] = gpsData[tag];
 		}
