@@ -1996,7 +1996,7 @@ function initWallpanel() {
 			if (element == this.imageTwo) {
 				cont = this.imageTwoBackground;
 			}
-			cont.style.backgroundImage = srcMediaUrl ? `url(${srcMediaUrl})` : "";
+			cont.style.backgroundImage = srcMediaUrl ? `url('${srcMediaUrl}')` : "";
 		}
 
 		connectedCallback() {
