@@ -44,9 +44,9 @@ See section "Styles".
 !!! tip
     Set `image_info_template: analyze` to show all available tags.
 
-**Examples**
+## Examples
 
-Display image path.
+### Display image path
 
 ```yaml
 show_image_info: true
@@ -56,7 +56,8 @@ image_info_template: >-
     </span>
 ```
 
-Display the location and date.
+### Display the location and date
+
 The first available tag (`address.town`, `address.city`, or `address.municipality`) with a non-empty value is used.
 Where `prefix` and `suffix` are always identical, regardless of which tag is used.
 
@@ -65,9 +66,12 @@ show_image_info: true
 image_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
 ```
 
+### Date or folder name
 Show formatted `DateTimeOriginal` with the prefix `Date: `.
 If `DateTimeOriginal` is missing, use `image.folderName` with prefix `Folder: `.
 
 ```yaml
-${DateTimeOriginal!prefix=Date: !options=year:numeric,month:long,day:2-digit||image.folderName!prefix=Folder: }
+show_image_info: true
+image_info_template: '${DateTimeOriginal!prefix=Date: !options=year:numeric,month:long,day:2-digit||image.folderName!prefix=Folder: }'
 ```
+
