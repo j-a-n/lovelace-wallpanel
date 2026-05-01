@@ -2095,7 +2095,7 @@ function initWallpanel() {
 			if (element == this.imageTwo) {
 				cont = this.imageTwoBackground;
 			}
-			cont.style.backgroundImage = srcMediaUrl ? `url("${encodeURI(srcMediaUrl)}")` : "";
+			cont.style.backgroundImage = srcMediaUrl ? `url('${srcMediaUrl.replace(/'/g, "%27")}')` : "";
 		}
 
 		connectedCallback() {
