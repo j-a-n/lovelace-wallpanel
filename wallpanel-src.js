@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.62.3";
+const version = "4.63.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -2571,66 +2571,73 @@ function initWallpanel() {
 					infoElement.style.pointerEvents = "auto";
 				});
 			} else {
-				html = html.replace(/\${([^}]+)}/g, (match, tags) => {
-					let prefix = "";
-					let suffix = "";
-					let options = null;
-					if (tags.includes("!")) {
-						const tmp = tags.split("!");
-						tags = tmp[0];
-						for (let i = 1; i < tmp.length; i++) {
-							const argType = tmp[i].substring(0, tmp[i].indexOf("="));
-							const argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
-							if (argType == "prefix") {
-								prefix = argValue;
-							} else if (argType == "suffix") {
-								suffix = argValue;
-							} else if (argType == "options") {
-								options = {};
-								argValue.split(",").forEach((optVal) => {
-									const tmp2 = optVal.split(":", 2);
-									if (tmp2[0] && tmp2[1]) {
-										options[tmp2[0].replace(/\s/g, "")] = tmp2[1].replace(/\s/g, "");
-									}
-								});
+				html = html.replace(/\${([^}]+)}/g, (match, alternativeTags) => {
+					const altTags = alternativeTags.split("||");
+					for (let t = 0; t < altTags.length; t++) {
+						let tags = altTags[t];
+						logger.debug(`Processing tags: ${tags}`);
+						let prefix = "";
+						let suffix = "";
+						let options = null;
+						if (tags.includes("!")) {
+							const tmp = tags.split("!");
+							tags = tmp[0];
+							for (let i = 1; i < tmp.length; i++) {
+								const argType = tmp[i].substring(0, tmp[i].indexOf("="));
+								const argValue = tmp[i].substring(tmp[i].indexOf("=") + 1);
+								if (argType == "prefix") {
+									prefix = argValue;
+								} else if (argType == "suffix") {
+									suffix = argValue;
+								} else if (argType == "options") {
+									options = {};
+									argValue.split(",").forEach((optVal) => {
+										const tmp2 = optVal.split(":", 2);
+										if (tmp2[0] && tmp2[1]) {
+											options[tmp2[0].replace(/\s/g, "")] = tmp2[1].replace(/\s/g, "");
+										}
+									});
+								}
 							}
 						}
-					}
 
-					let val = "";
-					const tagList = tags.split("|");
-					let tag = "";
-					for (let i = 0; i < tagList.length; i++) {
-						tag = tagList[i];
-						const keys = tag.replace(/\s/g, "").split(".");
-						val = mediaInfo;
-						keys.forEach((key) => {
+						let val = "";
+						const tagList = tags.split("|");
+						let tag = "";
+						for (let i = 0; i < tagList.length; i++) {
+							tag = tagList[i];
+							const keys = tag.replace(/\s/g, "").split(".");
+							val = mediaInfo;
+							keys.forEach((key) => {
+								if (val) {
+									val = val[key];
+								}
+							});
 							if (val) {
-								val = val[key];
+								break;
 							}
-						});
-						if (val) {
-							break;
 						}
-					}
-					if (!val) {
-						return "";
-					}
-					if (/DateTime/i.test(tag)) {
-						const date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, "$1-$2-$3T$4:$5:$6"));
-						if (isNaN(date)) {
-							// Invalid date
-							return "";
+						if (!val) {
+							// No value, try next alternative tag
+							continue;
 						}
-						if (!options) {
-							options = { year: "numeric", month: "2-digit", day: "2-digit" };
+						if (/DateTime/i.test(tag)) {
+							const date = new Date(val.replace(/(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/, "$1-$2-$3T$4:$5:$6"));
+							if (isNaN(date)) {
+								// Invalid date, try next alternative tag
+								continue;
+							}
+							if (!options) {
+								options = { year: "numeric", month: "2-digit", day: "2-digit" };
+							}
+							val = date.toLocaleDateString((elHass.hass || elHass.__hass).locale.language, options);
 						}
-						val = date.toLocaleDateString((elHass.hass || elHass.__hass).locale.language, options);
+						if (typeof val === "object") {
+							val = JSON.stringify(val);
+						}
+						return prefix + val + suffix;
 					}
-					if (typeof val === "object") {
-						val = JSON.stringify(val);
-					}
-					return prefix + val + suffix;
+					return "";
 				});
 			}
 

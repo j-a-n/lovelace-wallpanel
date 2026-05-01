@@ -14,20 +14,7 @@ Available attributes are: `country`, `country_code`, `county`, `municipality`, `
 See [Nominatim Reverse Geocoding](https://nominatim.org/release-docs/latest/api/Reverse/) for details.
 Please respect the [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/).
 
-If you specify multiple alternative values separated by a pipe symbol (`|`), the first available attribute is used.
-
-A prefix and suffix string can be added for each placeholder.
-Prefix and suffix are not displayed if the placeholder value is empty.
-
-For date values you can specify date format options.
-Each option must consist of an `<option name>:<option value>` pair.
-Multiple options must be separated by commas.
-Available option names are: `year`, `month`, `day`, `weekday`, `hour`, `minute` and `second`.
-Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
-See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
-
-
-The following placeholders can also be used:
+The following tags can also be used:
 
 * `image.url`: The full URL of the media item.
 * `image.path`: The complete path to the media item.
@@ -37,18 +24,30 @@ The following placeholders can also be used:
 * `mediaCount`: Total number of media files available.
 * `mediaPosition`: Position of the current file in the list of media files.
 
+A prefix and suffix string can be added for each tag.
+Prefix and suffix are not displayed if the tag value is empty.
+
+For date values you can specify date format options.
+Each option must consist of an `<option name>:<option value>` pair.
+Multiple options must be separated by commas.
+Available option names are: `year`, `month`, `day`, `weekday`, `hour`, `minute` and `second`.
+Possible option values are: `long`, `short`, `narrow`, `numeric` and `2-digit`.
+See [toLocaleDateString options](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString) for details.
+
+If you specify multiple tags separated by a pipe symbol (`|`), the first available tag is used.
+You can also separate the tags by a double pipe (`||`).
+In this case you can add separate a `prefix`, `suffix` and `option` to the alternative tags.
+
+The CSS class `wallpanel-screensaver-image-info` can be used to style the image info.
+See section "Styles".
+
 !!! tip
-    Set `image_info_template: analyze` to show all available attributes.
+    Set `image_info_template: analyze` to show all available tags.
 
 **Examples**
 
-Display location and date
-```yaml
-show_image_info: true
-image_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
-```
+Display image path.
 
-Display image path
 ```yaml
 show_image_info: true
 image_info_template: >-
@@ -57,5 +56,18 @@ image_info_template: >-
     </span>
 ```
 
-The CSS class `wallpanel-screensaver-image-info` can be used to style the image info.
-See section "Styles".
+Display the location and date.
+The first available tag (`address.town`, `address.city`, or `address.municipality`) with a non-empty value is used.
+Where `prefix` and `suffix` are always identical, regardless of which tag is used.
+
+```yaml
+show_image_info: true
+image_info_template: '<span style="color:#990000">//</span> ${address.town|address.city|address.municipality!prefix=!suffix= // }${DateTimeOriginal!options=year:numeric,month:long,day:2-digit}'
+```
+
+Show formatted `DateTimeOriginal` with the prefix `Date: `.
+If `DateTimeOriginal` is missing, use `image.folderName` with prefix `Folder: `.
+
+```yaml
+${DateTimeOriginal!prefix=Date: !options=year:numeric,month:long,day:2-digit||image.folderName!prefix=Folder: }
+```
