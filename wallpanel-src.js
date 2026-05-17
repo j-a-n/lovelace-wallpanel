@@ -2532,7 +2532,13 @@ function initWallpanel() {
 				mediaInfo.image.path = mediaUrlWithoutQuery.replace(/^[^:]+:\/\/[^/]+/, "");
 			}
 			if (mediaInfo.image.relativePath === undefined) {
-				mediaInfo.image.relativePath = mediaUrlWithoutQuery.replace(config.image_url, "").replace(/^\/+/, "");
+				// When image_url is configured as a media-source:// URI (e.g. media-source://media_source/local/),
+				// mediaUrl gets resolved to a full HTTP URL that won't match config.image_url.
+				// Use infoCacheUrl (which retains the original media-source:// URI) for that case.
+				const baseUrl = mediaSourceType() === "media-source"
+					? infoCacheUrl.replace(/\?[^?]*$/, "").replace(/\/+$/, "")
+					: mediaUrlWithoutQuery;
+				mediaInfo.image.relativePath = baseUrl.replace(config.image_url, "").replace(/^\/+/, "");
 			}
 			if (mediaInfo.image.filename === undefined) {
 				mediaInfo.image.filename = mediaUrlWithoutQuery.replace(/^.*[\\/]/, "");
