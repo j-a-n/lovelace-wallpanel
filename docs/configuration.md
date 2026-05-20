@@ -80,6 +80,7 @@ You can set the following configuration parameters for every individual Home Ass
 | show_progress_bar                | Show animated progress bar towards next image being displayed?                                         | false      |
 | fetch_address_data               | Fetch address data for EXIF GPS coordinates from nominatim.openstreetmap.org?                          | false      |
 | image_info_template              | Format of image info display (HTML). ${EXIF-tag-name} will be replaced with the corresponding EXIF tag value. The config name was `exif_info_template` before version 4.7. | ${DateTimeOriginal} |
+| touch_zone_navigation_enabled    | Enable the left/right tap zones for navigating to previous/next image? When disabled, clicks in those zones dismiss the screensaver instead (subject to `stop_screensaver_on_mouse_click`). Horizontal swipes always navigate regardless. | true |
 | touch_zone_size_next_image       | Size of the area on the right side of the screen at which a click will show the next image (as a percentage of the total screen width, 0 = disabled).   | 15         |
 | touch_zone_size_previous_image   | Size of the area on the left side of the screen at which a click will show the previous image (as a percentage of the total screen width, 0 = disabled).   | 15         |
 | info_animation_duration_x        | Animation duration in seconds for the movement of the info box in x-direction (0 = no animation).      | 0          |

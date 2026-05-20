@@ -75,6 +75,7 @@ const defaultConfig = {
 	image_background: "color", // color / image
 	video_loop: false,
 	video_volume: 0.0,
+	touch_zone_navigation_enabled: true,
 	touch_zone_size_next_image: 15,
 	touch_zone_size_previous_image: 15,
 	show_progress_bar: false,
@@ -4271,13 +4272,18 @@ function initWallpanel() {
 				}
 				evt.stopImmediatePropagation();
 
-				if (config.touch_zone_size_next_image > 0 && right <= config.touch_zone_size_next_image / 100) {
+				if (
+					config.touch_zone_navigation_enabled &&
+					config.touch_zone_size_next_image > 0 &&
+					right <= config.touch_zone_size_next_image / 100
+				) {
 					if (isClick) {
 						switchMedia = "forwards";
 					} else {
 						return;
 					}
 				} else if (
+					config.touch_zone_navigation_enabled &&
 					config.touch_zone_size_previous_image > 0 &&
 					right >= (100 - config.touch_zone_size_previous_image) / 100
 				) {
