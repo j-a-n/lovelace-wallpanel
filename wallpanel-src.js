@@ -76,6 +76,7 @@ const defaultConfig = {
 	image_background: "color", // color / image
 	video_loop: false,
 	video_volume: 0.0,
+	video_play_to_end: false,
 	touch_zone_size_next_image: 15,
 	touch_zone_size_previous_image: 15,
 	show_progress_bar: false,
@@ -3814,6 +3815,7 @@ function initWallpanel() {
 			};
 
 			videoElement.loop = config.video_loop;
+			videoElement.play_to_end = config.video_play_to_end;
 			if (!config.video_loop && !videoElement._wp_video_playback_listeners) {
 				// Immediately switch to next image at the end of the playback.
 				const onTimeUpdate = () => {
