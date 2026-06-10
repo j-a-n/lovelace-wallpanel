@@ -2085,6 +2085,15 @@ function initWallpanel() {
 			setTimeout(this.updateShadowStyle.bind(this), 500);
 		}
 
+		getDisplayTime() {
+			let displayTime = config.display_time;
+			const videoDuration = this.getActiveMediaElement(true).duration;
+			if (config.video_play_to_end && videoDuration) {
+				displayTime = Math.ceil(videoDuration);
+			}
+			return displayTime;
+		}
+
 		restartProgressBarAnimation() {
 			if (!this.progressBarContainer) {
 				return;
@@ -2096,7 +2105,7 @@ function initWallpanel() {
 			const wp = this;
 			setTimeout(function () {
 				// Restart CSS animation.
-				wp.progressBar.style.animation = `horizontalProgress ${config.display_time}s linear`;
+				wp.progressBar.style.animation = `horizontalProgress ${wp.getDisplayTime()}s linear`;
 				// Do not advance progress bar if slideshow is paused.
 				wp.progressBar.style.animationPlayState = wp.isPaused ? "paused" : "running";
 			}, 25);
@@ -2115,7 +2124,7 @@ function initWallpanel() {
 				delay = 50;
 			}
 			const duration = Math.ceil(
-				config.image_animation_ken_burns_duration || (config.display_time + config.crossfade_time * 2) * 1.2
+				config.image_animation_ken_burns_duration || (this.getDisplayTime() + config.crossfade_time * 2) * 1.2
 			);
 			const animation =
 				config.image_animation_ken_burns_animations[
@@ -4192,7 +4201,7 @@ function initWallpanel() {
 				logger.debug("Setting screen to black");
 				this.screensaverOverlay.style.background = "#000000";
 			} else if (config.show_images) {
-				if (!this.isPaused && now - this.lastMediaUpdate >= config.display_time * 1000) {
+				if (!this.isPaused && now - this.lastMediaUpdate >= this.getDisplayTime() * 1000) {
 					this.switchActiveMedia("display_time_elapsed");
 				}
 				if (now - this.lastMediaListUpdate >= config.media_list_update_interval * 1000) {
