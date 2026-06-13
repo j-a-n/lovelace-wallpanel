@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.65.0";
+const version = "4.65.1";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -1540,9 +1540,9 @@ function initWallpanel() {
 			this.screensaverContainer.style.position = "fixed";
 			this.screensaverContainer.style.pointerEvents = "auto";
 			this.screensaverContainer.style.top = 0;
+			this.screensaverContainer.style.right = 0;
+			this.screensaverContainer.style.bottom = 0;
 			this.screensaverContainer.style.left = 0;
-			this.screensaverContainer.style.width = "100vw";
-			this.screensaverContainer.style.height = "100vh";
 			this.screensaverContainer.style.background = "#000000";
 			this.screensaverContainer.style.overflow = "hidden";
 
@@ -2432,16 +2432,6 @@ function initWallpanel() {
 			};
 			window.addEventListener("resize", resizeHandler);
 			this.windowEventHandlers.push({ eventName: "resize", handler: resizeHandler });
-
-			const handleVisibilityChange = () => {
-				logger.debug("handleVisibilityChange", document.hidden);
-				if (!document.hidden && wp.screensaverRunning()) {
-					// CSS vw/vh viewport units in iOS WKWebView report stale values after the app is backgrounded and restored.
-					// They do not recompute until a resize event fires, which does not happen reliably on app resume.
-					window.dispatchEvent(new Event("resize"));
-				}
-			};
-			document.addEventListener("visibilitychange", handleVisibilityChange);
 
 			const hassMoreInfoHandler = () => {
 				try {
