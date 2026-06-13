@@ -2091,7 +2091,7 @@ function initWallpanel() {
 				mediaElement = this.getActiveMediaElement(true);
 			/* If config.video_play_to_end is true and the mediaElement is a video with a
 			 * duration longer or equal to the config.display_time, use the video duration
-			 * as WallpanelView.display_time. Otherwise just use config.display_time.
+			 * as WallpanelView.displayTime. Otherwise just use config.display_time.
 			 **/
 			if (mediaElement.play_to_end && !mediaElement.loop) {
 				this.displayTime = mediaElement.duration;
