@@ -1317,6 +1317,7 @@ function initWallpanel() {
 			this.updatingMedia = false;
 			this.lastMediaUpdate = 0;
 			this.isPaused = false;
+			this.displayTime = null;
 			this.mediaTimeElapsedBeforePause = 0;
 			this.lastImageUrlEntityValue = null;
 			this.blockEventsUntil = 0;
@@ -2085,13 +2086,22 @@ function initWallpanel() {
 			setTimeout(this.updateShadowStyle.bind(this), 500);
 		}
 
-		getDisplayTime() {
-			let displayTime = config.display_time;
-			const videoDuration = this.getActiveMediaElement(true).duration;
-			if (config.video_play_to_end && videoDuration) {
-				displayTime = Math.ceil(videoDuration);
+		setDisplayTime() {
+			const displayTime = config.display_time,
+				mediaElement = this.getActiveMediaElement(true);
+			/* If config.video_play_to_end is true and the mediaElement is a video with a
+			 * duration longer or equal to the config.display_time, use the video duration
+			 * as WallpanelView.display_time. Otherwise just use config.display_time.
+			 **/
+			if (mediaElement.play_to_end && !mediaElement.loop) {
+				this.displayTime = mediaElement.duration;
+			} else {
+				this.displayTime = displayTime;
 			}
-			return displayTime;
+		}
+
+		getDisplayTime() {
+			return this.displayTime;
 		}
 
 		restartProgressBarAnimation() {
@@ -3811,6 +3821,7 @@ function initWallpanel() {
 			const videoElement = this.getActiveMediaElement(true);
 
 			if (typeof videoElement.play !== "function") {
+				this.setDisplayTime();
 				return; // Not playable element.
 			}
 
@@ -3823,9 +3834,10 @@ function initWallpanel() {
 				}
 			};
 
-			videoElement.loop = config.video_loop;
+			videoElement.loop = config.video_loop && videoElement.duration < config.display_time;
 			videoElement.play_to_end = config.video_play_to_end;
-			if (!config.video_loop && !videoElement._wp_video_playback_listeners) {
+			this.setDisplayTime();
+			if (!videoElement.loop && !videoElement._wp_video_playback_listeners) {
 				// Immediately switch to next image at the end of the playback.
 				const onTimeUpdate = () => {
 					if (this.getActiveMediaElement() !== videoElement) {
@@ -4067,6 +4079,7 @@ function initWallpanel() {
 				this.imageTwoContainer.style.opacity = 1;
 			}
 
+			this.setDisplayTime();
 			await this.switchActiveMedia("start");
 			this.setupScreensaver();
 
