@@ -20,6 +20,7 @@ You can set the following configuration parameters for every individual Home Ass
 | keep_fullscreen                  | Keep fullscreen active if the wallpanel is deactivated, for instance when disabled in a view.          | true      |
 | z_index                          | Wallpanels base CSS z-index.                                                                           | 1000      |
 | idle_time                        | Time in seconds after which the screensaver will start (0 = screensaver disabled).                     | 15        |
+| idle_time_entity                 | Entity name of the timer entity in home assistant. While the timer is active, the screensaver will not start. Activating the timer also stops a running screensaver.                     | ""        |
 | fade_in_time                     | Screensaver fade-in time in seconds.                                                                   | 3.0       |
 | fade_out_time_motion_detected    | Screensaver fade-out time in seconds when the screensaver is stopped because motion is detected.       | 1.0       |
 | fade_out_time_screensaver_entity | Screensaver fade-out time in seconds when the screensaver is turned off by the screensaver entity.      | 3.0       |
