@@ -23,6 +23,7 @@ const defaultConfig = {
 	keep_fullscreen: true,
 	z_index: 1000,
 	idle_time: 15,
+	idle_time_entity: "",
 	fade_in_time: 3.0,
 	fade_out_time_motion_detected: 1.0,
 	fade_out_time_screensaver_entity: 3.0,
@@ -1485,13 +1486,20 @@ function initWallpanel() {
 				return;
 			}
 			if (this.screensaverRunning()) {
-				if (config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup()) {
+				if (
+					(config.idle_time_entity !== "" && this.hass.states[config.idle_time_entity].state === "active") ||
+					(config.disable_screensaver_on_browser_mod_popup && getActiveBrowserModPopup())
+				) {
 					this.stopScreensaver(config.fade_out_time_browser_mod_popup);
 				} else {
 					this.updateScreensaver();
 				}
 			} else if (isActive()) {
-				if (config.idle_time > 0 && Date.now() - this.idleSince >= config.idle_time * 1000) {
+				if (
+					(config.idle_time_entity === "" || this.hass.states[config.idle_time_entity].state !== "active") &&
+					config.idle_time > 0 &&
+					Date.now() - this.idleSince >= config.idle_time * 1000
+				) {
 					if (
 						!config.camera_motion_detection_stop_screensaver ||
 						!this.cameraMotionDetection ||
