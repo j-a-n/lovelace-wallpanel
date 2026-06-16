@@ -2092,8 +2092,13 @@ function initWallpanel() {
 			/* If config.video_play_to_end is true and the mediaElement is a video with a
 			 * duration longer or equal to the config.display_time, use the video duration
 			 * as WallpanelView.displayTime. Otherwise just use config.display_time.
+			 * During updateMedia the next media element is loaded in the background and if
+			 * an error occurs while loading the media element, the display time should be
+			 * set to 0 to move on to the next media element.
 			 **/
-			if (mediaElement.play_to_end && !mediaElement.loop) {
+			if (mediaElement.updateMediaError) {
+				this.displayTime = 0;
+			} else if (mediaElement.play_to_end && !mediaElement.loop) {
 				this.displayTime = mediaElement.duration;
 			} else {
 				this.displayTime = displayTime;
@@ -3629,6 +3634,7 @@ function initWallpanel() {
 				return;
 			}
 			this.updatingMedia = true;
+			element.updateMediaError = false;
 			try {
 				if (element == this.getActiveMediaElement()) {
 					const inactiveElement = this.getInactiveMediaElement();
@@ -3717,6 +3723,7 @@ function initWallpanel() {
 				// The network error can be caused by power-saving settings on mobile devices.
 				// Make sure the "Keep WiFi on during sleep" option is enabled.
 				// Set your WiFi connection to "not metered".
+				element.updateMediaError = true;
 				logger.error(`Failed to update media from ${element.mediaUrl}:`, error);
 			} finally {
 				this.updatingMedia = false;
