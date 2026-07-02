@@ -3013,11 +3013,7 @@ function initWallpanel() {
 				}
 			}
 
-			function getImmichDisplayDimensions(asset) {
-				if (asset.width != null && asset.height != null) {
-					return { width: asset.width, height: asset.height };
-				}
-				const exif = asset.exifInfo;
+			function getImmichExifDimensions(exif) {
 				if (!exif?.exifImageWidth || !exif?.exifImageHeight) {
 					return null;
 				}
@@ -3030,6 +3026,13 @@ function initWallpanel() {
 					}
 				}
 				return { width, height };
+			}
+
+			function getImmichDisplayDimensions(asset) {
+				if (asset.width != null && asset.height != null) {
+					return { width: asset.width, height: asset.height };
+				}
+				return getImmichExifDimensions(asset.exifInfo);
 			}
 
 			function getImmichMediaOrientation(asset) {
@@ -3045,11 +3048,18 @@ function initWallpanel() {
 				const needDimensions = !!exclude_media_orientation;
 				await Promise.all(
 					assets.map(async (asset) => {
+						const isImage = asset.type?.toLowerCase() === "image";
+						const needsDetailForEdit =
+							isImage &&
+							asset.isEdited !== true &&
+							(asset.width == null || asset.height == null || asset.isEdited === undefined);
+						const needsDetailForOrientation =
+							isImage && needDimensions && (asset.width == null || asset.height == null);
 						if (
 							!asset.exifInfo ||
 							(fetchTags && !asset.tags) ||
-							(needDimensions && (asset.width == null || asset.height == null)) ||
-							asset.isEdited === undefined
+							needsDetailForOrientation ||
+							needsDetailForEdit
 						) {
 							logger.debug(`Fetching asset info for ${asset.id}`);
 							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
@@ -3117,7 +3127,7 @@ function initWallpanel() {
 					}
 
 					let url = `${apiUrl}/assets/${asset.id}/${resolution}`;
-					if (asset.isEdited && assetType == "image") {
+					if (assetType == "image") {
 						url += url.includes("?") ? "&edited=true" : "?edited=true";
 					}
 					if (urls.indexOf(url) >= 0) {
