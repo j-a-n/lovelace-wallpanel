@@ -3021,7 +3021,7 @@ function initWallpanel() {
 							logger.debug(`Fetching asset info for ${asset.id}`);
 							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
 							asset.exifInfo = assetInfo.exifInfo;
-							asset.tags = assetInfo.tags.map((v) => v.value);
+							asset.tags = (assetInfo.tags || []).map((v) => v.value);
 						}
 					})
 				);
@@ -3280,23 +3280,28 @@ function initWallpanel() {
 						const allAlbums = await wp._immichFetch(`${apiUrl}/albums?shared=${config.immich_shared_albums}`, apiKey);
 						logger.debug("Got immich API response", allAlbums);
 
-						const albumIdsToFetch = allAlbums
-							.filter((album) => {
-								const include = !albumNamesLower.length || albumNamesLower.includes(album.albumName.toLowerCase());
-								logger.debug(`${include ? "Adding" : "Skipping"} album: ${album.albumName}`);
-								return include;
-							})
-							.map((album) => album.id);
+						const albumsToFetch = allAlbums.filter((album) => {
+							const include = !albumNamesLower.length || albumNamesLower.includes(album.albumName.toLowerCase());
+							logger.debug(`${include ? "Adding" : "Skipping"} album: ${album.albumName}`);
+							return include;
+						});
 
-						if (albumIdsToFetch.length > 0) {
-							const albumDetailPromises = albumIdsToFetch.map((albumId) => {
-								logger.debug("Fetching album metadata: ", albumId);
-								return wp._immichFetch(`${apiUrl}/albums/${albumId}`, apiKey);
-							});
-							const albumDetailsList = await Promise.all(albumDetailPromises);
-							for (const albumDetails of albumDetailsList) {
-								logger.debug(`Got immich album details`, albumDetails);
-								await processAssets(albumDetails.assets, apiKey, albumDetails.albumName);
+						if (albumsToFetch.length > 0) {
+							for (const album of albumsToFetch) {
+								logger.debug("Fetching assets for album: ", album.albumName);
+								let page = 1;
+								while (true) {
+									const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
+										method: "POST",
+										body: JSON.stringify({ albumIds: [album.id], withExif: true, page })
+									});
+									logger.debug(`Got immich album assets (page ${page})`, searchResults);
+									await processAssets(searchResults.assets.items, apiKey, album.albumName);
+									if (!searchResults.assets.nextPage) {
+										break;
+									}
+									page = parseInt(searchResults.assets.nextPage, 10);
+								}
 							}
 						} else {
 							logger.debug("No matching immich albums found or selected.");
