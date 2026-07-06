@@ -3186,7 +3186,7 @@ function initWallpanel() {
 									if (!searchResults.assets.nextPage) {
 										break;
 									}
-									page = searchResults.assets.nextPage;
+									page = parseInt(searchResults.assets.nextPage, 10);
 								}
 							}
 						}
@@ -3229,7 +3229,7 @@ function initWallpanel() {
 							if (!searchResults.assets.nextPage) {
 								break;
 							}
-							page = searchResults.assets.nextPage;
+							page = parseInt(searchResults.assets.nextPage, 10);
 						}
 					} else if (config.immich_tag_names && config.immich_tag_names.length) {
 						logger.debug("Searching for assets based on tag names");
@@ -3266,7 +3266,7 @@ function initWallpanel() {
 								if (!searchResults.assets.nextPage) {
 									break;
 								}
-								page = searchResults.assets.nextPage;
+								page = parseInt(searchResults.assets.nextPage, 10);
 							}
 						} else {
 							const msg = "No matching immich tags found or selected.";
