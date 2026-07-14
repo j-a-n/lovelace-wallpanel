@@ -3637,6 +3637,7 @@ function initWallpanel() {
 					return;
 				}
 				element.infoCacheUrl = element.mediaUrl;
+				element.mediaLoadFailed = false;
 
 				if (mediaSourceType() == "media-source") {
 					element = await this.updateMediaFromMediaSource(element);
@@ -3698,6 +3699,7 @@ function initWallpanel() {
 				// Make sure the "Keep WiFi on during sleep" option is enabled.
 				// Set your WiFi connection to "not metered".
 				logger.error(`Failed to update media from ${element.mediaUrl}:`, error);
+				element.mediaLoadFailed = true;
 			} finally {
 				this.updatingMedia = false;
 			}
@@ -3910,6 +3912,24 @@ function initWallpanel() {
 			if (!element) {
 				return;
 			}
+			if (element.mediaLoadFailed) {
+				// Never switch a broken element in as the active media.
+				element.mediaLoadFailed = false;
+				this.consecutiveMediaErrors = (this.consecutiveMediaErrors || 0) + 1;
+				const maxErrorSkips = Math.min(this.mediaList.length || 10, 10);
+				if (this.screensaverRunning() && this.consecutiveMediaErrors <= maxErrorSkips) {
+					logger.warn(
+						`Media failed to load, skipping to next (attempt ${this.consecutiveMediaErrors}/${maxErrorSkips})`
+					);
+					setTimeout(() => this.switchActiveMedia("error_skip"), 100);
+				} else if (this.consecutiveMediaErrors > maxErrorSkips) {
+					// Rate limit: fall back to the normal display_time pace, which still
+					// advances through the list when many items fail in a row
+					logger.error("Too many consecutive media load failures, waiting for next rotation");
+				}
+				return;
+			}
+			this.consecutiveMediaErrors = 0;
 			this._switchActiveMedia(element, crossfadeMillis);
 		}
 
