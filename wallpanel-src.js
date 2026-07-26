@@ -76,6 +76,7 @@ const defaultConfig = {
 	image_background: "color", // color / image
 	video_loop: false,
 	video_volume: 0.0,
+	video_play_to_end: false,
 	touch_zone_size_next_image: 15,
 	touch_zone_size_previous_image: 15,
 	show_progress_bar: false,
@@ -1330,6 +1331,7 @@ function initWallpanel() {
 			this.updatingMedia = false;
 			this.lastMediaUpdate = 0;
 			this.isPaused = false;
+			this.displayTime = null;
 			this.mediaTimeElapsedBeforePause = 0;
 			this.lastImageUrlEntityValue = null;
 			this.blockEventsUntil = 0;
@@ -2098,6 +2100,29 @@ function initWallpanel() {
 			setTimeout(this.updateShadowStyle.bind(this), 500);
 		}
 
+		setDisplayTime() {
+			const displayTime = config.display_time,
+				mediaElement = this.getActiveMediaElement(true);
+			/* If config.video_play_to_end is true and the mediaElement is a video with a
+			 * duration longer or equal to the config.display_time, use the video duration
+			 * as WallpanelView.displayTime. Otherwise just use config.display_time.
+			 * During updateMedia the next media element is loaded in the background and if
+			 * an error occurs while loading the media element, the display time should be
+			 * set to 0 to move on to the next media element.
+			 **/
+			if (mediaElement.updateMediaError) {
+				this.displayTime = 0;
+			} else if (mediaElement.play_to_end && !mediaElement.loop) {
+				this.displayTime = mediaElement.duration;
+			} else {
+				this.displayTime = displayTime;
+			}
+		}
+
+		getDisplayTime() {
+			return this.displayTime;
+		}
+
 		restartProgressBarAnimation() {
 			if (!this.progressBarContainer) {
 				return;
@@ -2109,7 +2134,7 @@ function initWallpanel() {
 			const wp = this;
 			setTimeout(function () {
 				// Restart CSS animation.
-				wp.progressBar.style.animation = `horizontalProgress ${config.display_time}s linear`;
+				wp.progressBar.style.animation = `horizontalProgress ${wp.getDisplayTime()}s linear`;
 				// Do not advance progress bar if slideshow is paused.
 				wp.progressBar.style.animationPlayState = wp.isPaused ? "paused" : "running";
 			}, 25);
@@ -2128,7 +2153,7 @@ function initWallpanel() {
 				delay = 50;
 			}
 			const duration = Math.ceil(
-				config.image_animation_ken_burns_duration || (config.display_time + config.crossfade_time * 2) * 1.2
+				config.image_animation_ken_burns_duration || (this.getDisplayTime() + config.crossfade_time * 2) * 1.2
 			);
 			const animation =
 				config.image_animation_ken_burns_animations[
@@ -3677,6 +3702,7 @@ function initWallpanel() {
 				return;
 			}
 			this.updatingMedia = true;
+			element.updateMediaError = false;
 			try {
 				if (element == this.getActiveMediaElement()) {
 					const inactiveElement = this.getInactiveMediaElement();
@@ -3765,6 +3791,7 @@ function initWallpanel() {
 				// The network error can be caused by power-saving settings on mobile devices.
 				// Make sure the "Keep WiFi on during sleep" option is enabled.
 				// Set your WiFi connection to "not metered".
+				element.updateMediaError = true;
 				logger.error(`Failed to update media from ${element.mediaUrl}:`, error);
 			} finally {
 				this.updatingMedia = false;
@@ -3859,6 +3886,7 @@ function initWallpanel() {
 			const videoElement = this.getActiveMediaElement(true);
 
 			if (typeof videoElement.play !== "function") {
+				this.setDisplayTime();
 				return; // Not playable element.
 			}
 
@@ -3871,8 +3899,10 @@ function initWallpanel() {
 				}
 			};
 
-			videoElement.loop = config.video_loop;
-			if (!config.video_loop && !videoElement._wp_video_playback_listeners) {
+			videoElement.loop = config.video_loop && videoElement.duration < config.display_time;
+			videoElement.play_to_end = config.video_play_to_end;
+			this.setDisplayTime();
+			if (!videoElement.loop && !videoElement._wp_video_playback_listeners) {
 				// Immediately switch to next image at the end of the playback.
 				const onTimeUpdate = () => {
 					if (this.getActiveMediaElement() !== videoElement) {
@@ -4114,6 +4144,7 @@ function initWallpanel() {
 				this.imageTwoContainer.style.opacity = 1;
 			}
 
+			this.setDisplayTime();
 			await this.switchActiveMedia("start");
 			this.setupScreensaver();
 
@@ -4248,6 +4279,7 @@ function initWallpanel() {
 				logger.debug("Setting screen to black");
 				this.screensaverOverlay.style.background = "#000000";
 			} else if (config.show_images) {
+				if (!this.isPaused && now - this.lastMediaUpdate >= this.getDisplayTime() * 1000) {
 				let displayTimeElapsed;
 				if (config.media_order == "random_but_synced") {
 					// Advance on the wall-clock boundary so every device switches together.
