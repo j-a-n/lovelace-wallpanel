@@ -69,7 +69,7 @@ const defaultConfig = {
 	media_vertical_align: "middle", // top / middle  / bottom
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
-	media_order: "random", // sorted / random
+	media_order: "random", // sorted / random / random_but_synced
 	exclude_filenames: [], // Excluded filenames (regex)
 	exclude_media_types: [], // Exclude media types (image / video)
 	exclude_media_orientation: "", // Exclude media items with this orientation (landscape / portrait / auto)
@@ -774,10 +774,24 @@ class CameraMotionDetection {
 	}
 }
 
-function shuffleArray(array) {
+// Fixed seed so "random_but_synced" produces the identical shuffle on every device.
+const MEDIA_SYNC_SEED = 0x5eed5eed;
+
+// Deterministic PRNG (mulberry32). Seeded with the same value everywhere, it lets
+// independent devices compute the same "random" order without any coordination.
+function mulberry32(seed) {
+	return function () {
+		seed = (seed + 0x6d2b79f5) | 0;
+		let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+	};
+}
+
+function shuffleArray(array, randomFn = Math.random) {
 	const result = array.slice(); // Make a copy to avoid mutating the original
 	for (let i = result.length - 1; i > 0; i--) {
-		const j = Math.floor(Math.random() * (i + 1));
+		const j = Math.floor(randomFn() * (i + 1));
 		[result[i], result[j]] = [result[j], result[i]];
 	}
 	return result;
@@ -2928,6 +2942,10 @@ function initWallpanel() {
 				let urls = await wp.findMedias(mediaContentId);
 				if (config.media_order == "random") {
 					urls = shuffleArray(urls);
+				} else if (config.media_order == "random_but_synced") {
+					// Sort for a stable base, then shuffle with a fixed seed so every
+					// device derives the identical "random" order.
+					urls = shuffleArray(urls.slice().sort(), mulberry32(MEDIA_SYNC_SEED));
 				} else {
 					urls = urls.sort(); // Sort consistently if not random
 				}
@@ -3038,15 +3056,61 @@ function initWallpanel() {
 				}
 			}
 
+			function getImmichExifDimensions(exif) {
+				if (!exif?.exifImageWidth || !exif?.exifImageHeight) {
+					return null;
+				}
+				let width = exif.exifImageWidth;
+				let height = exif.exifImageHeight;
+				if (exif.orientation) {
+					const orientation = Number(exif.orientation);
+					if ([5, 6, 7, 8, 90, -90].includes(orientation)) {
+						[width, height] = [height, width];
+					}
+				}
+				return { width, height };
+			}
+
+			function getImmichDisplayDimensions(asset) {
+				if (asset.width != null && asset.height != null) {
+					return { width: asset.width, height: asset.height };
+				}
+				return getImmichExifDimensions(asset.exifInfo);
+			}
+
+			function getImmichMediaOrientation(asset) {
+				const dimensions = getImmichDisplayDimensions(asset);
+				if (!dimensions) {
+					return null;
+				}
+				return dimensions.width >= dimensions.height ? "landscape" : "portrait";
+			}
+
 			async function fetchAssetInfo(assets, apiKey) {
 				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
+				const needDimensions = !!exclude_media_orientation;
 				await Promise.all(
 					assets.map(async (asset) => {
-						if (!asset.exifInfo || (fetchTags && !asset.tags)) {
+						const isImage = asset.type?.toLowerCase() === "image";
+						const needsDetailForEdit =
+							isImage &&
+							asset.isEdited !== true &&
+							(asset.width == null || asset.height == null || asset.isEdited === undefined);
+						const needsDetailForOrientation =
+							isImage && needDimensions && (asset.width == null || asset.height == null);
+						if (
+							!asset.exifInfo ||
+							(fetchTags && !asset.tags) ||
+							needsDetailForOrientation ||
+							needsDetailForEdit
+						) {
 							logger.debug(`Fetching asset info for ${asset.id}`);
 							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
 							asset.exifInfo = assetInfo.exifInfo;
-							asset.tags = assetInfo.tags.map((v) => v.value);
+							asset.tags = assetInfo.tags?.map((v) => v.value) ?? asset.tags;
+							asset.width = assetInfo.width;
+							asset.height = assetInfo.height;
+							asset.isEdited = assetInfo.isEdited;
 						}
 					})
 				);
@@ -3088,18 +3152,8 @@ function initWallpanel() {
 						}
 					}
 
-					if (
-						exclude_media_orientation &&
-						asset.exifInfo &&
-						asset.exifInfo.exifImageWidth &&
-						asset.exifInfo.exifImageHeight
-					) {
-						let orientation =
-							asset.exifInfo.exifImageWidth >= asset.exifInfo.exifImageHeight ? "landscape" : "portrait";
-						if (asset.exifInfo.orientation && [5, 6, 7, 8].includes(parseInt(asset.exifInfo.orientation))) {
-							// 90 or 270 degrees rotated
-							orientation = orientation == "landscape" ? "portrait" : "landscape";
-						}
+					if (exclude_media_orientation) {
+						const orientation = getImmichMediaOrientation(asset);
 						if (orientation === exclude_media_orientation) {
 							logger.debug(`Media item with orientation "${orientation}" excluded`);
 							continue;
@@ -3115,7 +3169,10 @@ function initWallpanel() {
 						}
 					}
 
-					const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+					let url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+					if (assetType == "image") {
+						url += url.includes("?") ? "&edited=true" : "?edited=true";
+					}
 					if (urls.indexOf(url) >= 0) {
 						continue;
 					}
@@ -3139,6 +3196,10 @@ function initWallpanel() {
 				}
 				if (config.media_order == "random") {
 					urls = shuffleArray(urls);
+				} else if (config.media_order == "random_but_synced") {
+					// Sort for a stable base, then shuffle with a fixed seed so every
+					// device derives the identical "random" order.
+					urls = shuffleArray(urls.slice().sort(), mulberry32(MEDIA_SYNC_SEED));
 				} else {
 					urls = urls.sort(); // Sort consistently if not random
 				}
@@ -3476,16 +3537,23 @@ function initWallpanel() {
 			if (!this.mediaList.length) {
 				return null;
 			}
-			let mediaIndex = this.mediaIndex;
-			if (this.mediaListDirection == "forwards") {
-				mediaIndex++;
+			let mediaIndex;
+			if (config.media_order == "random_but_synced") {
+				// Wall-clock derived index: every device shows the same item, and a
+				// device that reloads or joins late lands in sync immediately.
+				mediaIndex = Math.floor(Date.now() / (config.display_time * 1000)) % this.mediaList.length;
 			} else {
-				mediaIndex--;
-			}
-			if (mediaIndex >= this.mediaList.length) {
-				mediaIndex = 0;
-			} else if (mediaIndex < 0) {
-				mediaIndex = this.mediaList.length - 1;
+				mediaIndex = this.mediaIndex;
+				if (this.mediaListDirection == "forwards") {
+					mediaIndex++;
+				} else {
+					mediaIndex--;
+				}
+				if (mediaIndex >= this.mediaList.length) {
+					mediaIndex = 0;
+				} else if (mediaIndex < 0) {
+					mediaIndex = this.mediaList.length - 1;
+				}
 			}
 			if (updateIndex) {
 				this.mediaIndex = mediaIndex;
@@ -4212,6 +4280,16 @@ function initWallpanel() {
 				this.screensaverOverlay.style.background = "#000000";
 			} else if (config.show_images) {
 				if (!this.isPaused && now - this.lastMediaUpdate >= this.getDisplayTime() * 1000) {
+				let displayTimeElapsed;
+				if (config.media_order == "random_but_synced") {
+					// Advance on the wall-clock boundary so every device switches together.
+					displayTimeElapsed =
+						Math.floor(now / (config.display_time * 1000)) !=
+						Math.floor(this.lastMediaUpdate / (config.display_time * 1000));
+				} else {
+					displayTimeElapsed = now - this.lastMediaUpdate >= config.display_time * 1000;
+				}
+				if (!this.isPaused && displayTimeElapsed) {
 					this.switchActiveMedia("display_time_elapsed");
 				}
 				if (now - this.lastMediaListUpdate >= config.media_list_update_interval * 1000) {
