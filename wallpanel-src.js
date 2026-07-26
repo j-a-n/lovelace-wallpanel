@@ -3031,15 +3031,61 @@ function initWallpanel() {
 				}
 			}
 
+			function getImmichExifDimensions(exif) {
+				if (!exif?.exifImageWidth || !exif?.exifImageHeight) {
+					return null;
+				}
+				let width = exif.exifImageWidth;
+				let height = exif.exifImageHeight;
+				if (exif.orientation) {
+					const orientation = Number(exif.orientation);
+					if ([5, 6, 7, 8, 90, -90].includes(orientation)) {
+						[width, height] = [height, width];
+					}
+				}
+				return { width, height };
+			}
+
+			function getImmichDisplayDimensions(asset) {
+				if (asset.width != null && asset.height != null) {
+					return { width: asset.width, height: asset.height };
+				}
+				return getImmichExifDimensions(asset.exifInfo);
+			}
+
+			function getImmichMediaOrientation(asset) {
+				const dimensions = getImmichDisplayDimensions(asset);
+				if (!dimensions) {
+					return null;
+				}
+				return dimensions.width >= dimensions.height ? "landscape" : "portrait";
+			}
+
 			async function fetchAssetInfo(assets, apiKey) {
 				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
+				const needDimensions = !!exclude_media_orientation;
 				await Promise.all(
 					assets.map(async (asset) => {
-						if (!asset.exifInfo || (fetchTags && !asset.tags)) {
+						const isImage = asset.type?.toLowerCase() === "image";
+						const needsDetailForEdit =
+							isImage &&
+							asset.isEdited !== true &&
+							(asset.width == null || asset.height == null || asset.isEdited === undefined);
+						const needsDetailForOrientation =
+							isImage && needDimensions && (asset.width == null || asset.height == null);
+						if (
+							!asset.exifInfo ||
+							(fetchTags && !asset.tags) ||
+							needsDetailForOrientation ||
+							needsDetailForEdit
+						) {
 							logger.debug(`Fetching asset info for ${asset.id}`);
 							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
 							asset.exifInfo = assetInfo.exifInfo;
-							asset.tags = assetInfo.tags.map((v) => v.value);
+							asset.tags = assetInfo.tags?.map((v) => v.value) ?? asset.tags;
+							asset.width = assetInfo.width;
+							asset.height = assetInfo.height;
+							asset.isEdited = assetInfo.isEdited;
 						}
 					})
 				);
@@ -3081,18 +3127,8 @@ function initWallpanel() {
 						}
 					}
 
-					if (
-						exclude_media_orientation &&
-						asset.exifInfo &&
-						asset.exifInfo.exifImageWidth &&
-						asset.exifInfo.exifImageHeight
-					) {
-						let orientation =
-							asset.exifInfo.exifImageWidth >= asset.exifInfo.exifImageHeight ? "landscape" : "portrait";
-						if (asset.exifInfo.orientation && [5, 6, 7, 8].includes(parseInt(asset.exifInfo.orientation))) {
-							// 90 or 270 degrees rotated
-							orientation = orientation == "landscape" ? "portrait" : "landscape";
-						}
+					if (exclude_media_orientation) {
+						const orientation = getImmichMediaOrientation(asset);
 						if (orientation === exclude_media_orientation) {
 							logger.debug(`Media item with orientation "${orientation}" excluded`);
 							continue;
@@ -3108,7 +3144,10 @@ function initWallpanel() {
 						}
 					}
 
-					const url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+					let url = `${apiUrl}/assets/${asset.id}/${resolution}`;
+					if (assetType == "image") {
+						url += url.includes("?") ? "&edited=true" : "?edited=true";
+					}
 					if (urls.indexOf(url) >= 0) {
 						continue;
 					}
