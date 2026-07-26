@@ -3098,12 +3098,7 @@ function initWallpanel() {
 							(asset.width == null || asset.height == null || asset.isEdited === undefined);
 						const needsDetailForOrientation =
 							isImage && needDimensions && (asset.width == null || asset.height == null);
-						if (
-							!asset.exifInfo ||
-							(fetchTags && !asset.tags) ||
-							needsDetailForOrientation ||
-							needsDetailForEdit
-						) {
+						if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
 							logger.debug(`Fetching asset info for ${asset.id}`);
 							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
 							asset.exifInfo = assetInfo.exifInfo;
@@ -4279,7 +4274,6 @@ function initWallpanel() {
 				logger.debug("Setting screen to black");
 				this.screensaverOverlay.style.background = "#000000";
 			} else if (config.show_images) {
-				if (!this.isPaused && now - this.lastMediaUpdate >= this.getDisplayTime() * 1000) {
 				let displayTimeElapsed;
 				if (config.media_order == "random_but_synced") {
 					// Advance on the wall-clock boundary so every device switches together.
@@ -4287,7 +4281,7 @@ function initWallpanel() {
 						Math.floor(now / (config.display_time * 1000)) !=
 						Math.floor(this.lastMediaUpdate / (config.display_time * 1000));
 				} else {
-					displayTimeElapsed = now - this.lastMediaUpdate >= config.display_time * 1000;
+					displayTimeElapsed = now - this.lastMediaUpdate >= this.getDisplayTime() * 1000;
 				}
 				if (!this.isPaused && displayTimeElapsed) {
 					this.switchActiveMedia("display_time_elapsed");
