@@ -70,7 +70,7 @@ You can set the following configuration parameters for every individual Home Ass
 | image_background                 | Possible values are `color` and `image`. When set to `image`, a snapshot from the current media item is used as the background, covering the entire screen. To customize its appearance, apply styles using the `wallpanel-screensaver-image-background` class. | color |
 | media_list_update_interval       | When using a local media source, the media list is updated at this interval.                           | 3600       |
 | media_list_max_size              | The maximum number of media items to fetch from the media source.                                      | 500        |
-| media_order                      | The order in which the images are displayed (possible values are: sorted / random).                    | random     |
+| media_order                      | The order in which the images are displayed (possible values are: sorted / random / random_but_synced). With `random_but_synced` every device shows the same pseudo-random image at the same time (a shared, time-derived order) — handy for multiple wall displays.                    | random     |
 | image_animation_ken_burns        | Apply a Ken Burns effect (panning and zooming) to the images?                                          | false      |
 | image_animation_ken_burns_zoom   | Zoom level for the Ken Burns effect.                                                                   | 1.3        |
 | image_animation_ken_burns_delay  | Start Ken Burns effect with a delay (in seconds).                                                      | 0          |
