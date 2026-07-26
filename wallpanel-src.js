@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.65.1";
+const version = "4.66.0";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -3358,8 +3358,8 @@ function initWallpanel() {
 						// Default: Fetch albums
 						const albumNamesLower = (config.immich_album_names || []).map((v) => v.toLowerCase());
 						logger.debug(`Fetching immich albums (shared=${config.immich_shared_albums})`);
-						const serverVersion = wp._immichFetch(`${apiUrl}/server/version`, apiKey);
-						logger.debug(`Immich server version: ${serverVersion}`);
+						const serverVersion = await wp._immichFetch(`${apiUrl}/server/version`, apiKey);
+						logger.debug("Immich server version:", serverVersion);
 						const parameterShared = serverVersion.major < 3 ? "shared" : "isShared";
 						const allAlbums = await wp._immichFetch(
 							`${apiUrl}/albums?${parameterShared}=${config.immich_shared_albums}`,
