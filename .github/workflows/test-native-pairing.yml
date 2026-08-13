@@ -1,0 +1,27 @@
+name: Test native portrait pairing
+
+on:
+  push:
+    branches:
+      - feature/portrait-pairing-upstream
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node scripts/apply-native-portrait-pairing.mjs
+      - run: node --check wallpanel-src.js
+      - run: git diff --check
+      - run: npx eslint wallpanel-src.js
+      - run: npm run build
+      - run: grep -q "portrait_pairing" wallpanel.js
