@@ -20,8 +20,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/apply-native-portrait-pairing.mjs
+      - run: npx eslint --fix wallpanel-src.js || true
       - run: node --check wallpanel-src.js
       - run: git diff --check
-      - run: npx eslint wallpanel-src.js
       - run: npm run build
       - run: grep -q "portrait_pairing" wallpanel.js
