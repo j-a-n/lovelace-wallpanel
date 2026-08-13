@@ -64,6 +64,8 @@ You can set the following configuration parameters for every individual Home Ass
 | exclude_media_orientation        | Media orientation to exlcude. See [Media Sources](media-sources.md#exclude-files) for details.         |            |
 | image_fit_landscape              | How to adjust a media item in landscape mode to fit the available space (cover or contain).            | cover      |
 | image_fit_portrait               | How to adjust a media item in portrait mode to fit the available space (cover or contain).             | contain    |
+| portrait_pairing                 | Display two portrait images side-by-side when possible. Currently supported for Home Assistant Media Source images. Pair selection follows `media_order`: adjacent pairs for `sorted`, random partners for `random`, and deterministic partners for `random_but_synced`. | false |
+| portrait_pairing_fit             | How portrait images in a pair fill their half of the screen (`cover` or `contain`).                    | contain    |
 | media_horizontal_align           | Determines how media items are aligned horizontally on the screen (left, center, or right).            | center     |
 | media_vertical_align             | Determines how media items are aligned vertically on the screen (top, middle, or bottom).              | middle     |
 | calculate_media_size             | Calculate media container sizes.                                                                       | true       |
@@ -146,6 +148,8 @@ wallpanel:
   screensaver_start_navigation_path: /lovelace/default_view
   image_url: 'http://picsum.photos/${width}/${height}?random=${timestamp}'
   image_fit_landscape: cover
+  portrait_pairing: true
+  portrait_pairing_fit: cover
   media_list_update_interval: 3600
   media_order: 'sorted'
   exclude_filenames: []
