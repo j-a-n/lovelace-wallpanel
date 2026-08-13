@@ -1,0 +1,40 @@
+name: Materialize native portrait pairing
+
+on:
+  push:
+    branches:
+      - feature/portrait-pairing-upstream
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/portrait-pairing-upstream
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node scripts/apply-native-portrait-pairing.mjs
+      - run: node scripts/apply-native-portrait-docs.mjs
+      - run: npx eslint --fix wallpanel-src.js || true
+      - run: node --check wallpanel-src.js
+      - run: git diff --check
+      - run: npm run build
+      - run: grep -q "portrait_pairing" wallpanel.js
+      - name: Commit clean upstream-ready implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f portrait-pairing.js wallpanel-src-entry.js
+          git rm -f scripts/apply-native-portrait-pairing.mjs scripts/apply-native-portrait-docs.mjs
+          git rm -f .github/workflows/test-portrait-pairing-upstream.yml .github/workflows/test-native-pairing.yml .github/workflows/materialize-native-pairing.yml
+          git add wallpanel-src.js wallpanel.js docs/configuration.md
+          git commit -m "Add native portrait pairing"
+          git push origin HEAD:feature/portrait-pairing-upstream
