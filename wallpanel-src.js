@@ -3090,26 +3090,30 @@ function initWallpanel() {
 			async function fetchAssetInfo(assets, apiKey) {
 				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
 				const needDimensions = !!exclude_media_orientation;
-				await Promise.all(
-					assets.map(async (asset) => {
-						const isImage = asset.type?.toLowerCase() === "image";
-						const needsDetailForEdit =
-							isImage &&
-							asset.isEdited !== true &&
-							(asset.width == null || asset.height == null || asset.isEdited === undefined);
-						const needsDetailForOrientation =
-							isImage && needDimensions && (asset.width == null || asset.height == null);
-						if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
-							logger.debug(`Fetching asset info for ${asset.id}`);
-							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
-							asset.exifInfo = assetInfo.exifInfo;
-							asset.tags = (assetInfo.tags || []).map((v) => v.value);
-							asset.width = assetInfo.width;
-							asset.height = assetInfo.height;
-							asset.isEdited = assetInfo.isEdited;
-						}
-					})
-				);
+				const assetInfoConcurrency = 10;
+				for (let offset = 0; offset < assets.length; offset += assetInfoConcurrency) {
+					const assetBatch = assets.slice(offset, offset + assetInfoConcurrency);
+					await Promise.all(
+						assetBatch.map(async (asset) => {
+							const isImage = asset.type?.toLowerCase() === "image";
+							const needsDetailForEdit =
+								isImage &&
+								asset.isEdited !== true &&
+								(asset.width == null || asset.height == null || asset.isEdited === undefined);
+							const needsDetailForOrientation =
+								isImage && needDimensions && (asset.width == null || asset.height == null);
+							if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
+								logger.debug(`Fetching asset info for ${asset.id}`);
+								const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
+								asset.exifInfo = assetInfo.exifInfo;
+								asset.tags = (assetInfo.tags || []).map((v) => v.value);
+								asset.width = assetInfo.width;
+								asset.height = assetInfo.height;
+								asset.isEdited = assetInfo.isEdited;
+							}
+						})
+					);
+				}
 			}
 
 			async function processAssets(assets, apiKey, folderName = null) {
