@@ -1346,6 +1346,7 @@ function initWallpanel() {
 			this.lastClickTime = 0;
 			this.clickCount = 0;
 			this.touchStartX = -1;
+			this.touchStartY = -1;
 			this.currentWidth = 0;
 			this.currentHeight = 0;
 			this.energyCollectionUpdateEnabled = false;
@@ -4508,16 +4509,20 @@ function initWallpanel() {
 			if (evt.type == "touchstart") {
 				if (evt.touches && evt.touches[0]) {
 					this.touchStartX = evt.touches[0].clientX;
+					this.touchStartY = evt.touches[0].clientY;
 				}
 				return;
 			} else if (evt.type == "touchend" && this.touchStartX >= 0 && evt.changedTouches && evt.changedTouches[0]) {
 				const diffX = evt.changedTouches[0].clientX - this.touchStartX;
-				if (diffX >= 5) {
+				const diffY = evt.changedTouches[0].clientY - this.touchStartY;
+				const swipeThreshold = Math.max(20, window.innerWidth * 0.03);
+				if (diffX >= swipeThreshold && Math.abs(diffX) > Math.abs(diffY)) {
 					swipe = "right";
-				} else if (diffX <= -5) {
+				} else if (diffX <= -swipeThreshold && Math.abs(diffX) > Math.abs(diffY)) {
 					swipe = "left";
 				}
 				this.touchStartX = -1;
+				this.touchStartY = -1;
 			}
 
 			if (!this.screensaverRunning()) {
