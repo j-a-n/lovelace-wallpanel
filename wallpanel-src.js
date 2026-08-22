@@ -3433,9 +3433,18 @@ function initWallpanel() {
 						elem.removeEventListener(loadEventName, onLoad);
 					};
 
-					const onLoad = () => {
+					const onLoad = async () => {
 						cleanup();
-						resolve();
+						try {
+							// Firefox can fire load before the new image is ready to be composited.
+							// Wait for decoding so a reused slideshow buffer cannot flash its old frame.
+							if (tagName === "img" && typeof elem.decode === "function") {
+								await elem.decode();
+							}
+							resolve();
+						} catch (error) {
+							reject(error);
+						}
 					};
 
 					const onError = () => {
@@ -3709,6 +3718,9 @@ function initWallpanel() {
 			}
 			this.updatingMedia = true;
 			element.updateMediaError = false;
+			// The inactive buffer still contains the image shown two slides ago. Hide it
+			// explicitly while its source is replaced to avoid stale-frame compositor flashes.
+			element.style.visibility = "hidden";
 			try {
 				if (element == this.getActiveMediaElement()) {
 					const inactiveElement = this.getInactiveMediaElement();
@@ -3798,6 +3810,7 @@ function initWallpanel() {
 				// Make sure the "Keep WiFi on during sleep" option is enabled.
 				// Set your WiFi connection to "not metered".
 				element.updateMediaError = true;
+				element.style.visibility = "visible";
 				logger.error(`Failed to update media from ${element.mediaUrl}:`, error);
 			} finally {
 				this.updatingMedia = false;
