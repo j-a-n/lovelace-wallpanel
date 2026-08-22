@@ -851,6 +851,10 @@ function mergeConfig(target, ...sources) {
 					if (typeof val === "string" || val instanceof String) {
 						val = val.replace(/\$\{browser_id\}/g, browserId ? browserId : "browser-id-unset");
 						val = val.replace(/\$\{entity:\s*([^}]+\.[^}]+)\}/g, replacer);
+					} else if (Array.isArray(val)) {
+						val = val.map((item) => processValue(item));
+					} else if (isObject(val)) {
+						val = Object.fromEntries(Object.entries(val).map(([key, value]) => [key, processValue(value)]));
 					}
 					if (typeof target[key] === "boolean") {
 						if (val === null || val === undefined) {
@@ -861,11 +865,7 @@ function mergeConfig(target, ...sources) {
 					}
 					return val;
 				}
-				if (Array.isArray(val)) {
-					val = val.map((v) => processValue(v));
-				} else {
-					val = processValue(val);
-				}
+				val = processValue(val);
 				if (Array.isArray(target[key]) && typeof val === "string") {
 					val = val.split(",").map((item) => item.trim());
 				}
@@ -2020,7 +2020,7 @@ function initWallpanel() {
 					}
 
 					const viewElement = document.createElement("hui-view");
-					viewElement.route = { prefix: "/" + activePanel, path: "/" + view.path };
+					viewElement.route = { prefix: "/" + activePanel, path: "/" + viewConfig.path };
 					viewElement.lovelace = this.lovelace;
 					viewElement.panel = this.hass.panels[activePanel];
 					viewElement.hass = this.hass;
