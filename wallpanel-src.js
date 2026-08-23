@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.66.1";
+const version = "4.66.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -3440,16 +3440,19 @@ function initWallpanel() {
 
 					const onLoad = async () => {
 						cleanup();
-						try {
-							// Firefox can fire load before the new image is ready to be composited.
-							// Wait for decoding so a reused slideshow buffer cannot flash its old frame.
-							if (tagName === "img" && typeof elem.decode === "function") {
+						// Firefox can fire load before the new image is ready to be composited.
+						// Wait for decoding so a reused slideshow buffer cannot flash its old frame.
+						if (tagName === "img" && typeof elem.decode === "function") {
+							try {
 								await elem.decode();
+							} catch (error) {
+								// Some browsers reject decode() for images they have already loaded and can
+								// display. The load event is authoritative here; a decode() rejection must
+								// not turn an otherwise valid slideshow item into a black error slide.
+								logger.debug(`Failed to pre-decode loaded image "${url}":`, error);
 							}
-							resolve();
-						} catch (error) {
-							reject(error);
 						}
+						resolve();
 					};
 
 					const onError = () => {
