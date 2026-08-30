@@ -206,6 +206,13 @@ wallpanel:
   image_url: 'https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=${entity:input_text.wallpanel_unsplash_query}'
 ```
 
+Placeholders also work in nested configuration, including view definitions:
+```yaml
+wallpanel:
+  views:
+    - title: '${entity:input_select.wallpanel_screensaver_view}'
+```
+
 If Browser Mod is available, you can also use the `${browser_id}` placeholder:
 ```yaml
 wallpanel:
@@ -307,4 +314,3 @@ https://hass:8123/dashboard-test/1
 ```
 
 If you leave the list empty, WallPanel will be enabled on all views by default.
-

@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.66.0";
+const version = "4.66.2";
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -853,6 +853,10 @@ function mergeConfig(target, ...sources) {
 					if (typeof val === "string" || val instanceof String) {
 						val = val.replace(/\$\{browser_id\}/g, browserId ? browserId : "browser-id-unset");
 						val = val.replace(/\$\{entity:\s*([^}]+\.[^}]+)\}/g, replacer);
+					} else if (Array.isArray(val)) {
+						val = val.map((item) => processValue(item));
+					} else if (isObject(val)) {
+						val = Object.fromEntries(Object.entries(val).map(([key, value]) => [key, processValue(value)]));
 					}
 					if (typeof target[key] === "boolean") {
 						if (val === null || val === undefined) {
@@ -863,11 +867,7 @@ function mergeConfig(target, ...sources) {
 					}
 					return val;
 				}
-				if (Array.isArray(val)) {
-					val = val.map((v) => processValue(v));
-				} else {
-					val = processValue(val);
-				}
+				val = processValue(val);
 				if (Array.isArray(target[key]) && typeof val === "string") {
 					val = val.split(",").map((item) => item.trim());
 				}
@@ -1348,6 +1348,7 @@ function initWallpanel() {
 			this.lastClickTime = 0;
 			this.clickCount = 0;
 			this.touchStartX = -1;
+			this.touchStartY = -1;
 			this.currentWidth = 0;
 			this.currentHeight = 0;
 			this.energyCollectionUpdateEnabled = false;
@@ -2022,7 +2023,7 @@ function initWallpanel() {
 					}
 
 					const viewElement = document.createElement("hui-view");
-					viewElement.route = { prefix: "/" + activePanel, path: "/" + view.path };
+					viewElement.route = { prefix: "/" + activePanel, path: "/" + viewConfig.path };
 					viewElement.lovelace = this.lovelace;
 					viewElement.panel = this.hass.panels[activePanel];
 					viewElement.hass = this.hass;
@@ -3091,26 +3092,30 @@ function initWallpanel() {
 			async function fetchAssetInfo(assets, apiKey) {
 				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
 				const needDimensions = !!exclude_media_orientation;
-				await Promise.all(
-					assets.map(async (asset) => {
-						const isImage = asset.type?.toLowerCase() === "image";
-						const needsDetailForEdit =
-							isImage &&
-							asset.isEdited !== true &&
-							(asset.width == null || asset.height == null || asset.isEdited === undefined);
-						const needsDetailForOrientation =
-							isImage && needDimensions && (asset.width == null || asset.height == null);
-						if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
-							logger.debug(`Fetching asset info for ${asset.id}`);
-							const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
-							asset.exifInfo = assetInfo.exifInfo;
-							asset.tags = (assetInfo.tags || []).map((v) => v.value);
-							asset.width = assetInfo.width;
-							asset.height = assetInfo.height;
-							asset.isEdited = assetInfo.isEdited;
-						}
-					})
-				);
+				const assetInfoConcurrency = 10;
+				for (let offset = 0; offset < assets.length; offset += assetInfoConcurrency) {
+					const assetBatch = assets.slice(offset, offset + assetInfoConcurrency);
+					await Promise.all(
+						assetBatch.map(async (asset) => {
+							const isImage = asset.type?.toLowerCase() === "image";
+							const needsDetailForEdit =
+								isImage &&
+								asset.isEdited !== true &&
+								(asset.width == null || asset.height == null || asset.isEdited === undefined);
+							const needsDetailForOrientation =
+								isImage && needDimensions && (asset.width == null || asset.height == null);
+							if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
+								logger.debug(`Fetching asset info for ${asset.id}`);
+								const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
+								asset.exifInfo = assetInfo.exifInfo;
+								asset.tags = (assetInfo.tags || []).map((v) => v.value);
+								asset.width = assetInfo.width;
+								asset.height = assetInfo.height;
+								asset.isEdited = assetInfo.isEdited;
+							}
+						})
+					);
+				}
 			}
 
 			async function processAssets(assets, apiKey, folderName = null) {
@@ -3435,8 +3440,20 @@ function initWallpanel() {
 						elem.removeEventListener(loadEventName, onLoad);
 					};
 
-					const onLoad = () => {
+					const onLoad = async () => {
 						cleanup();
+						// Firefox can fire load before the new image is ready to be composited.
+						// Wait for decoding so a reused slideshow buffer cannot flash its old frame.
+						if (tagName === "img" && typeof elem.decode === "function") {
+							try {
+								await elem.decode();
+							} catch (error) {
+								// Some browsers reject decode() for images they have already loaded and can
+								// display. The load event is authoritative here; a decode() rejection must
+								// not turn an otherwise valid slideshow item into a black error slide.
+								logger.debug(`Failed to pre-decode loaded image "${url}":`, error);
+							}
+						}
 						resolve();
 					};
 
@@ -3711,6 +3728,9 @@ function initWallpanel() {
 			}
 			this.updatingMedia = true;
 			element.updateMediaError = false;
+			// The inactive buffer still contains the image shown two slides ago. Hide it
+			// explicitly while its source is replaced to avoid stale-frame compositor flashes.
+			element.style.visibility = "hidden";
 			try {
 				if (element == this.getActiveMediaElement()) {
 					const inactiveElement = this.getInactiveMediaElement();
@@ -3800,6 +3820,7 @@ function initWallpanel() {
 				// Make sure the "Keep WiFi on during sleep" option is enabled.
 				// Set your WiFi connection to "not metered".
 				element.updateMediaError = true;
+				element.style.visibility = "visible";
 				logger.error(`Failed to update media from ${element.mediaUrl}:`, error);
 			} finally {
 				this.updatingMedia = false;
@@ -4817,16 +4838,20 @@ function initWallpanel() {
 			if (evt.type == "touchstart") {
 				if (evt.touches && evt.touches[0]) {
 					this.touchStartX = evt.touches[0].clientX;
+					this.touchStartY = evt.touches[0].clientY;
 				}
 				return;
 			} else if (evt.type == "touchend" && this.touchStartX >= 0 && evt.changedTouches && evt.changedTouches[0]) {
 				const diffX = evt.changedTouches[0].clientX - this.touchStartX;
-				if (diffX >= 5) {
+				const diffY = evt.changedTouches[0].clientY - this.touchStartY;
+				const swipeThreshold = Math.max(20, window.innerWidth * 0.03);
+				if (diffX >= swipeThreshold && Math.abs(diffX) > Math.abs(diffY)) {
 					swipe = "right";
-				} else if (diffX <= -5) {
+				} else if (diffX <= -swipeThreshold && Math.abs(diffX) > Math.abs(diffY)) {
 					swipe = "left";
 				}
 				this.touchStartX = -1;
+				this.touchStartY = -1;
 			}
 
 			if (!this.screensaverRunning()) {
