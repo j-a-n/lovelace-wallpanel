@@ -3,7 +3,8 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.66.2";
+const version = "4.66.3";
+const mediaLoadRetryDelay = 1000;
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -249,6 +250,20 @@ function stringify(obj) {
 				return;
 			}
 			processedObjects.push(value);
+		}
+		if (value instanceof Error || (typeof DOMException !== "undefined" && value instanceof DOMException)) {
+			const serializedError = {
+				name: value.name,
+				message: value.message,
+				stack: value.stack
+			};
+			if ("cause" in value) {
+				serializedError.cause = value.cause;
+			}
+			Object.keys(value).forEach((property) => {
+				serializedError[property] = value[property];
+			});
+			return serializedError;
 		}
 		return value;
 	});
@@ -1329,6 +1344,7 @@ function initWallpanel() {
 			this.lastMediaListUpdate;
 			this.updatingMediaList = false;
 			this.updatingMedia = false;
+			this.mediaLoadRetryAt = 0;
 			this.lastMediaUpdate = 0;
 			this.isPaused = false;
 			this.displayTime = null;
@@ -2107,13 +2123,8 @@ function initWallpanel() {
 			/* If config.video_play_to_end is true and the mediaElement is a video with a
 			 * duration longer or equal to the config.display_time, use the video duration
 			 * as WallpanelView.displayTime. Otherwise just use config.display_time.
-			 * During updateMedia the next media element is loaded in the background and if
-			 * an error occurs while loading the media element, the display time should be
-			 * set to 0 to move on to the next media element.
 			 **/
-			if (mediaElement.updateMediaError) {
-				this.displayTime = 0;
-			} else if (mediaElement.play_to_end && !mediaElement.loop) {
+			if (mediaElement.play_to_end && !mediaElement.loop) {
 				this.displayTime = mediaElement.duration;
 			} else {
 				this.displayTime = displayTime;
@@ -3424,6 +3435,18 @@ function initWallpanel() {
 			if (config.force_load_media_with_fetch) {
 				useFetch = true;
 			}
+			const responseError = (elem, response) => {
+				const error = new Error(
+					`Failed to load ${elem.tagName} "${url}": HTTP ${response.status} ${response.statusText}`.trim()
+				);
+				error.response = {
+					url: response.url,
+					status: response.status,
+					statusText: response.statusText,
+					type: response.type
+				};
+				return error;
+			};
 			// Setting the src attribute works better than fetch because cross-origin requests aren't blocked
 			const loadMediaWithElement = async (elem) => {
 				const tagName = elem.tagName.toLowerCase();
@@ -3457,55 +3480,66 @@ function initWallpanel() {
 
 					const onError = () => {
 						cleanup();
-						reject(new Error(`Failed to load ${elem.tagName} "${url}"`));
+						const error = new Error(`Failed to load ${elem.tagName} "${url}"`);
+						error.mediaElement = {
+							tagName: elem.tagName,
+							currentSrc: elem.currentSrc || elem.src || "",
+							complete: elem.complete,
+							naturalWidth: elem.naturalWidth,
+							naturalHeight: elem.naturalHeight,
+							readyState: elem.readyState,
+							networkState: elem.networkState
+						};
+						if (elem.error) {
+							error.mediaElement.error = {
+								code: elem.error.code,
+								message: elem.error.message
+							};
+						}
+						reject(error);
 					};
 
 					elem.addEventListener(loadEventName, onLoad);
 					elem.onerror = onError;
 				});
 				if (useFetch) {
+					headers = headers || {};
 					if (config.stream_load_media) {
-						fetch(url, { headers: headers })
-							.then((response) => {
-								if (!response.ok) {
-									throw new Error(`Failed to load ${elem.tagName} "${url}": ${response}`);
-								}
-								if (!response.body) {
-									throw new Error(`Failed to load ${elem.tagName} "${url}": empty body`);
-								}
-								const reader = response.body.getReader();
-								return new ReadableStream({
-									start(controller) {
-										return pump();
-										function pump() {
-											return reader.read().then(({ done, value }) => {
-												// When no more data needs to be consumed, close the stream
-												if (done) {
-													controller.close();
-													return;
-												}
-												// Enqueue the next data chunk into our target stream
-												controller.enqueue(value);
-												return pump();
-											});
+						const response = await fetch(url, { headers: headers });
+						if (!response.ok) {
+							throw responseError(elem, response);
+						}
+						if (!response.body) {
+							throw new Error(`Failed to load ${elem.tagName} "${url}": empty body`);
+						}
+						const reader = response.body.getReader();
+						const stream = new ReadableStream({
+							start(controller) {
+								return pump();
+								function pump() {
+									return reader.read().then(({ done, value }) => {
+										// When no more data needs to be consumed, close the stream
+										if (done) {
+											controller.close();
+											return;
 										}
-									}
-								});
-							})
-							.then((stream) => new Response(stream))
-							.then((response) => response.blob())
-							.then((blob) => {
-								if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
-									URL.revokeObjectURL(elem.src);
+										// Enqueue the next data chunk into our target stream
+										controller.enqueue(value);
+										return pump();
+									});
 								}
-								elem.src = URL.createObjectURL(blob);
-							});
+							}
+						});
+						const blob = await new Response(stream).blob();
+						if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
+							URL.revokeObjectURL(elem.src);
+						}
+						elem.src = URL.createObjectURL(blob);
 					} else {
-						headers = headers || {};
 						const response = await fetch(url, { headers: headers });
 						logger.debug("Got respone", response);
 						if (!response.ok) {
-							throw new Error(`Failed to load ${elem.tagName} "${url}": ${response}`);
+							throw responseError(elem, response);
 						}
 						// The object URL created by URL.createObjectURL() must be released
 						// using URL.revokeObjectURL() to free the associated memory again.
@@ -3725,7 +3759,6 @@ function initWallpanel() {
 				return;
 			}
 			this.updatingMedia = true;
-			element.updateMediaError = false;
 			// The inactive buffer still contains the image shown two slides ago. Hide it
 			// explicitly while its source is replaced to avoid stale-frame compositor flashes.
 			element.style.visibility = "hidden";
@@ -3812,14 +3845,10 @@ function initWallpanel() {
 					}
 				}
 			} catch (error) {
-				// Example: "TypeError: Failed to fetch"
-				// This is most likely due to a network error.
-				// The network error can be caused by power-saving settings on mobile devices.
-				// Make sure the "Keep WiFi on during sleep" option is enabled.
-				// Set your WiFi connection to "not metered".
-				element.updateMediaError = true;
-				element.style.visibility = "visible";
+				// Keep the active media visible when the inactive buffer cannot be loaded.
+				// The timer will retry with the next media item after a short delay.
 				logger.error(`Failed to update media from ${element.mediaUrl}:`, error);
+				return null;
 			} finally {
 				this.updatingMedia = false;
 			}
@@ -3975,6 +4004,10 @@ function initWallpanel() {
 		}
 
 		async switchActiveMedia(eventType) {
+			if (this.updatingMedia) {
+				logger.debug("Already switching media");
+				return;
+			}
 			if (this.afterFadeoutTimer) {
 				clearTimeout(this.afterFadeoutTimer);
 			}
@@ -4033,8 +4066,10 @@ function initWallpanel() {
 			const updateElement = this.getInactiveMediaElement();
 			const element = await this.updateMedia(updateElement);
 			if (!element) {
+				this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
 				return;
 			}
+			this.mediaLoadRetryAt = 0;
 			this._switchActiveMedia(element, crossfadeMillis);
 		}
 
@@ -4147,6 +4182,7 @@ function initWallpanel() {
 		async startScreensaver() {
 			logger.debug("Start screensaver");
 
+			this.mediaLoadRetryAt = 0;
 			this.screensaverStartedAt = Date.now();
 			this.screensaverStoppedAt = null;
 			this.currentWidth = this.screensaverContainer.clientWidth;
@@ -4238,6 +4274,7 @@ function initWallpanel() {
 		stopScreensaver(fadeOutTime = 0.0) {
 			logger.debug("Stop screensaver");
 
+			this.mediaLoadRetryAt = 0;
 			this.screensaverStartedAt = null;
 			this.screensaverStoppedAt = Date.now();
 
@@ -4315,7 +4352,8 @@ function initWallpanel() {
 				} else {
 					displayTimeElapsed = now - this.lastMediaUpdate >= this.getDisplayTime() * 1000;
 				}
-				if (!this.isPaused && displayTimeElapsed) {
+				const switchMedia = this.mediaLoadRetryAt > 0 ? now >= this.mediaLoadRetryAt : displayTimeElapsed;
+				if (!this.isPaused && !this.updatingMedia && switchMedia) {
 					this.switchActiveMedia("display_time_elapsed");
 				}
 				if (now - this.lastMediaListUpdate >= config.media_list_update_interval * 1000) {
