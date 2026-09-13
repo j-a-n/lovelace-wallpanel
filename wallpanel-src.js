@@ -5,6 +5,9 @@
 
 const version = "4.66.3";
 const mediaLoadRetryDelay = 1000;
+const mediaListRetryDelay = 3000;
+const mediaListRateLimitRetryDelay = 60000;
+const maxMediaListRateLimitRetryDelay = 3600000;
 const defaultConfig = {
 	enabled: false,
 	enabled_on_views: [],
@@ -268,6 +271,28 @@ function stringify(obj) {
 		return value;
 	});
 	return json;
+}
+
+function getRetryAfterDelay(response) {
+	const retryAfter = response.headers.get("Retry-After");
+	if (retryAfter) {
+		const seconds = Number(retryAfter);
+		if (Number.isFinite(seconds) && seconds >= 0) {
+			return Math.round(seconds * 1000);
+		}
+		const retryAt = Date.parse(retryAfter);
+		if (Number.isFinite(retryAt)) {
+			return Math.max(0, retryAt - Date.now());
+		}
+	}
+
+	// Unsplash exposes the rate-limit reset time as a Unix timestamp.
+	const rateLimitReset = Number(response.headers.get("X-Ratelimit-Reset"));
+	if (Number.isFinite(rateLimitReset) && rateLimitReset > 0) {
+		const retryAt = rateLimitReset > 1000000000000 ? rateLimitReset : rateLimitReset * 1000;
+		return Math.max(0, retryAt - Date.now());
+	}
+	return null;
 }
 
 const logger = {
@@ -1343,6 +1368,8 @@ function initWallpanel() {
 			this.mediaListDirection = "forwards"; // forwards, backwards
 			this.lastMediaListUpdate;
 			this.updatingMediaList = false;
+			this.mediaListRetryAt = 0;
+			this.mediaListRetryTimer = null;
 			this.updatingMedia = false;
 			this.mediaLoadRetryAt = 0;
 			this.lastMediaUpdate = 0;
@@ -2554,6 +2581,7 @@ function initWallpanel() {
 				this.afterFadeoutTimer = null;
 			}
 			this.releaseAllMedia();
+			this.clearMediaListRetry();
 			if (this.timerInterval) {
 				clearInterval(this.timerInterval);
 				this.timerInterval = null;
@@ -2620,6 +2648,7 @@ function initWallpanel() {
 				const switchMedia = this.screensaverRunning() && oldConfigAvailable;
 
 				if (sourceChange) {
+					this.clearMediaListRetry();
 					this.mediaList = [];
 					this.mediaIndex = -1;
 				}
@@ -2907,14 +2936,24 @@ function initWallpanel() {
 			});
 		}
 
+		clearMediaListRetry() {
+			if (this.mediaListRetryTimer) {
+				clearTimeout(this.mediaListRetryTimer);
+				this.mediaListRetryTimer = null;
+			}
+			this.mediaListRetryAt = 0;
+		}
+
 		async updateMediaList(callback = null, force = false, retryCount = 0) {
 			if (!config.image_url) return;
 			if (this.updatingMediaList) return;
+			if (this.mediaListRetryAt > Date.now()) return;
 			if (!force) {
 				if (new Date().getTime() - this.lastMediaListUpdate < config.media_list_update_interval * 1000) {
 					return;
 				}
 			}
+			this.clearMediaListRetry();
 
 			const wp = this;
 			let updateFunction = null;
@@ -2944,19 +2983,32 @@ function initWallpanel() {
 			this.lastMediaListUpdate = Date.now();
 			try {
 				await updateFunction.bind(wp)();
+				this.clearMediaListRetry();
 				logger.debug(`Media list from ${sourceType} is now:`, wp.mediaList);
 				if (callback) {
 					callback();
 				}
 			} catch (error) {
 				const maxRetries = 3;
-				const retryDelay = 3000; // 3 seconds
+				let retryDelay = mediaListRetryDelay;
+				if (error.httpStatus === 429) {
+					if (Number.isFinite(error.retryAfterDelay)) {
+						retryDelay = Math.max(error.retryAfterDelay, mediaListRetryDelay);
+					} else {
+						retryDelay = Math.min(mediaListRateLimitRetryDelay * 2 ** retryCount, maxMediaListRateLimitRetryDelay);
+					}
+				}
 				logger.warn(`Failed to update media list from ${sourceType}:`, error);
 				if (retryCount < maxRetries) {
 					logger.warn(
 						`Retrying media list update in ${retryDelay / 1000} seconds (attempt ${retryCount + 1}/${maxRetries})...`
 					);
-					setTimeout(() => wp.updateMediaList(callback, true, retryCount + 1), retryDelay);
+					this.mediaListRetryAt = Date.now() + retryDelay;
+					this.mediaListRetryTimer = setTimeout(() => {
+						wp.mediaListRetryTimer = null;
+						wp.mediaListRetryAt = 0;
+						wp.updateMediaList(callback, true, retryCount + 1);
+					}, retryDelay);
 				} else {
 					const errorMsg = `Failed to update media list from ${config.image_url} after ${maxRetries} retries: ${error.message || stringify(error)}`;
 					logger.error(errorMsg);
@@ -3056,7 +3108,14 @@ function initWallpanel() {
 
 				if (!response.ok) {
 					const errorText = await response.text();
-					throw new Error(`Unsplash API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+					const error = new Error(
+						`Unsplash API request failed: ${response.status} ${response.statusText} - ${errorText}`
+					);
+					error.httpStatus = response.status;
+					if (response.status === 429) {
+						error.retryAfterDelay = getRetryAfterDelay(response);
+					}
+					throw error;
 				}
 
 				const json = await response.json();
