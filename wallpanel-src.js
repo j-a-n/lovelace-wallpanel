@@ -1359,6 +1359,7 @@ function initWallpanel() {
 			this.lastMove = null;
 			this.lastCorner = 0; // 0 - top left, 1 - bottom left, 2 - bottom right, 3 - top right
 			this.translateTimeout = null;
+			this.afterFadeoutTimer = null;
 			this.lastClickTime = 0;
 			this.clickCount = 0;
 			this.touchStartX = -1;
@@ -2199,6 +2200,65 @@ function initWallpanel() {
 			return this.getMediaElement(false, mediaElement);
 		}
 
+		releaseMediaElement(mediaElement) {
+			if (!mediaElement) {
+				return;
+			}
+
+			// Remove compositor references after a crossfade. In particular, keeping the
+			// old image URL on an invisible buffer can keep its decoded bitmap / GPU
+			// texture alive in memory-constrained WebViews.
+			mediaElement.style.animation = "none";
+			const backgroundElement =
+				mediaElement === this.imageOne
+					? this.imageOneBackground
+					: mediaElement === this.imageTwo
+						? this.imageTwoBackground
+						: null;
+			if (backgroundElement) {
+				backgroundElement.style.backgroundImage = "";
+			}
+
+			const tagName = mediaElement.tagName.toLowerCase();
+			if (tagName === "ha-camera-stream") {
+				try {
+					const [player, video] = getHaCameraStreamPlayerAndVideo(mediaElement);
+					if (video) {
+						video.pause();
+					}
+					if (player && typeof player.stop === "function") {
+						player.stop();
+					}
+				} catch (error) {
+					logger.debug(error);
+				}
+			} else {
+				if (typeof mediaElement.pause === "function") {
+					try {
+						mediaElement.pause();
+					} catch (error) {
+						logger.debug(error);
+					}
+				}
+				const src = mediaElement.getAttribute("src") || "";
+				if (src.startsWith("blob:")) {
+					URL.revokeObjectURL(src);
+				}
+				mediaElement.removeAttribute("src");
+				if (tagName === "video" && typeof mediaElement.load === "function") {
+					mediaElement.load();
+				}
+			}
+
+			mediaElement.mediaUrl = null;
+			mediaElement.infoCacheUrl = null;
+		}
+
+		releaseAllMedia() {
+			this.releaseMediaElement(this.imageOne);
+			this.releaseMediaElement(this.imageTwo);
+		}
+
 		replaceMediaElement(mediaElement, mediaType) {
 			if (typeof mediaElement.src === "string" && mediaElement.src.startsWith("blob:")) {
 				URL.revokeObjectURL(mediaElement.src);
@@ -2489,6 +2549,11 @@ function initWallpanel() {
 		}
 
 		disconnectedCallback() {
+			if (this.afterFadeoutTimer) {
+				clearTimeout(this.afterFadeoutTimer);
+				this.afterFadeoutTimer = null;
+			}
+			this.releaseAllMedia();
 			if (this.timerInterval) {
 				clearInterval(this.timerInterval);
 				this.timerInterval = null;
@@ -4010,6 +4075,7 @@ function initWallpanel() {
 			}
 			if (this.afterFadeoutTimer) {
 				clearTimeout(this.afterFadeoutTimer);
+				this.afterFadeoutTimer = null;
 			}
 
 			const sourceType = mediaSourceType();
@@ -4115,17 +4181,15 @@ function initWallpanel() {
 			this.restartProgressBarAnimation();
 			this.restartKenBurnsEffect();
 
-			if (curMedia.tagName.toLowerCase() === "video") {
-				this.afterFadeoutTimer = setTimeout(function () {
-					if (curMedia.tagName.toLowerCase() === "video") {
-						try {
-							curMedia.pause();
-						} catch (e) {
-							logger.debug(e);
-						}
-					}
-				}, crossfadeMillis);
-			}
+			const wp = this;
+			this.afterFadeoutTimer = setTimeout(function () {
+				wp.afterFadeoutTimer = null;
+				// A rapid manual switch may reuse this buffer before the old fade timer
+				// fires. Only release it while it is still the inactive buffer.
+				if (curMedia === wp.getInactiveMediaElement()) {
+					wp.releaseMediaElement(curMedia);
+				}
+			}, crossfadeMillis);
 		}
 
 		showMessage(type, title, text, timeout = 5000) {
@@ -4182,6 +4246,10 @@ function initWallpanel() {
 		async startScreensaver() {
 			logger.debug("Start screensaver");
 
+			if (this.afterFadeoutTimer) {
+				clearTimeout(this.afterFadeoutTimer);
+				this.afterFadeoutTimer = null;
+			}
 			this.mediaLoadRetryAt = 0;
 			this.screensaverStartedAt = Date.now();
 			this.screensaverStoppedAt = null;
@@ -4274,6 +4342,10 @@ function initWallpanel() {
 		stopScreensaver(fadeOutTime = 0.0) {
 			logger.debug("Stop screensaver");
 
+			if (this.afterFadeoutTimer) {
+				clearTimeout(this.afterFadeoutTimer);
+				this.afterFadeoutTimer = null;
+			}
 			this.mediaLoadRetryAt = 0;
 			this.screensaverStartedAt = null;
 			this.screensaverStoppedAt = Date.now();
@@ -4303,6 +4375,17 @@ function initWallpanel() {
 			if (this.screenWakeLock.enabled) {
 				this.screenWakeLock.disable();
 			}
+
+			const wp = this;
+			this.afterFadeoutTimer = setTimeout(
+				function () {
+					wp.afterFadeoutTimer = null;
+					if (!wp.screensaverRunning()) {
+						wp.releaseAllMedia();
+					}
+				},
+				Math.round(fadeOutTime * 1000)
+			);
 
 			setTimeout(this.setScreensaverEntityState.bind(this), 25);
 		}
