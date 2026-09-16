@@ -1254,14 +1254,14 @@ function setToolbarVisibility(hideToolbar, hideActionItems) {
 		const view = huiRoot.querySelector("#view");
 		// HA 2026.9+: the toolbar is wrapped by a fixed header that owns the
 		// safe-area padding and shadow, so hiding only the toolbar leaves a strip.
-		const appHeader = huiRoot.querySelector("div.header");
+		const appHeader = huiRoot.querySelector(".header");
 		let appToolbar = huiRoot.querySelector("app-toolbar");
 		if (!appToolbar) {
 			// Changed with 2023.04
 			appToolbar = huiRoot.querySelector("div.toolbar");
 		}
 		const toolbarContainer = appHeader || appToolbar;
-		if (!toolbarContainer || !appToolbar || !view) {
+		if (!toolbarContainer || !view) {
 			return;
 		}
 		if (hideToolbar) {
@@ -1276,11 +1276,13 @@ function setToolbarVisibility(hideToolbar, hideActionItems) {
 			view.style.removeProperty("min-height");
 			view.style.removeProperty("margin-top");
 			view.style.removeProperty("padding-top");
-			const actionItems = appToolbar.querySelector("div.action-items");
-			if (hideActionItems) {
-				actionItems.style.setProperty("display", "none");
-			} else {
-				actionItems.style.setProperty("display", "flex");
+			const actionItems = appToolbar && appToolbar.querySelector("div.action-items");
+			if (actionItems) {
+				if (hideActionItems) {
+					actionItems.style.setProperty("display", "none");
+				} else {
+					actionItems.style.setProperty("display", "flex");
+				}
 			}
 		}
 		window.dispatchEvent(new Event("resize"));
