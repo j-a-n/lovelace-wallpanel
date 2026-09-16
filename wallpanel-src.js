@@ -1251,38 +1251,35 @@ function setToolbarVisibility(hideToolbar, hideActionItems) {
 			return;
 		}
 		huiRoot = huiRoot.shadowRoot;
-		const view = huiRoot.querySelector("#view");
-		// HA 2026.9+: the toolbar is wrapped by a fixed header that owns the
-		// safe-area padding and shadow, so hiding only the toolbar leaves a strip.
-		const appHeader = huiRoot.querySelector(".header");
 		let appToolbar = huiRoot.querySelector("app-toolbar");
 		if (!appToolbar) {
 			// Changed with 2023.04
 			appToolbar = huiRoot.querySelector("div.toolbar");
 		}
-		const toolbarContainer = appHeader || appToolbar;
-		if (!toolbarContainer || !view) {
-			return;
-		}
+		const toolbarStyleId = "wallpanel-toolbar-visibility";
+		let toolbarStyle = huiRoot.querySelector(`#${toolbarStyleId}`);
 		if (hideToolbar) {
-			toolbarContainer.style.setProperty("display", "none");
-			if (!config.keep_toolbar_space) {
-				view.style.minHeight = "100vh";
-				view.style.marginTop = "0";
-				view.style.paddingTop = "0";
+			if (!toolbarStyle) {
+				toolbarStyle = document.createElement("style");
+				toolbarStyle.id = toolbarStyleId;
+				huiRoot.appendChild(toolbarStyle);
 			}
+			// HA may recreate the header after WallPanel initializes. A stylesheet
+			// continues to apply to replacement elements, unlike inline styles.
+			toolbarStyle.textContent = `.header, app-toolbar, div.toolbar { display: none !important; }${
+				config.keep_toolbar_space
+					? ""
+					: "#view { min-height: 100vh !important; margin-top: 0 !important; padding-top: 0 !important; }"
+			}`;
 		} else {
-			toolbarContainer.style.removeProperty("display");
-			view.style.removeProperty("min-height");
-			view.style.removeProperty("margin-top");
-			view.style.removeProperty("padding-top");
-			const actionItems = appToolbar && appToolbar.querySelector("div.action-items");
-			if (actionItems) {
-				if (hideActionItems) {
-					actionItems.style.setProperty("display", "none");
-				} else {
-					actionItems.style.setProperty("display", "flex");
-				}
+			if (toolbarStyle) {
+				toolbarStyle.remove();
+			}
+			const actionItems = appToolbar.querySelector("div.action-items");
+			if (hideActionItems) {
+				actionItems.style.setProperty("display", "none");
+			} else {
+				actionItems.style.setProperty("display", "flex");
 			}
 		}
 		window.dispatchEvent(new Event("resize"));
