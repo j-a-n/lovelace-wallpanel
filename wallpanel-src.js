@@ -1252,20 +1252,27 @@ function setToolbarVisibility(hideToolbar, hideActionItems) {
 		}
 		huiRoot = huiRoot.shadowRoot;
 		const view = huiRoot.querySelector("#view");
+		// HA 2026.9+: the toolbar is wrapped by a fixed header that owns the
+		// safe-area padding and shadow, so hiding only the toolbar leaves a strip.
+		const appHeader = huiRoot.querySelector("div.header");
 		let appToolbar = huiRoot.querySelector("app-toolbar");
 		if (!appToolbar) {
 			// Changed with 2023.04
 			appToolbar = huiRoot.querySelector("div.toolbar");
 		}
+		const toolbarContainer = appHeader || appToolbar;
+		if (!toolbarContainer || !appToolbar || !view) {
+			return;
+		}
 		if (hideToolbar) {
-			appToolbar.style.setProperty("display", "none");
+			toolbarContainer.style.setProperty("display", "none");
 			if (!config.keep_toolbar_space) {
 				view.style.minHeight = "100vh";
 				view.style.marginTop = "0";
 				view.style.paddingTop = "0";
 			}
 		} else {
-			appToolbar.style.removeProperty("display");
+			toolbarContainer.style.removeProperty("display");
 			view.style.removeProperty("min-height");
 			view.style.removeProperty("margin-top");
 			view.style.removeProperty("padding-top");
