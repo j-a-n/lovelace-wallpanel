@@ -59,6 +59,19 @@ For example:
 
 `media-source://synology_dsm/18C0PEN253705/19`
 
+### Random path order
+
+For media sources containing multiple folders, `random_path` randomly selects a folder beneath `image_url` and displays the media directly inside that folder in sorted order. After the last media item in the folder has been displayed, another folder is randomly selected. Every folder is selected once before the folder order is shuffled again.
+
+The folder configured by `image_url` is also eligible when it directly contains media. Empty folders and folders whose media are all excluded are skipped. Nested folders are treated as separate paths rather than being combined with their parent folder.
+
+```yaml
+image_url: /media1/photos
+media_order: random_path
+```
+
+This option is only supported for Home Assistant media sources. `exclude_filenames`, `exclude_media_types`, and `media_list_max_size` continue to apply; `media_list_max_size` limits the number of media items used from the selected folder.
+
 ### Exclude files
 To exclude files and directories from a local media source, use the `exclude_filenames` configuration option.
 This option accepts a list of regular expressions.

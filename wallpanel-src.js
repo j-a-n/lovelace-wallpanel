@@ -73,7 +73,7 @@ const defaultConfig = {
 	media_vertical_align: "middle", // top / middle  / bottom
 	media_list_update_interval: 3600,
 	media_list_max_size: 500,
-	media_order: "random", // sorted / random / random_but_synced
+	media_order: "random", // sorted / random / random_but_synced / random_path
 	exclude_filenames: [], // Excluded filenames (regex)
 	exclude_media_types: [], // Exclude media types (image / video)
 	exclude_media_orientation: "", // Exclude media items with this orientation (landscape / portrait / auto)
@@ -1372,6 +1372,9 @@ function initWallpanel() {
 			this.mediaList = [];
 			this.mediaIndex = -1;
 			this.mediaListDirection = "forwards"; // forwards, backwards
+			this.mediaPathLists = [];
+			this.mediaPathQueue = [];
+			this.currentMediaPath = null;
 			this.lastMediaListUpdate;
 			this.updatingMediaList = false;
 			this.mediaListRetryAt = 0;
@@ -2639,6 +2642,10 @@ function initWallpanel() {
 
 			const sourceChange =
 				oldConfig.image_url != config.image_url ||
+				oldConfig.media_order != config.media_order ||
+				oldConfig.media_list_max_size != config.media_list_max_size ||
+				JSON.stringify(oldConfig.exclude_filenames) != JSON.stringify(config.exclude_filenames) ||
+				JSON.stringify(oldConfig.exclude_media_types) != JSON.stringify(config.exclude_media_types) ||
 				(mediaSourceType() == "immich-api" &&
 					(config.immich_shared_albums != oldConfig.immich_shared_albums ||
 						config.immich_memories != oldConfig.immich_memories ||
@@ -2655,6 +2662,7 @@ function initWallpanel() {
 
 				if (sourceChange) {
 					this.clearMediaListRetry();
+					this.resetMediaPathLists();
 					this.mediaList = [];
 					this.mediaIndex = -1;
 				}
@@ -3023,13 +3031,29 @@ function initWallpanel() {
 			this.updatingMediaList = false;
 		}
 
-		async findMedias(mediaContentId) {
+		resetMediaPathLists() {
+			this.mediaPathLists = [];
+			this.mediaPathQueue = [];
+			this.currentMediaPath = null;
+		}
+
+		limitMediaList(urls) {
+			if (urls.length > config.media_list_max_size) {
+				logger.info(`Using only ${config.media_list_max_size} of ${urls.length} media items`);
+				return urls.slice(0, config.media_list_max_size);
+			}
+			return urls;
+		}
+
+		async findMediaPathLists(mediaContentId, excludeRegExp = null) {
 			const wp = this;
-			logger.debug(`findMedias: ${mediaContentId}`);
-			const excludeRegExp = [];
-			if (config.exclude_filenames) {
-				for (const imageExclude of config.exclude_filenames) {
-					excludeRegExp.push(new RegExp(imageExclude));
+			logger.debug(`findMediaPathLists: ${mediaContentId}`);
+			if (!excludeRegExp) {
+				excludeRegExp = [];
+				if (config.exclude_filenames) {
+					for (const imageExclude of config.exclude_filenames) {
+						excludeRegExp.push(new RegExp(imageExclude));
+					}
 				}
 			}
 
@@ -3040,32 +3064,98 @@ function initWallpanel() {
 				});
 
 				logger.debug("Found media entry", mediaEntry);
-				const promises = mediaEntry.children.map(async (child) => {
+				const medias = [];
+				const directoryPromises = [];
+				for (const child of mediaEntry.children) {
 					const filename = child.media_content_id.replace(/^media-source:\/\/[^/]+/, "");
+					let excluded = false;
 					for (const exclude of excludeRegExp) {
+						exclude.lastIndex = 0;
 						if (exclude.test(filename)) {
-							return null; // Excluded by filename
+							excluded = true;
+							break;
 						}
+					}
+					if (excluded) {
+						continue;
 					}
 					if (["image", "video"].includes(child.media_class)) {
 						if (config.exclude_media_types && config.exclude_media_types.includes(child.media_class)) {
-							return null; // Excluded by media type
+							continue;
 						}
-						return child.media_content_id;
+						medias.push(child.media_content_id);
+					} else if (child.media_class == "directory") {
+						directoryPromises.push(wp.findMediaPathLists(child.media_content_id, excludeRegExp));
 					}
-					if (child.media_class == "directory") {
-						// Recursively find medias in subdirectory
-						return await wp.findMedias(child.media_content_id);
-					}
-					return null; // Not an image, video, or directory
-				});
+				}
 
-				const results = await Promise.all(promises);
-				// Flatten the results and filter out null values
-				return results.flat().filter((res) => res !== null);
+				const childPathLists = (await Promise.all(directoryPromises)).flat();
+				const pathLists = medias.length ? [{ path: mediaContentId, medias: medias }] : [];
+				return pathLists.concat(childPathLists);
 			} catch (error) {
 				logger.warn(`Error browsing media ${mediaContentId}:`, error);
 				throw error; // Re-throw the error to be caught by the caller
+			}
+		}
+
+		updateMediaPathQueue() {
+			const availablePaths = this.mediaPathLists.map((pathList) => pathList.path);
+			this.mediaPathQueue = this.mediaPathQueue.filter(
+				(path, index, paths) =>
+					path != this.currentMediaPath && availablePaths.includes(path) && paths.indexOf(path) == index
+			);
+		}
+
+		selectNextMediaPath() {
+			if (!this.mediaPathLists.length) {
+				this.mediaList = [];
+				this.mediaIndex = -1;
+				this.currentMediaPath = null;
+				return false;
+			}
+
+			if (!this.mediaPathQueue.length) {
+				this.mediaPathQueue = shuffleArray(this.mediaPathLists.map((pathList) => pathList.path));
+				if (this.mediaPathQueue.length > 1 && this.mediaPathQueue[0] == this.currentMediaPath) {
+					[this.mediaPathQueue[0], this.mediaPathQueue[1]] = [this.mediaPathQueue[1], this.mediaPathQueue[0]];
+				}
+			}
+
+			const nextPath = this.mediaPathQueue.shift();
+			const pathList = this.mediaPathLists.find((entry) => entry.path == nextPath);
+			if (!pathList) {
+				this.updateMediaPathQueue();
+				return this.selectNextMediaPath();
+			}
+
+			this.currentMediaPath = nextPath;
+			this.mediaList = this.limitMediaList(pathList.medias.slice().sort());
+			this.mediaIndex = -1;
+			logger.debug(`Selected media path ${nextPath}:`, this.mediaList);
+			return this.mediaList.length > 0;
+		}
+
+		updateRandomPathMediaLists(pathLists) {
+			const currentMediaUrl = this.mediaList[this.mediaIndex];
+			const previousMediaIndex = this.mediaIndex;
+			this.mediaPathLists = pathLists;
+			this.updateMediaPathQueue();
+
+			const currentPathList = this.mediaPathLists.find((entry) => entry.path == this.currentMediaPath);
+			if (!currentPathList) {
+				this.currentMediaPath = null;
+				this.mediaPathQueue = [];
+				this.selectNextMediaPath();
+				return;
+			}
+
+			this.mediaList = this.limitMediaList(currentPathList.medias.slice().sort());
+			if (currentMediaUrl && this.mediaList.includes(currentMediaUrl)) {
+				this.mediaIndex = this.mediaList.indexOf(currentMediaUrl);
+			} else if (previousMediaIndex >= 0) {
+				this.mediaIndex = Math.min(previousMediaIndex - 1, this.mediaList.length - 1);
+			} else {
+				this.mediaIndex = -1;
 			}
 		}
 
@@ -3074,7 +3164,14 @@ function initWallpanel() {
 			const wp = this;
 
 			try {
-				let urls = await wp.findMedias(mediaContentId);
+				const pathLists = await wp.findMediaPathLists(mediaContentId);
+				if (config.media_order == "random_path") {
+					wp.updateRandomPathMediaLists(pathLists);
+					return;
+				}
+
+				wp.resetMediaPathLists();
+				let urls = pathLists.flatMap((pathList) => pathList.medias);
 				if (config.media_order == "random") {
 					urls = shuffleArray(urls);
 				} else if (config.media_order == "random_but_synced") {
@@ -3084,13 +3181,9 @@ function initWallpanel() {
 				} else {
 					urls = urls.sort(); // Sort consistently if not random
 				}
-				if (urls.length > config.media_list_max_size) {
-					logger.info(`Using only ${config.media_list_max_size} of ${urls.length} media items`);
-					urls = urls.slice(0, config.media_list_max_size);
-				}
-				wp.mediaList = urls;
+				wp.mediaList = wp.limitMediaList(urls);
 			} catch (error) {
-				// Error is logged in findMedias, re-throw for updateMediaList handler
+				// Error is logged in findMediaPathLists, re-throw for updateMediaList handler
 				throw new Error(`Failed to update image list from ${config.image_url}: ${error.message || stringify(error)}`);
 			}
 		}
@@ -3737,6 +3830,9 @@ function initWallpanel() {
 					mediaIndex--;
 				}
 				if (mediaIndex >= this.mediaList.length) {
+					if (config.media_order == "random_path" && updateIndex) {
+						this.selectNextMediaPath();
+					}
 					mediaIndex = 0;
 				} else if (mediaIndex < 0) {
 					mediaIndex = this.mediaList.length - 1;
