@@ -1382,7 +1382,7 @@ function setToolbarVisibility(hideToolbar, hideActionItems) {
 			toolbarStyle.textContent = `.header, app-toolbar, div.toolbar { display: none !important; }${
 				config.keep_toolbar_space
 					? ""
-					: "#view { min-height: 100vh !important; margin-top: 0 !important; padding-top: 0 !important; }"
+					: "hui-view-container, #view { min-height: 100vh !important; margin-top: 0 !important; padding-top: 0 !important; }"
 			}`;
 		} else {
 			if (toolbarStyle) {
