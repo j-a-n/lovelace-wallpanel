@@ -295,6 +295,124 @@ function getRetryAfterDelay(response) {
 	return null;
 }
 
+// The message container lives in the document, not in the wallpanel element's
+// shadow root, so messages can also be shown before that element exists - e.g.
+// config errors raised while the configuration is being parsed. Those used to
+// fall back to alert(), which blocks rendering until somebody clicks OK; on an
+// unattended wall panel nobody is there to.
+let messageContainer = null;
+let messageStyle = null;
+const queuedMessages = [];
+
+function messageCss() {
+	let css = "";
+	for (const className in classStyles) {
+		if (!className.startsWith("wallpanel-message")) {
+			continue;
+		}
+		css += `.${className} {\n`;
+		for (const attr in classStyles[className]) {
+			css += `${attr}: ${classStyles[className][attr]};\n`;
+		}
+		css += `}\n`;
+	}
+	return css;
+}
+
+// Keeps message styling in sync with config.style overrides
+function updateMessageStyle() {
+	if (messageStyle) {
+		messageStyle.innerHTML = messageCss();
+	}
+}
+
+function getMessageContainer() {
+	if (messageContainer && messageContainer.isConnected) {
+		return messageContainer;
+	}
+	if (!document.body) {
+		return null;
+	}
+	messageStyle = document.createElement("style");
+	messageStyle.innerHTML = messageCss();
+
+	messageContainer = document.createElement("div");
+	messageContainer.id = "wallpanel-message-container";
+	messageContainer.appendChild(messageStyle);
+	// Sits above the screensaver and the Home Assistant UI, but must not swallow
+	// clicks meant for the dashboard - only the messages themselves are clickable.
+	Object.assign(messageContainer.style, {
+		position: "fixed",
+		top: "1rem",
+		left: "1rem",
+		bottom: "1rem",
+		right: "1rem",
+		display: "flex",
+		flexDirection: "column",
+		alignItems: "flex-end",
+		gap: "0.5rem",
+		zIndex: "100000",
+		pointerEvents: "none"
+	});
+	document.body.appendChild(messageContainer);
+	return messageContainer;
+}
+
+function showMessage(type, title, text, timeout = 5000) {
+	// type: info / success / warning / error
+	const container = getMessageContainer();
+	if (!container) {
+		// Document not ready yet - show as soon as it is
+		if (!queuedMessages.length) {
+			document.addEventListener("DOMContentLoaded", flushQueuedMessages, { once: true });
+		}
+		queuedMessages.push([type, title, text, timeout]);
+		return;
+	}
+
+	const message = document.createElement("div");
+	message.className = `wallpanel-message ${type}`;
+	message.style.pointerEvents = "auto";
+
+	const titleDiv = document.createElement("div");
+	titleDiv.className = "wallpanel-message-title";
+	titleDiv.textContent = title;
+	message.appendChild(titleDiv);
+
+	const textDiv = document.createElement("div");
+	textDiv.className = "wallpanel-message-text";
+	textDiv.textContent = text;
+	message.appendChild(textDiv);
+	message.addEventListener("click", () => hideMessage(message));
+
+	container.appendChild(message);
+	requestAnimationFrame(() => message.classList.add("show"));
+
+	setTimeout(() => hideMessage(message), timeout);
+}
+
+function hideMessage(message) {
+	message.classList.remove("show");
+	message.addEventListener("transitionend", () => message.remove());
+}
+
+function hideAllMessages() {
+	if (!messageContainer) {
+		return false;
+	}
+	const messages = messageContainer.querySelectorAll(".wallpanel-message");
+	if (!messages.length) {
+		return false;
+	}
+	messages.forEach((message) => hideMessage(message));
+	return true;
+}
+
+function flushQueuedMessages() {
+	const queued = queuedMessages.splice(0, queuedMessages.length);
+	queued.forEach((args) => showMessage.apply(null, args));
+}
+
 const logger = {
 	messages: [],
 	logLevelConsole: "warning",
@@ -405,12 +523,7 @@ const logger = {
 		}
 		logger.addMessage("error", arguments);
 		if (config.alert_errors) {
-			const msg = `Wallpanel error: ${stringify(arguments)}`;
-			if (wallpanel) {
-				wallpanel.showMessage("error", "Error", msg, 10000);
-			} else {
-				alert(msg);
-			}
+			showMessage("error", "Error", `Wallpanel error: ${stringify(arguments)}`, 10000);
 		}
 	},
 	err: function () {
@@ -1574,20 +1687,6 @@ function initWallpanel() {
 		}
 
 		setDefaultStyle() {
-			this.messageContainer.removeAttribute("style");
-			this.messageContainer.style.position = "fixed";
-			this.messageContainer.style.top = "1rem";
-			this.messageContainer.style.left = "1rem";
-			this.messageContainer.style.bottom = "1rem";
-			this.messageContainer.style.right = "1rem";
-			this.messageContainer.style.alignItems = "flex-end";
-			this.messageContainer.style.display = "flex";
-			this.messageContainer.style.flexDirection = "column";
-			this.messageContainer.style.gap = "0.5rem";
-			this.messageContainer.style.zIndex = this.style.zIndex + 1;
-			this.messageContainer.style.pointerEvents = "none";
-			this.messageContainer.style.visibility = "hidden";
-
 			this.debugBox.removeAttribute("style");
 			this.debugBox.style.position = "fixed";
 			this.debugBox.style.pointerEvents = "none";
@@ -1763,7 +1862,6 @@ function initWallpanel() {
 				config.crossfade_time > 0 ? `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out` : "";
 			this.imageTwoContainer.style.transition =
 				config.crossfade_time > 0 ? `opacity ${Math.round(config.crossfade_time * 1000)}ms ease-in-out` : "";
-			this.messageContainer.style.visibility = this.screensaverRunning() ? "visible" : "hidden";
 			this.screensaverImageOverlay.style.pointerEvents = config.content_interaction ? "none" : "auto";
 
 			const show_info = config.show_image_info && Boolean(config.image_info_template);
@@ -1837,6 +1935,8 @@ function initWallpanel() {
 					}
 				}
 			}
+
+			updateMessageStyle();
 
 			let classCss = "";
 			for (const className in classStyles) {
@@ -2377,9 +2477,6 @@ function initWallpanel() {
 				this.timerInterval = setInterval(this.timer.bind(this), 1000);
 			}
 
-			this.messageContainer = document.createElement("div");
-			this.messageContainer.id = "wallpanel-message-container";
-
 			this.debugBox = document.createElement("div");
 			this.debugBox.id = "wallpanel-debug-box";
 
@@ -2511,7 +2608,6 @@ function initWallpanel() {
 			const shadow = this.attachShadow({ mode: "open" });
 			shadow.appendChild(this.shadowStyle);
 			shadow.appendChild(this.screensaverContainer);
-			shadow.appendChild(this.messageContainer);
 			shadow.appendChild(this.debugBox);
 
 			const wp = this;
@@ -4353,47 +4449,6 @@ function initWallpanel() {
 			}, crossfadeMillis);
 		}
 
-		showMessage(type, title, text, timeout = 5000) {
-			// type: info / success / warning / error
-			if (!this.messageContainer) {
-				return;
-			}
-
-			const message = document.createElement("div");
-			message.className = `wallpanel-message ${type}`;
-
-			const titleDiv = document.createElement("div");
-			titleDiv.className = "wallpanel-message-title";
-			titleDiv.textContent = title;
-			message.appendChild(titleDiv);
-
-			const textDiv = document.createElement("div");
-			textDiv.className = "wallpanel-message-text";
-			textDiv.textContent = text;
-			message.appendChild(textDiv);
-
-			this.messageContainer.appendChild(message);
-			requestAnimationFrame(() => message.classList.add("show"));
-
-			const wp = this;
-			setTimeout(() => wp.hideMessage(message), timeout);
-		}
-
-		hideMessage(message) {
-			message.classList.remove("show");
-			message.addEventListener("transitionend", () => message.remove());
-		}
-
-		hideAllMessages() {
-			const messages = this.messageContainer.querySelectorAll(".wallpanel-message");
-			if (!messages.length) {
-				return false;
-			}
-			const wp = this;
-			messages.forEach((message) => wp.hideMessage(message));
-			return true;
-		}
-
 		setupScreensaver() {
 			logger.debug("Setup screensaver");
 			if (config.keep_screen_on_time > 0 && !this.screenWakeLock.enabled) {
@@ -4447,7 +4502,7 @@ function initWallpanel() {
 						logger.warning(
 							"Keep screen on will not work because the user didn't interact with the document first. https://goo.gl/xX8pDD"
 						);
-						wp.showMessage(
+						showMessage(
 							"info",
 							"Keep screen on",
 							"Please tap the screen for a moment to keep it awake and prevent it from turning off.",
@@ -4516,7 +4571,7 @@ function initWallpanel() {
 			if (this.screensaverStopNavigationPathTimeout) {
 				clearTimeout(this.screensaverStopNavigationPathTimeout);
 			}
-			this.hideAllMessages();
+			hideAllMessages();
 
 			this.debugBox.style.pointerEvents = "none";
 			if (fadeOutTime > 0) {
@@ -4828,7 +4883,7 @@ function initWallpanel() {
 			}
 
 			// Screensaver is active
-			if (isClick && this.hideAllMessages()) {
+			if (isClick && hideAllMessages()) {
 				// One or messages where hidden
 				this.blockEventsUntil = now + 1000;
 				return;
