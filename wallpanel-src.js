@@ -4073,6 +4073,7 @@ function initWallpanel() {
 
 		async updateMediaFromOtherSrc(element) {
 			element.mediaUrl = this.fillPlaceholders(element.mediaUrl);
+			element.infoCacheUrl = element.mediaUrl;
 			return await this.updateMediaFromUrl(element, element.mediaUrl);
 		}
 
