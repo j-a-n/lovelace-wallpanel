@@ -5045,7 +5045,7 @@ function initWallpanel() {
 function activateWallpanel() {
 	logger.debug("activateWallpanel");
 	let hideToolbar = config.hide_toolbar;
-	let hideActionItems = config.hide_toolbar_action_icons;
+	const hideActionItems = config.hide_toolbar_action_icons;
 	if (hideToolbar && !config.hide_toolbar_on_subviews && activeTab) {
 		const pl = getHaPanelLovelace();
 		if (pl && pl.lovelace && pl.lovelace.rawConfig && pl.lovelace.rawConfig.views) {
@@ -5054,7 +5054,6 @@ function activateWallpanel() {
 					if (pl.lovelace.rawConfig.views[i].subview) {
 						logger.debug(`Current tab '${activeTab}' is a subview, not hiding toolbar`);
 						hideToolbar = false;
-						hideActionItems = false;
 					}
 					break;
 				}
