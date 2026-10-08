@@ -2376,6 +2376,12 @@ function initWallpanel() {
 						logger.debug(error);
 					}
 				}
+				// Removing src fires neither load nor error, so a load still pending on this
+				// element would never settle and updatingMedia would stay true forever.
+				// Fail the pending load explicitly so updateMedia() can finish.
+				if (typeof mediaElement.onerror === "function") {
+					mediaElement.dispatchEvent(new Event("error"));
+				}
 				const src = mediaElement.getAttribute("src") || "";
 				if (src.startsWith("blob:")) {
 					URL.revokeObjectURL(src);
