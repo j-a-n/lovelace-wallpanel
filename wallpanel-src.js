@@ -4387,8 +4387,15 @@ function initWallpanel() {
 				}
 			}
 
+			const screensaverStartedAt = this.screensaverStartedAt;
 			const updateElement = this.getInactiveMediaElement();
 			const element = await this.updateMedia(updateElement);
+			if (!this.screensaverRunning() || this.screensaverStartedAt !== screensaverStartedAt) {
+				if (element) {
+					this.releaseMediaElement(element);
+				}
+				return;
+			}
 			if (!element) {
 				this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
 				return;
