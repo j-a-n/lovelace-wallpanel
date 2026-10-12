@@ -3379,6 +3379,7 @@ function initWallpanel() {
 			);
 			let urls = [];
 			const mediaInfo = {};
+			const excludedAssetIds = new Set();
 			const apiUrl = config.image_url.replace(/^immich\+/, "");
 			const excludeRegExp = [];
 			if (config.exclude_filenames) {
@@ -3417,8 +3418,35 @@ function initWallpanel() {
 				return dimensions.width >= dimensions.height ? "landscape" : "portrait";
 			}
 
+			async function fetchExcludedAssetIds(apiKey) {
+				excludedAssetIds.clear();
+				if (!config.immich_exclude_tag_names || !config.immich_exclude_tag_names.length) {
+					return;
+				}
+				const tagNamesLower = config.immich_exclude_tag_names.map((value) => value.toLowerCase());
+				const matchingTags = (await wp._immichFetch(`${apiUrl}/tags`, apiKey)).filter((tag) =>
+					tagNamesLower.includes(tag.name.toLowerCase())
+				);
+				for (const tag of matchingTags) {
+					let page = 1;
+					while (true) {
+						const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
+							method: "POST",
+							body: JSON.stringify({ tagIds: [tag.id], page: page, size: 1000 })
+						});
+						for (const asset of searchResults.assets.items) {
+							excludedAssetIds.add(asset.id);
+						}
+						if (!searchResults.assets.nextPage) {
+							break;
+						}
+						page = parseInt(searchResults.assets.nextPage, 10);
+					}
+				}
+				logger.debug(`Excluding ${excludedAssetIds.size} Immich assets by tag`);
+			}
+
 			async function fetchAssetInfo(assets, apiKey) {
-				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
 				const needDimensions = !!exclude_media_orientation;
 				const assetInfoConcurrency = 10;
 				for (let offset = 0; offset < assets.length; offset += assetInfoConcurrency) {
@@ -3432,11 +3460,10 @@ function initWallpanel() {
 								(asset.width == null || asset.height == null || asset.isEdited === undefined);
 							const needsDetailForOrientation =
 								isImage && needDimensions && (asset.width == null || asset.height == null);
-							if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
+							if (!asset.exifInfo || needsDetailForOrientation || needsDetailForEdit) {
 								logger.debug(`Fetching asset info for ${asset.id}`);
 								const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
 								asset.exifInfo = assetInfo.exifInfo;
-								asset.tags = (assetInfo.tags || []).map((v) => v.value);
 								asset.width = assetInfo.width;
 								asset.height = assetInfo.height;
 								asset.isEdited = assetInfo.isEdited;
@@ -3451,6 +3478,10 @@ function initWallpanel() {
 
 				for (const asset of assets) {
 					logger.debug("Processing immich asset", asset);
+					if (excludedAssetIds.has(asset.id)) {
+						logger.debug("Media item excluded due to tag");
+						continue;
+					}
 
 					const assetType = asset.type.toLowerCase();
 					if (!["image", "video"].includes(assetType)) {
@@ -3472,14 +3503,6 @@ function initWallpanel() {
 					}
 					if (excludedByRegExp) {
 						continue;
-					}
-
-					if (config.immich_exclude_tag_names && config.immich_exclude_tag_names.length) {
-						const matchingTags = asset.tags.filter((tag) => config.immich_exclude_tag_names.includes(tag));
-						if (matchingTags.length > 0) {
-							logger.debug(`Media item excluded due to tag(s): ${matchingTags.join(", ")}`);
-							continue;
-						}
 					}
 
 					if (exclude_media_orientation) {
@@ -3546,6 +3569,7 @@ function initWallpanel() {
 			try {
 				for (const apiKey of config.immich_api_keys) {
 					logger.debug(`Using immich API key ${apiKey}`);
+					await fetchExcludedAssetIds(apiKey);
 					if (config.immich_persons && config.immich_persons.length) {
 						logger.debug("Searching for assets based on persons");
 						const orPersonNames = config.immich_persons.map((entry) =>
