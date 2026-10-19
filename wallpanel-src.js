@@ -119,6 +119,7 @@ const defaultConfig = {
 	content_interaction: false,
 	profile: "",
 	profile_entity: "",
+	command_entity: "",
 	profiles: {}
 };
 const renamedConfigOptions = {
@@ -1557,6 +1558,8 @@ function initWallpanel() {
 				updateConfig();
 			}
 
+			this.handleCommandEntity();
+
 			if (!isActive()) {
 				return;
 			}
@@ -1647,6 +1650,61 @@ function initWallpanel() {
 						logger.error("Failed to set image url entity state:", error);
 					}
 				);
+		}
+
+		// Executes the command in the state of the command_entity ("<command>" or "<command>|<counter>")
+		// when the state changes. The state at load time is only remembered.
+		handleCommandEntity() {
+			const commandEntity = config.command_entity;
+			const entity = commandEntity ? this.__hass.states[commandEntity] : null;
+			if (!entity) {
+				this.lastCommandEntityKey = null;
+				return;
+			}
+			const key = `${commandEntity}|${entity.state}|${entity.last_changed}`;
+			const lastKey = this.lastCommandEntityKey;
+			this.lastCommandEntityKey = key;
+			if (!lastKey || !lastKey.startsWith(`${commandEntity}|`) || key == lastKey) {
+				return;
+			}
+			const command = String(entity.state).split("|")[0].trim().toLowerCase();
+			if (!command || command == "unknown" || command == "unavailable") {
+				return;
+			}
+			this.executeCommand(command);
+		}
+
+		executeCommand(command) {
+			if (!isActive()) {
+				logger.debug(`Ignoring command "${command}", WallPanel is not active`);
+				return;
+			}
+			if (command == "start") {
+				if (!this.screensaverRunning()) {
+					this.startScreensaver();
+				}
+				return;
+			}
+			if (!this.screensaverRunning()) {
+				logger.debug(`Ignoring command "${command}", screensaver is not running`);
+				return;
+			}
+			logger.debug(`Executing command "${command}"`);
+			if (command == "next") {
+				this.nextImage();
+			} else if (command == "previous") {
+				this.previousImage();
+			} else if (command == "pause") {
+				if (!this.isPaused) this.togglePlayPause();
+			} else if (command == "resume") {
+				if (this.isPaused) this.togglePlayPause();
+			} else if (command == "toggle_pause") {
+				this.togglePlayPause();
+			} else if (command == "stop") {
+				this.stopScreensaver();
+			} else {
+				logger.warn(`Unknown command "${command}" in ${config.command_entity}`);
+			}
 		}
 
 		updateProfile() {
