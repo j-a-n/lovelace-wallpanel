@@ -1,6 +1,6 @@
 # Media Info
 You can show infos regarding the displayed media in the screesaver.
-The media info is available for Local Media Sources, Immich Integration and some image entities.
+The media info is available for Local Media Sources, Immich Integration, PhotoPrism Integration and some image entities.
 Set the configuration opttion `show_image_info` to `true` to activate this feature.
 
 The image info can be formatted by specifying HTML code in `image_info_template`.

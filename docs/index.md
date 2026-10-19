@@ -21,6 +21,7 @@ You can use images and videos from the following sources:
 
 - Home Assistant Media-source
 - Immich
+- PhotoPrism
 - Unsplash
 - Home Assitant entities with entity_picture attribute
 - Full websites as iframe

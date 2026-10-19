@@ -59,6 +59,17 @@ You can set the following configuration parameters for every individual Home Ass
 | immich_memories                  | Display only today’s memories.                                                                         | false     |
 | immich_favorites                 | Display only media marked as favorite.                                                                 | false     |
 | immich_resolution                | The resolution to use for loading media from immich (possible values are: `preview` / `original`).     | preview   |
+| photoprism_access_tokens         | App passwords or access tokens that are used for authentication at the [PhotoPrism API](media-sources.md#photoprism-api) | []        |
+| photoprism_api_request_timeout   | Timeout in seconds for PhotoPrism API requests.                                                        | 15        |
+| photoprism_album_names           | Display media only from the specified PhotoPrism albums.                                               | []        |
+| photoprism_label_names           | Display media only with the specified PhotoPrism labels.                                               | []        |
+| photoprism_favorites             | Display only media marked as favorite.                                                                 | false     |
+| photoprism_query                 | PhotoPrism search query or list of queries, supports date placeholders. See [On this day](media-sources.md#on-this-day) for details. |           |
+| photoprism_query_min_results     | Minimum number of pictures a query of the `photoprism_query` list must return. See [On this day](media-sources.md#on-this-day) for details. | 1         |
+| photoprism_album_mode            | `all` to show media from all albums, `random_single` to show media from a single random album per media list update. See [Random album](media-sources.md#random-album). | all       |
+| photoprism_reference_date        | Date used for the date placeholders of `photoprism_query` instead of the current date (`YYYY-MM-DD` or `MM-DD`). See [On this day](media-sources.md#on-this-day). |           |
+| photoprism_status_entity         | An entity of type 'input_text' that receives a short status text after every PhotoPrism media list update. See [PhotoPrism status](media-sources.md#photoprism-status). |           |
+| photoprism_resolution            | The resolution to use for loading media from PhotoPrism (`preview` / `original` / thumbnail size name like `fit_2560`). | preview   |
 | exclude_filenames                | List of regular expressions for excluding files and directories from media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_types              | List of media types to exlcude media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_orientation        | Media orientation to exlcude. See [Media Sources](media-sources.md#exclude-files) for details.         |            |

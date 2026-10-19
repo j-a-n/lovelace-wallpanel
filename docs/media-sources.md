@@ -99,7 +99,7 @@ Valid values are:
 * `auto`: excludes media whose orientation does not match the screen orientation
 
 !!! note
-    This option is currently only supported for the Immich media source.
+    This option is currently only supported for the Immich and PhotoPrism media sources.
 
 **Example**
 ```yaml
@@ -251,6 +251,208 @@ immich_api_keys:
   - 0vOb7EZ7YSajUQckMt6Cbnri8Ifzo5dlD9Q5hnnXlc
 immich_favorites: true
 ```
+
+## PhotoPrism API
+Images and videos can be loaded from a [PhotoPrism](https://www.photoprism.app/) server,
+for which WallPanel accesses the [PhotoPrism API](https://docs.photoprism.app/developer-guide/api/).
+Images are loaded through the [Thumbnail Image API](https://docs.photoprism.app/developer-guide/api/thumbnails/),
+videos are streamed as MPEG-4 AVC (H.264).
+
+### PhotoPrism access token
+WallPanel authenticates with an app password or a client access token (`Authorization: Bearer <token>`).
+App passwords can be created in the PhotoPrism web interface under *Settings > Account > Apps and Devices*
+or with the `photoprism auth add` command, for example:
+
+```bash
+photoprism auth add -n WallPanel -s "photos albums labels config" -e -1 admin
+```
+
+App passwords expire after one year by default, `-e -1` creates an app password that does not expire.
+
+The authorization scope must include `photos` as well as `config`, which is needed to get the preview token
+that is part of the thumbnail and video URLs. Add `albums` and/or `labels` if you select pictures by album or label name.
+On current PhotoPrism versions you can also use the read-only scope `read`, or `*` to allow all.
+See [Client Authentication](https://docs.photoprism.app/developer-guide/api/auth/) for details.
+
+!!! note
+    Thumbnail and video URLs contain the preview token of the account, they are valid as long as the token is.
+    The preview token changes when the account password is changed, WallPanel will then fetch the new token
+    the next time the media list is updated.
+
+### PhotoPrism server CORS
+WallPanel sends direct requests to the PhotoPrism server via the browser, which enforces CORS (Cross-Origin Resource Sharing).
+PhotoPrism supports CORS through its [config options](https://docs.photoprism.app/getting-started/config-options/).
+Set the origin to the URL of your Home Assistant instance and add `Authorization` to the allowed headers:
+
+```yaml
+PHOTOPRISM_CORS_ORIGIN: "https://homeassistant.your.domain:8123"
+PHOTOPRISM_CORS_HEADERS: "Accept, Accept-Ranges, Authorization, Content-Disposition, Content-Encoding, Content-Range, Location"
+PHOTOPRISM_CORS_METHODS: "GET, HEAD, OPTIONS"
+```
+
+`PHOTOPRISM_CORS_METHODS` can be left at its default value, as WallPanel only sends `GET` requests.
+Preflight requests are handled correctly since PhotoPrism build 251130, for older versions
+configure CORS in a reverse proxy instead (see [Immich server CORS](#immich-server-cors)).
+
+!!! warning
+    For security reasons, it's best to specify the URL of your Home Assistant instance in `PHOTOPRISM_CORS_ORIGIN` rather than using `*`.
+
+### Wallpanel configuration
+You need to set the `image_url` to `photoprism+<your PhotoPrism URL>` and add the access token to `photoprism_access_tokens`.
+Multiple access tokens can be added to use multiple accounts on the same server.
+The timeout for PhotoPrism API requests can be set using the `photoprism_api_request_timeout` configuration option and defaults to 15 seconds.
+
+The following options select the media items:
+
+* `photoprism_album_names`: list of album titles
+* `photoprism_label_names`: list of label names
+* `photoprism_favorites`: `true` to show favorites only
+* `photoprism_query`: a [PhotoPrism search query](https://docs.photoprism.app/user-guide/search/filters/), e.g. `year:2024 country:at`,
+  or a list of queries (see [On this day](#on-this-day))
+* `photoprism_query_min_results`: minimum number of pictures a query of the `photoprism_query` list must return (default: `1`)
+* `photoprism_album_mode`: `all` (default) to show pictures from all albums and labels,
+  or `random_single` to show pictures from a single random album or label (see [Random album](#random-album))
+
+Media items from all configured albums and labels are combined.
+Album titles are matched exactly (case-insensitive), if several albums have the same title, all of them are used.
+If neither albums nor labels are configured, the whole library is used.
+`photoprism_favorites` and `photoprism_query` restrict the results further, also in combination with albums and labels.
+Archived and private pictures are not included.
+If `exclude_media_types` contains `video`, videos are already excluded by PhotoPrism, live photos are shown as images.
+
+With the default `media_order` `random`, PhotoPrism selects random pictures,
+so only `media_list_max_size` media items are loaded on every media list update instead of the whole library.
+If albums or labels are configured, the media items are distributed over them according to their number of pictures.
+With `photoprism_favorites` or `photoprism_query`, up to `media_list_max_size` media items are loaded from every album and label,
+WallPanel then selects `media_list_max_size` random items from them.
+With `media_order` `sorted` or `random_but_synced`, all matching media items are loaded.
+
+The media list is updated every `media_list_update_interval` seconds and when the profile set by `profile_entity` changes.
+Small values for `media_list_max_size` and `media_list_update_interval` (for example `60` and `3600`) result in
+a new selection of pictures every hour.
+
+With the config option `photoprism_resolution` you can select the resolution of the images:
+
+* `preview` (default): `fit_1920` thumbnails
+* `original`: the largest thumbnail size (`fit_7680`), PhotoPrism reduces the size to the largest size available on the server,
+  see [Size Limits](https://docs.photoprism.app/developer-guide/api/thumbnails/#size-limits)
+* a [thumbnail size](https://docs.photoprism.app/developer-guide/api/thumbnails/#thumbnail-sizes) name like `fit_2560`
+
+The picture metadata returned by PhotoPrism (for example `Title`, `TakenAtLocal`, `PlaceLabel`, `CameraModel`)
+can be used in the `image_info_template`.
+
+Example showing PhotoPrism favorites:
+```yaml
+image_url: photoprism+https://photos.your.domain
+photoprism_access_tokens:
+  - Y2b7Q-wXZpo-7rKcS-fNa3u
+photoprism_favorites: true
+exclude_media_orientation: auto
+```
+
+Example using album names:
+```yaml
+image_url: photoprism+https://photos.your.domain
+photoprism_access_tokens:
+  - Y2b7Q-wXZpo-7rKcS-fNa3u
+photoprism_album_names:
+  - Tokio
+  - New York
+photoprism_resolution: fit_2560
+```
+
+Example using labels, restricted to pictures taken in 2024:
+```yaml
+image_url: photoprism+https://photos.your.domain
+photoprism_access_tokens:
+  - Y2b7Q-wXZpo-7rKcS-fNa3u
+photoprism_label_names:
+  - Cat
+  - Dog
+photoprism_query: "year:2024"
+image_info_template: "${Title} - ${TakenAtLocal}"
+```
+
+### On this day
+`photoprism_query` can contain the following placeholders, which are replaced with the current local date:
+
+* `{day}`: day of the month
+* `{month}`: month (1-12)
+* `{year}`: year
+* `{days:N}`: the days from N days before to N days after the current day,
+  e.g. `{days:3}` is replaced with `month:10 day:12|13|14|15|16|17|18` on October 15th.
+  If the days span several months, one query per month is sent and the results are combined.
+* `{week}`: same as `{days:3}`
+
+Set `photoprism_reference_date` to use another date than today, either as `YYYY-MM-DD` or as `MM-DD` (current year).
+If a reference date is set, the media list is not updated when the day changes.
+
+If `photoprism_query` is a list, the queries are tried in order and the first one that returns
+at least `photoprism_query_min_results` pictures (default: `1`) is used.
+If no query reaches this number, the query with the most pictures is used.
+Queries with placeholders are also updated when the day changes.
+
+Example showing pictures taken on this day in previous years from two albums,
+widening the time span until at least 30 pictures are found:
+```yaml
+image_url: photoprism+https://photos.your.domain
+photoprism_access_tokens:
+  - Y2b7Q-wXZpo-7rKcS-fNa3u
+photoprism_album_names:
+  - Family
+  - Holidays
+photoprism_query:
+  - "month:{month} day:{day}"
+  - "{days:3}"
+  - "{days:7}"
+  - "{days:14}"
+  - "month:{month}"
+  - "{days:45}"
+photoprism_query_min_results: 30
+exclude_media_types:
+  - video
+media_list_max_size: 60
+media_list_update_interval: 3600
+image_info_template: "${Title} - ${TakenAtLocal}"
+```
+
+### Random album
+With `photoprism_album_mode: random_single`, a single album or label is selected randomly on every media list update
+and `media_list_max_size` random pictures of it are shown.
+The same album is not selected twice in a row, albums and labels with less than `photoprism_query_min_results` pictures are skipped.
+Albums with the same title are treated as separate albums.
+The title of the selected album is available as `image.folderName` in the `image_info_template`.
+This option is only used if `photoprism_query` is empty, otherwise all albums and labels are searched.
+
+Example showing a different album every hour:
+```yaml
+image_url: photoprism+https://photos.your.domain
+photoprism_access_tokens:
+  - Y2b7Q-wXZpo-7rKcS-fNa3u
+photoprism_album_names:
+  - Family
+  - Holidays
+  - Tokio
+photoprism_album_mode: random_single
+photoprism_query_min_results: 30
+media_list_max_size: 60
+media_list_update_interval: 3600
+image_info_template: "${image.folderName} - ${TakenAtLocal}"
+```
+
+### PhotoPrism status
+If `photoprism_status_entity` is set to an `input_text` entity, a short status text is written to it after every media list update,
+for example:
+
+* `Album: Sweden 2025 (797) · 60 pictures · 15:00` (`photoprism_album_mode: random_single`)
+* `Albums: 62 · 60 pictures · 15:00` (all configured albums)
+* `10/15 ±3 days · 43 pictures (level 2/6) · 15:00` (reference date, selected query of the `photoprism_query` list
+  and number of matching pictures before limiting to `media_list_max_size`)
+* `No pictures found (10/15 day) · 15:00`
+
+The texts are available in English and German and are selected by the Home Assistant language,
+the date is formatted according to the language.
+The text is limited to 255 characters, the maximum length of an `input_text` entity.
 
 ## Website as iframe
 You can also display a website in an iframe.
