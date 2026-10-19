@@ -116,6 +116,7 @@ const defaultConfig = {
 	badges: [],
 	cards: [],
 	views: [],
+	playlist: [],
 	content_interaction: false,
 	profile: "",
 	profile_entity: "",
@@ -1029,6 +1030,20 @@ function mergeConfig(target, ...sources) {
 	return mergeConfig(target, ...sources);
 }
 
+function normalizeImageUrl(url) {
+	if (!url || typeof url !== "string") {
+		return url;
+	}
+	url = url.replace(/^media-entity:\/\//, "media-entity-image://");
+	if (url.startsWith("/")) {
+		url = `media-source://media_source${url}`;
+	}
+	if (url.startsWith("media-source://")) {
+		url = url.replace(/\/+$/, "");
+	}
+	return url;
+}
+
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
 
@@ -1131,17 +1146,13 @@ function updateConfig() {
 	}
 
 	if (config.image_url) {
-		config.image_url = config.image_url.replace(/^media-entity:\/\//, "media-entity-image://");
-		if (config.image_url.startsWith("/")) {
-			config.image_url = `media-source://media_source${config.image_url}`;
-		}
-		if (mediaSourceType() == "media-source") {
-			config.image_url = config.image_url.replace(/\/+$/, "");
-		}
+		config.image_url = normalizeImageUrl(config.image_url);
 		if (mediaSourceType() == "unsplash-api" && config.media_list_update_interval < 90) {
 			// Unsplash API currently places a limit of 50 requests per hour
 			config.media_list_update_interval = 90;
 		}
+	} else if (config.playlist && Array.isArray(config.playlist) && config.playlist.length > 0) {
+		config.show_images = true;
 	} else {
 		config.show_images = false;
 	}
@@ -1485,6 +1496,10 @@ function initWallpanel() {
 			this.mediaList = [];
 			this.mediaIndex = -1;
 			this.mediaListDirection = "forwards"; // forwards, backwards
+			this.playlistIndex = 0;
+			this.playlistCycle = 0;
+			this.baseConfig = null;
+			this.playlistState = [];
 			this.mediaPathLists = [];
 			this.mediaPathQueue = [];
 			this.currentMediaPath = null;
@@ -2272,6 +2287,81 @@ function initWallpanel() {
 			return this.displayTime;
 		}
 
+		isPlaylistActive() {
+			return Boolean(config.playlist && Array.isArray(config.playlist) && config.playlist.length > 0);
+		}
+
+		getCurrentPlaylistItem() {
+			if (!this.isPlaylistActive()) {
+				return null;
+			}
+			if (this.playlistIndex >= config.playlist.length || this.playlistIndex < 0) {
+				this.playlistIndex = 0;
+			}
+			const raw = config.playlist[this.playlistIndex];
+			if (typeof raw === "string") {
+				return { image_url: raw, cycles: 1 };
+			}
+			if (isObject(raw)) {
+				return {
+					cycles: 1,
+					...raw
+				};
+			}
+			return null;
+		}
+
+		applyPlaylistItem(index, preserveListState = true) {
+			if (!this.isPlaylistActive()) {
+				return;
+			}
+			if (!this.baseConfig) {
+				this.baseConfig = { ...config };
+			}
+			if (preserveListState && this.playlistState) {
+				this.playlistState[this.playlistIndex] = {
+					mediaList: this.mediaList ? [...this.mediaList] : [],
+					mediaIndex: this.mediaIndex,
+					lastMediaListUpdate: this.lastMediaListUpdate
+				};
+			}
+			this.playlistIndex = (index + config.playlist.length) % config.playlist.length;
+			const item = this.getCurrentPlaylistItem();
+			if (!item) {
+				return;
+			}
+
+			// Restore base configuration and overlay current item parameters
+			for (const key in this.baseConfig) {
+				config[key] = this.baseConfig[key];
+			}
+			for (const key in item) {
+				if (key !== "cycles") {
+					config[key] = item[key];
+				}
+			}
+			if (config.image_url) {
+				config.image_url = normalizeImageUrl(config.image_url);
+				config.show_images = true;
+			}
+			if (mediaSourceType() === "unsplash-api" && config.media_list_update_interval < 90) {
+				config.media_list_update_interval = 90;
+			}
+
+			const savedState = this.playlistState[this.playlistIndex];
+			if (savedState && savedState.mediaList && savedState.mediaList.length > 0) {
+				this.mediaList = savedState.mediaList;
+				this.mediaIndex = savedState.mediaIndex !== undefined ? savedState.mediaIndex : -1;
+				this.lastMediaListUpdate = savedState.lastMediaListUpdate || 0;
+			} else {
+				this.mediaList = [];
+				this.mediaIndex = -1;
+				this.lastMediaListUpdate = 0;
+			}
+			this.setDisplayTime();
+			logger.debug(`Playlist activated item ${this.playlistIndex}:`, item);
+		}
+
 		restartProgressBarAnimation() {
 			if (!this.progressBarContainer) {
 				return;
@@ -2736,7 +2826,13 @@ function initWallpanel() {
 				wallpanel.moveInfoBox(0, 0);
 			}
 
+			if (this.isPlaylistActive()) {
+				this.baseConfig = { ...config };
+				this.applyPlaylistItem(this.playlistIndex, false);
+			}
+
 			const sourceChange =
+				JSON.stringify(oldConfig?.playlist) != JSON.stringify(config?.playlist) ||
 				oldConfig.image_url != config.image_url ||
 				oldConfig.media_order != config.media_order ||
 				oldConfig.media_list_max_size != config.media_list_max_size ||
@@ -3751,6 +3847,14 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
+			if (mediaType && element.tagName.toLowerCase() !== mediaType) {
+				element = this.replaceMediaElement(element, mediaType);
+			} else if (
+				!mediaType &&
+				(element.tagName.toLowerCase() === "iframe" || element.tagName.toLowerCase() === "embed")
+			) {
+				element = this.replaceMediaElement(element, "img");
+			}
 			if (config.force_load_media_with_fetch) {
 				useFetch = true;
 			}
@@ -4336,6 +4440,45 @@ function initWallpanel() {
 				this.afterFadeoutTimer = null;
 			}
 
+			const prevPlaylistIndex = this.playlistIndex;
+			const prevPlaylistCycle = this.playlistCycle;
+			let playlistAdvanced = false;
+
+			if (this.isPlaylistActive()) {
+				if (eventType === "start") {
+					this.applyPlaylistItem(this.playlistIndex, false);
+					this.playlistCycle = 1;
+				} else {
+					const currentItem = this.getCurrentPlaylistItem();
+					const targetCycles = Math.max(1, parseInt(currentItem?.cycles, 10) || 1);
+
+					if (this.mediaListDirection === "backwards") {
+						if (this.playlistCycle > 1) {
+							this.playlistCycle--;
+						} else {
+							const prevIndex = (this.playlistIndex - 1 + config.playlist.length) % config.playlist.length;
+							this.applyPlaylistItem(prevIndex, true);
+							const newItem = this.getCurrentPlaylistItem();
+							this.playlistCycle = Math.max(1, parseInt(newItem?.cycles, 10) || 1);
+							playlistAdvanced = true;
+						}
+					} else {
+						if (this.playlistCycle < targetCycles) {
+							this.playlistCycle++;
+						} else {
+							const nextIndex = (this.playlistIndex + 1) % config.playlist.length;
+							this.applyPlaylistItem(nextIndex, true);
+							this.playlistCycle = 1;
+							playlistAdvanced = true;
+						}
+					}
+				}
+
+				if (!this.mediaList || !this.mediaList.length) {
+					await this.updateMediaList(null, true);
+				}
+			}
+
 			const sourceType = mediaSourceType();
 			if (sourceType.startsWith("media-entity")) {
 				const mediaEntity = config.image_url.replace(/^media-entity-(image|video):\/\//, "");
@@ -4391,6 +4534,13 @@ function initWallpanel() {
 			const element = await this.updateMedia(updateElement);
 			if (!element) {
 				this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
+				if (this.isPlaylistActive()) {
+					this.playlistIndex = prevPlaylistIndex;
+					this.playlistCycle = prevPlaylistCycle;
+					if (playlistAdvanced) {
+						this.applyPlaylistItem(prevPlaylistIndex, false);
+					}
+				}
 				return;
 			}
 			this.mediaLoadRetryAt = 0;

@@ -274,3 +274,37 @@ For example:
 ```yaml
 image_url: embed+https://external.source.test/embed.pdf
 ```
+
+## Playlists
+
+You can sequence multiple media sources into an automated playlist using the `playlist` configuration option.
+WallPanel will cycle through each item in the playlist according to the specified number of `cycles` before advancing to the next source in the list.
+
+Each item in `playlist` can define:
+- `image_url`: Media source URL (required).
+- `cycles`: Number of display cycles to show before switching to the next playlist item (default: `1`).
+- Optional per-item overrides: `display_time`, `crossfade_time`, `image_fit_landscape`, `image_fit_portrait`, `iframe_interaction`, Immich parameters (`immich_album_names`, etc.).
+
+Example:
+```yaml
+wallpanel:
+  enabled: true
+  playlist:
+    # Show 2 images from Unsplash
+    - image_url: "https://api.unsplash.com/photos/random?client_id=YOUR_ACCESS_KEY&query=nature"
+      cycles: 2
+      display_time: 15
+    # Then show 2 photos from Immich
+    - image_url: "immich+https://immich.your.domain/api"
+      immich_api_keys:
+        - YOUR_API_KEY
+      immich_album_names:
+        - "Favorites"
+      cycles: 2
+      display_time: 15
+    # Then show a clock webpage in an iframe for 1 cycle with extended duration
+    - image_url: "iframe+https://projects.sntosh.in/clock/"
+      cycles: 1
+      display_time: 45
+```
+
