@@ -4845,6 +4845,37 @@ function initWallpanel() {
 			this.setCameraMotionDetectionEntityState(false);
 		}
 
+		// Checks if the event target is part of the cards, badges, views or info boxes,
+		// including menus and popups rendered in their shadow DOM, or a Home Assistant
+		// dialog or overlay opened from them on document level.
+		isContentInteractionEvent(evt) {
+			if (typeof evt.composedPath !== "function") {
+				return false;
+			}
+			const contentElements = [
+				...(this.__cards || []),
+				...(this.__badges || []),
+				...(this.__views || []),
+				this.infoBoxContent,
+				this.fixedInfoBoxContent
+			].filter((element) => element);
+			for (const element of evt.composedPath()) {
+				if (contentElements.includes(element)) {
+					logger.debug("Event on content element:", element);
+					return true;
+				}
+				const tagName = element.tagName ? element.tagName.toLowerCase() : "";
+				if (
+					tagName &&
+					/^(ha-dialog|ha-more-info-dialog|ha-md-dialog|vaadin-.*-overlay|mwc-menu-surface)$/.test(tagName)
+				) {
+					logger.debug("Event on dialog or overlay:", element);
+					return true;
+				}
+			}
+			return false;
+		}
+
 		handleInteractionEvent(evt) {
 			const isClick = ["click", "touchend"].includes(evt.type);
 			const now = Date.now();
@@ -4927,7 +4958,7 @@ function initWallpanel() {
 			}
 
 			if (config.content_interaction) {
-				if (this.getMoreInfoDialog()) {
+				if (this.getMoreInfoDialog() || this.isContentInteractionEvent(evt)) {
 					return;
 				}
 				let elements = [];
