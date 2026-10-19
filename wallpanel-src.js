@@ -119,6 +119,7 @@ const defaultConfig = {
 	content_interaction: false,
 	profile: "",
 	profile_entity: "",
+	config_entity: "",
 	profiles: {}
 };
 const renamedConfigOptions = {
@@ -239,6 +240,7 @@ let browserId = null;
 let userId = null;
 let userName = null;
 let userDisplayname = null;
+let configEntityValue = null;
 
 function isObject(item) {
 	return item && typeof item === "object" && !Array.isArray(item);
@@ -1029,6 +1031,26 @@ function mergeConfig(target, ...sources) {
 	return mergeConfig(target, ...sources);
 }
 
+// Returns the "wallpanel" attribute of the config_entity, if it is an object.
+function getConfigEntityConfig() {
+	const configEntity = config.config_entity;
+	if (!configEntity || !elHass) {
+		return null;
+	}
+	const hass = elHass.hass || elHass.__hass;
+	const entity = hass && hass.states ? hass.states[configEntity] : null;
+	if (!entity) {
+		logger.debug(`Config entity ${configEntity} not found`);
+		return null;
+	}
+	const value = entity.attributes ? entity.attributes.wallpanel : null;
+	if (!isObject(value)) {
+		logger.debug(`Config entity ${configEntity} has no wallpanel attribute of type object`);
+		return null;
+	}
+	return value;
+}
+
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
 
@@ -1124,6 +1146,21 @@ function updateConfig() {
 		const profile = (elHass.hass || elHass.__hass).states[profile_entity].state;
 		config = mergeConfig(config, config.profiles[profile]);
 		logger.debug(`Profile set from entity state: ${profile}`);
+	}
+	const entityConfig = getConfigEntityConfig();
+	configEntityValue = entityConfig ? JSON.stringify(entityConfig) : null;
+	if (entityConfig) {
+		const ignoredKeys = ["profile", "profiles", "profile_entity", "config_entity"];
+		const liveConfig = {};
+		for (const key in entityConfig) {
+			if (ignoredKeys.includes(key)) {
+				logger.warn(`Ignoring '${key}' in the wallpanel attribute of ${config.config_entity}`);
+			} else {
+				liveConfig[key] = entityConfig[key];
+			}
+		}
+		config = mergeConfig(config, liveConfig);
+		logger.debug(`Config set from entity ${config.config_entity}:`, liveConfig);
 	}
 
 	if (config.content_interaction) {
@@ -1553,6 +1590,13 @@ function initWallpanel() {
 				}
 			}
 			const profileUpdated = this.updateProfile();
+			if (!profileUpdated && config.config_entity) {
+				const entityConfig = getConfigEntityConfig();
+				if ((entityConfig ? JSON.stringify(entityConfig) : null) !== configEntityValue) {
+					logger.debug(`Config entity ${config.config_entity} changed`);
+					changed = true;
+				}
+			}
 			if (!profileUpdated && changed) {
 				updateConfig();
 			}

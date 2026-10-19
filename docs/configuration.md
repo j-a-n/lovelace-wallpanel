@@ -100,6 +100,7 @@ You can set the following configuration parameters for every individual Home Ass
 | profiles                         | See [Configuration profiles](#profiles) for details.                                                   | {}         |
 | profile                          | Configuration profile to activate. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |            |
 | profile_entity                   | An entity of type 'input_text' used for dynamic activation of profiles. If browser_mod is installed, `${browser_id}` will be replaced with Browser ID (see [Browser Mod](browser-mod.md#placeholder-browser_id)). |            |
+| config_entity                    | An entity whose `wallpanel` attribute (a dictionary of configuration options) is applied on top of the configuration. See [Configuration from an entity attribute](configuration.md#configuration-from-an-entity-attribute). |            |
 | camera_motion_detection_enabled          | Activate camera based motion detection? Screensaver is stopped when movement is detected See [Camera motion detection](camera-motion-detection.md) for details. | false      |
 | camera_motion_detection_stop_screensaver | Stop screensaver when motion is detected?                                                      | true       |
 | camera_motion_detection_set_entity       | An entity of type 'input_boolean' to update with the motion detection state (on = motion detected, off = no motion detected). | | 
@@ -297,6 +298,33 @@ wallpanel:
 
 A profile can be selected using a URL parameter:
 `http://hass:8123/lovelace/default_view?wp_profile=night`
+
+## Configuration from an entity attribute
+With `config_entity`, configuration options can be changed from Home Assistant without changing the dashboard.
+The `wallpanel` attribute of the entity must be a dictionary of configuration options,
+it is applied after all profiles and URL query parameters.
+The configuration is updated whenever the attribute changes.
+If the entity or the attribute does not exist, or the attribute is not a dictionary, it is ignored.
+The options `profile`, `profiles`, `profile_entity` and `config_entity` can't be set this way.
+
+A template sensor can provide the attribute, for example:
+```yaml
+template:
+  - sensor:
+      - name: WallPanel config
+        state: "{{ states('input_select.wallpanel_album') }}"
+        attributes:
+          wallpanel: >
+            {{ {"photoprism_album_names": [states('input_select.wallpanel_album')]} }}
+```
+
+```yaml
+wallpanel:
+  config_entity: sensor.wallpanel_config
+```
+
+`config_entity` and `profile_entity` can refer to the same entity, the profile is selected by the state
+and the attribute adjusts the configuration of the selected profile.
 
 ## Enable WallPanel on specific Views
 To enable WallPanel only on specific views, use the `enabled_on_views` configuration option.
