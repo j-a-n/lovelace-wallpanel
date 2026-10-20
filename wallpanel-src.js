@@ -116,6 +116,9 @@ const defaultConfig = {
 	badges: [],
 	cards: [],
 	views: [],
+	playlist: [],
+	show_cards: true,
+	hide_cards: false,
 	content_interaction: false,
 	profile: "",
 	profile_entity: "",
@@ -1029,6 +1032,20 @@ function mergeConfig(target, ...sources) {
 	return mergeConfig(target, ...sources);
 }
 
+function normalizeImageUrl(url) {
+	if (!url || typeof url !== "string") {
+		return url;
+	}
+	url = url.replace(/^media-entity:\/\//, "media-entity-image://");
+	if (url.startsWith("/")) {
+		url = `media-source://media_source${url}`;
+	}
+	if (url.startsWith("media-source://")) {
+		url = url.replace(/\/+$/, "");
+	}
+	return url;
+}
+
 function updateConfig() {
 	const params = new URLSearchParams(window.location.search);
 
@@ -1131,17 +1148,13 @@ function updateConfig() {
 	}
 
 	if (config.image_url) {
-		config.image_url = config.image_url.replace(/^media-entity:\/\//, "media-entity-image://");
-		if (config.image_url.startsWith("/")) {
-			config.image_url = `media-source://media_source${config.image_url}`;
-		}
-		if (mediaSourceType() == "media-source") {
-			config.image_url = config.image_url.replace(/\/+$/, "");
-		}
+		config.image_url = normalizeImageUrl(config.image_url);
 		if (mediaSourceType() == "unsplash-api" && config.media_list_update_interval < 90) {
 			// Unsplash API currently places a limit of 50 requests per hour
 			config.media_list_update_interval = 90;
 		}
+	} else if (config.playlist && Array.isArray(config.playlist) && config.playlist.length > 0) {
+		config.show_images = true;
 	} else {
 		config.show_images = false;
 	}
@@ -1485,6 +1498,10 @@ function initWallpanel() {
 			this.mediaList = [];
 			this.mediaIndex = -1;
 			this.mediaListDirection = "forwards"; // forwards, backwards
+			this.playlistIndex = 0;
+			this.playlistCycle = 0;
+			this.baseConfig = null;
+			this.playlistState = [];
 			this.mediaPathLists = [];
 			this.mediaPathQueue = [];
 			this.currentMediaPath = null;
@@ -2084,8 +2101,56 @@ function initWallpanel() {
 			}, ms);
 		}
 
+		updateInfoContainerVisibility(crossfadeMillis = null) {
+			if (!this.infoContainer) return;
+			const cardsHidden = config.show_cards === false || config.hide_cards === true;
+			const duration =
+				crossfadeMillis !== null && Number.isFinite(crossfadeMillis)
+					? crossfadeMillis
+					: config.crossfade_time > 0
+						? Math.round(config.crossfade_time * 1000)
+						: 800;
+
+			this.infoContainer.style.transition = `opacity ${duration}ms ease-in-out`;
+			if (this.fixedInfoContainer) {
+				this.fixedInfoContainer.style.transition = `opacity ${duration}ms ease-in-out`;
+			}
+
+			if (this._infoHideTimeout) {
+				clearTimeout(this._infoHideTimeout);
+				this._infoHideTimeout = null;
+			}
+
+			if (cardsHidden) {
+				this.infoContainer.style.pointerEvents = "none";
+				this.infoContainer.style.opacity = "0";
+				if (this.fixedInfoContainer) {
+					this.fixedInfoContainer.style.pointerEvents = "none";
+					this.fixedInfoContainer.style.opacity = "0";
+				}
+				this._infoHideTimeout = setTimeout(() => {
+					if (config.show_cards === false || config.hide_cards === true) {
+						this.infoContainer.style.visibility = "hidden";
+						if (this.fixedInfoContainer) {
+							this.fixedInfoContainer.style.visibility = "hidden";
+						}
+					}
+				}, duration);
+			} else {
+				this.infoContainer.style.visibility = "visible";
+				this.infoContainer.style.opacity = "1";
+				this.infoContainer.style.pointerEvents = config.card_interaction ? "auto" : "none";
+				if (this.fixedInfoContainer) {
+					this.fixedInfoContainer.style.visibility = "visible";
+					this.fixedInfoContainer.style.opacity = "1";
+					this.fixedInfoContainer.style.pointerEvents = config.card_interaction ? "auto" : "none";
+				}
+			}
+		}
+
 		createInfoBoxContent() {
 			logger.debug("Creating info box content");
+			this.updateInfoContainerVisibility();
 			const haPanelLovelace = getHaPanelLovelace();
 			if (!haPanelLovelace) {
 				return;
@@ -2270,6 +2335,90 @@ function initWallpanel() {
 
 		getDisplayTime() {
 			return this.displayTime;
+		}
+
+		isPlaylistActive() {
+			return Boolean(config.playlist && Array.isArray(config.playlist) && config.playlist.length > 0);
+		}
+
+		getCurrentPlaylistItem() {
+			if (!this.isPlaylistActive()) {
+				return null;
+			}
+			if (this.playlistIndex >= config.playlist.length || this.playlistIndex < 0) {
+				this.playlistIndex = 0;
+			}
+			const raw = config.playlist[this.playlistIndex];
+			if (typeof raw === "string") {
+				return { image_url: raw, cycles: 1 };
+			}
+			if (isObject(raw)) {
+				return {
+					cycles: 1,
+					...raw
+				};
+			}
+			return null;
+		}
+
+		skipCurrentPlaylistItem() {
+			// Exhaust the current item's cycles so the next switch advances past it
+			const item = this.getCurrentPlaylistItem();
+			this.playlistCycle = this.mediaListDirection === "backwards" ? 1 : Math.max(1, parseInt(item?.cycles, 10) || 1);
+		}
+
+		applyPlaylistItem(index, preserveListState = true) {
+			if (!this.isPlaylistActive()) {
+				return;
+			}
+			if (!this.baseConfig) {
+				this.baseConfig = { ...config };
+			}
+			if (preserveListState && this.playlistState) {
+				this.playlistState[this.playlistIndex] = {
+					mediaList: this.mediaList ? [...this.mediaList] : [],
+					mediaIndex: this.mediaIndex,
+					lastMediaListUpdate: this.lastMediaListUpdate
+				};
+			}
+			this.playlistIndex = (index + config.playlist.length) % config.playlist.length;
+			const item = this.getCurrentPlaylistItem();
+			if (!item) {
+				return;
+			}
+
+			// Restore base configuration and overlay current item parameters
+			for (const key in this.baseConfig) {
+				config[key] = this.baseConfig[key];
+			}
+			for (const key in item) {
+				// "playlist" is excluded so an item cannot replace the playlist that is being sequenced
+				if (key !== "cycles" && key !== "playlist") {
+					config[key] = item[key];
+				}
+			}
+			if (config.image_url) {
+				config.image_url = normalizeImageUrl(config.image_url);
+				config.show_images = true;
+			}
+			if (mediaSourceType() === "unsplash-api" && config.media_list_update_interval < 90) {
+				config.media_list_update_interval = 90;
+			}
+
+			const savedState = this.playlistState[this.playlistIndex];
+			if (savedState && savedState.mediaList && savedState.mediaList.length > 0) {
+				this.mediaList = savedState.mediaList;
+				this.mediaIndex = savedState.mediaIndex !== undefined ? savedState.mediaIndex : -1;
+				this.lastMediaListUpdate = savedState.lastMediaListUpdate || 0;
+			} else {
+				this.mediaList = [];
+				this.mediaIndex = -1;
+				this.lastMediaListUpdate = 0;
+			}
+			this.setDisplayTime();
+			// crossfade_time and other style-bound keys are only applied to the DOM by updateStyle()
+			this.updateStyle();
+			logger.debug(`Playlist activated item ${this.playlistIndex}:`, item);
 		}
 
 		restartProgressBarAnimation() {
@@ -2736,7 +2885,17 @@ function initWallpanel() {
 				wallpanel.moveInfoBox(0, 0);
 			}
 
+			if (this.isPlaylistActive()) {
+				if (JSON.stringify(oldConfig?.playlist) != JSON.stringify(config.playlist)) {
+					// Saved per-item state is indexed by position and is invalid once the playlist changes
+					this.playlistState = [];
+				}
+				this.baseConfig = { ...config };
+				this.applyPlaylistItem(this.playlistIndex, false);
+			}
+
 			const sourceChange =
+				JSON.stringify(oldConfig?.playlist) != JSON.stringify(config?.playlist) ||
 				oldConfig.image_url != config.image_url ||
 				oldConfig.media_order != config.media_order ||
 				oldConfig.media_list_max_size != config.media_list_max_size ||
@@ -3751,6 +3910,14 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromUrl(element, url, mediaType = null, headers = null, useFetch = false) {
+			if (mediaType && element.tagName.toLowerCase() !== mediaType) {
+				element = this.replaceMediaElement(element, mediaType);
+			} else if (
+				!mediaType &&
+				(element.tagName.toLowerCase() === "iframe" || element.tagName.toLowerCase() === "embed")
+			) {
+				element = this.replaceMediaElement(element, "img");
+			}
 			if (config.force_load_media_with_fetch) {
 				useFetch = true;
 			}
@@ -4336,12 +4503,61 @@ function initWallpanel() {
 				this.afterFadeoutTimer = null;
 			}
 
+			if (this.isPlaylistActive() && this.updatingMediaList && eventType !== "start") {
+				// A list refresh for the current item is in flight; advancing now would let its
+				// result overwrite the next item's media list. The timer retries on the next tick.
+				logger.debug("Media list update in progress, deferring playlist advance");
+				return;
+			}
+
+			const playlistIndexBefore = this.playlistIndex;
+			if (this.isPlaylistActive()) {
+				if (eventType === "start") {
+					this.applyPlaylistItem(this.playlistIndex, false);
+					this.playlistCycle = 1;
+				} else if (eventType === "entity_update") {
+					// A state change of the current media entity must not consume a playlist cycle
+				} else {
+					const currentItem = this.getCurrentPlaylistItem();
+					const targetCycles = Math.max(1, parseInt(currentItem?.cycles, 10) || 1);
+
+					if (this.mediaListDirection === "backwards") {
+						if (this.playlistCycle > 1) {
+							this.playlistCycle--;
+						} else {
+							const prevIndex = (this.playlistIndex - 1 + config.playlist.length) % config.playlist.length;
+							this.applyPlaylistItem(prevIndex, true);
+							const newItem = this.getCurrentPlaylistItem();
+							this.playlistCycle = Math.max(1, parseInt(newItem?.cycles, 10) || 1);
+						}
+					} else {
+						if (this.playlistCycle < targetCycles) {
+							this.playlistCycle++;
+						} else {
+							const nextIndex = (this.playlistIndex + 1) % config.playlist.length;
+							this.applyPlaylistItem(nextIndex, true);
+							this.playlistCycle = 1;
+						}
+					}
+				}
+
+				if (!this.mediaList || !this.mediaList.length) {
+					await this.updateMediaList(null, true);
+				}
+			}
+
+			// True when this call moved the playlist to a different item; the new item must be shown
+			// even if the shared "unchanged" shortcuts below would otherwise skip loading.
+			const playlistItemChanged = this.isPlaylistActive() && this.playlistIndex !== playlistIndexBefore;
 			const sourceType = mediaSourceType();
 			if (sourceType.startsWith("media-entity")) {
 				const mediaEntity = config.image_url.replace(/^media-entity-(image|video):\/\//, "");
 				const entity = this.hass.states[mediaEntity];
 				if (!entity) {
 					logger.error(`Media entity "${mediaEntity}" not available`);
+					if (this.isPlaylistActive() && eventType !== "entity_update") {
+						this.skipCurrentPlaylistItem();
+					}
 					return;
 				}
 
@@ -4349,7 +4565,7 @@ function initWallpanel() {
 					logger.debug(`Media entity ${mediaEntity} state has changed`);
 				} else if (eventType == "entity_update") {
 					return;
-				} else if (eventType == "start" || eventType == "user_action") {
+				} else if (eventType == "start" || eventType == "user_action" || playlistItemChanged) {
 					logger.debug(`Media entity ${mediaEntity} state unchanged, but eventType = ${eventType}`);
 				} else if (config.media_entity_load_unchanged) {
 					logger.debug(`Media entity ${mediaEntity} state unchanged, but media_entity_load_unchanged = true`);
@@ -4391,6 +4607,11 @@ function initWallpanel() {
 			const element = await this.updateMedia(updateElement);
 			if (!element) {
 				this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
+				if (this.isPlaylistActive()) {
+					// Do not revert to the previous item: that would retry the failing item forever.
+					// Exhaust the current item's cycles so the next retry advances to the next item.
+					this.skipCurrentPlaylistItem();
+				}
 				return;
 			}
 			this.mediaLoadRetryAt = 0;
@@ -4425,6 +4646,7 @@ function initWallpanel() {
 			if (curActiveContainer.style.opacity != 0) {
 				curActiveContainer.style.opacity = 0;
 			}
+			this.updateInfoContainerVisibility(crossfadeMillis);
 
 			if (newMedia.tagName.toLowerCase() == "iframe" && config.iframe_interaction) {
 				newMedia.style.pointerEvents = "auto";

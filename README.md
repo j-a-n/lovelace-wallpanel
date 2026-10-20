@@ -12,6 +12,7 @@
 WallPanel is a configurable extension that features:
 
 - Photo and video slideshow screensaver
+- Multi-source media playlists with configurable cycle counts
 - Show dashboard views, cards and badges of your choice on top of the images.
 - Full-screen mode
 - Hide the side and or top bar 
