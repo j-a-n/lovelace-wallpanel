@@ -117,6 +117,8 @@ const defaultConfig = {
 	cards: [],
 	views: [],
 	playlist: [],
+	show_cards: true,
+	hide_cards: false,
 	content_interaction: false,
 	profile: "",
 	profile_entity: "",
@@ -2099,8 +2101,56 @@ function initWallpanel() {
 			}, ms);
 		}
 
+		updateInfoContainerVisibility(crossfadeMillis = null) {
+			if (!this.infoContainer) return;
+			const cardsHidden = config.show_cards === false || config.hide_cards === true;
+			const duration =
+				crossfadeMillis !== null && Number.isFinite(crossfadeMillis)
+					? crossfadeMillis
+					: config.crossfade_time > 0
+						? Math.round(config.crossfade_time * 1000)
+						: 800;
+
+			this.infoContainer.style.transition = `opacity ${duration}ms ease-in-out`;
+			if (this.fixedInfoContainer) {
+				this.fixedInfoContainer.style.transition = `opacity ${duration}ms ease-in-out`;
+			}
+
+			if (this._infoHideTimeout) {
+				clearTimeout(this._infoHideTimeout);
+				this._infoHideTimeout = null;
+			}
+
+			if (cardsHidden) {
+				this.infoContainer.style.pointerEvents = "none";
+				this.infoContainer.style.opacity = "0";
+				if (this.fixedInfoContainer) {
+					this.fixedInfoContainer.style.pointerEvents = "none";
+					this.fixedInfoContainer.style.opacity = "0";
+				}
+				this._infoHideTimeout = setTimeout(() => {
+					if (config.show_cards === false || config.hide_cards === true) {
+						this.infoContainer.style.visibility = "hidden";
+						if (this.fixedInfoContainer) {
+							this.fixedInfoContainer.style.visibility = "hidden";
+						}
+					}
+				}, duration);
+			} else {
+				this.infoContainer.style.visibility = "visible";
+				this.infoContainer.style.opacity = "1";
+				this.infoContainer.style.pointerEvents = config.card_interaction ? "auto" : "none";
+				if (this.fixedInfoContainer) {
+					this.fixedInfoContainer.style.visibility = "visible";
+					this.fixedInfoContainer.style.opacity = "1";
+					this.fixedInfoContainer.style.pointerEvents = config.card_interaction ? "auto" : "none";
+				}
+			}
+		}
+
 		createInfoBoxContent() {
 			logger.debug("Creating info box content");
+			this.updateInfoContainerVisibility();
 			const haPanelLovelace = getHaPanelLovelace();
 			if (!haPanelLovelace) {
 				return;
@@ -4596,6 +4646,7 @@ function initWallpanel() {
 			if (curActiveContainer.style.opacity != 0) {
 				curActiveContainer.style.opacity = 0;
 			}
+			this.updateInfoContainerVisibility(crossfadeMillis);
 
 			if (newMedia.tagName.toLowerCase() == "iframe" && config.iframe_interaction) {
 				newMedia.style.pointerEvents = "auto";

@@ -283,7 +283,7 @@ WallPanel will cycle through each item in the playlist according to the specifie
 Each item in `playlist` can define:
 - `image_url`: Media source URL. May be omitted for items that inherit the top-level source.
 - `cycles`: Number of slides to show before switching to the next playlist item (default: `1`). One cycle is one displayed slide, not a full pass through the item's media list. An item that fails to load is skipped.
-- Optional per-item overrides: `display_time`, `crossfade_time`, `image_fit_landscape`, `image_fit_portrait`, `iframe_interaction`, Immich parameters (`immich_album_names`, etc.).
+- Optional per-item overrides: `display_time`, `crossfade_time`, `show_cards` (set `false` to hide card overlay during item), `image_fit_landscape`, `image_fit_portrait`, `iframe_interaction`, Immich parameters (`immich_album_names`, etc.).
 
 Example:
 ```yaml
