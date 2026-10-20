@@ -2311,6 +2311,12 @@ function initWallpanel() {
 			return null;
 		}
 
+		skipCurrentPlaylistItem() {
+			// Exhaust the current item's cycles so the next switch advances past it
+			const item = this.getCurrentPlaylistItem();
+			this.playlistCycle = this.mediaListDirection === "backwards" ? 1 : Math.max(1, parseInt(item?.cycles, 10) || 1);
+		}
+
 		applyPlaylistItem(index, preserveListState = true) {
 			if (!this.isPlaylistActive()) {
 				return;
@@ -2336,7 +2342,8 @@ function initWallpanel() {
 				config[key] = this.baseConfig[key];
 			}
 			for (const key in item) {
-				if (key !== "cycles") {
+				// "playlist" is excluded so an item cannot replace the playlist that is being sequenced
+				if (key !== "cycles" && key !== "playlist") {
 					config[key] = item[key];
 				}
 			}
@@ -2359,6 +2366,8 @@ function initWallpanel() {
 				this.lastMediaListUpdate = 0;
 			}
 			this.setDisplayTime();
+			// crossfade_time and other style-bound keys are only applied to the DOM by updateStyle()
+			this.updateStyle();
 			logger.debug(`Playlist activated item ${this.playlistIndex}:`, item);
 		}
 
@@ -2827,6 +2836,10 @@ function initWallpanel() {
 			}
 
 			if (this.isPlaylistActive()) {
+				if (JSON.stringify(oldConfig?.playlist) != JSON.stringify(config.playlist)) {
+					// Saved per-item state is indexed by position and is invalid once the playlist changes
+					this.playlistState = [];
+				}
 				this.baseConfig = { ...config };
 				this.applyPlaylistItem(this.playlistIndex, false);
 			}
@@ -4440,14 +4453,20 @@ function initWallpanel() {
 				this.afterFadeoutTimer = null;
 			}
 
-			const prevPlaylistIndex = this.playlistIndex;
-			const prevPlaylistCycle = this.playlistCycle;
-			let playlistAdvanced = false;
+			if (this.isPlaylistActive() && this.updatingMediaList && eventType !== "start") {
+				// A list refresh for the current item is in flight; advancing now would let its
+				// result overwrite the next item's media list. The timer retries on the next tick.
+				logger.debug("Media list update in progress, deferring playlist advance");
+				return;
+			}
 
+			const playlistIndexBefore = this.playlistIndex;
 			if (this.isPlaylistActive()) {
 				if (eventType === "start") {
 					this.applyPlaylistItem(this.playlistIndex, false);
 					this.playlistCycle = 1;
+				} else if (eventType === "entity_update") {
+					// A state change of the current media entity must not consume a playlist cycle
 				} else {
 					const currentItem = this.getCurrentPlaylistItem();
 					const targetCycles = Math.max(1, parseInt(currentItem?.cycles, 10) || 1);
@@ -4460,7 +4479,6 @@ function initWallpanel() {
 							this.applyPlaylistItem(prevIndex, true);
 							const newItem = this.getCurrentPlaylistItem();
 							this.playlistCycle = Math.max(1, parseInt(newItem?.cycles, 10) || 1);
-							playlistAdvanced = true;
 						}
 					} else {
 						if (this.playlistCycle < targetCycles) {
@@ -4469,7 +4487,6 @@ function initWallpanel() {
 							const nextIndex = (this.playlistIndex + 1) % config.playlist.length;
 							this.applyPlaylistItem(nextIndex, true);
 							this.playlistCycle = 1;
-							playlistAdvanced = true;
 						}
 					}
 				}
@@ -4479,12 +4496,18 @@ function initWallpanel() {
 				}
 			}
 
+			// True when this call moved the playlist to a different item; the new item must be shown
+			// even if the shared "unchanged" shortcuts below would otherwise skip loading.
+			const playlistItemChanged = this.isPlaylistActive() && this.playlistIndex !== playlistIndexBefore;
 			const sourceType = mediaSourceType();
 			if (sourceType.startsWith("media-entity")) {
 				const mediaEntity = config.image_url.replace(/^media-entity-(image|video):\/\//, "");
 				const entity = this.hass.states[mediaEntity];
 				if (!entity) {
 					logger.error(`Media entity "${mediaEntity}" not available`);
+					if (this.isPlaylistActive() && eventType !== "entity_update") {
+						this.skipCurrentPlaylistItem();
+					}
 					return;
 				}
 
@@ -4492,7 +4515,7 @@ function initWallpanel() {
 					logger.debug(`Media entity ${mediaEntity} state has changed`);
 				} else if (eventType == "entity_update") {
 					return;
-				} else if (eventType == "start" || eventType == "user_action") {
+				} else if (eventType == "start" || eventType == "user_action" || playlistItemChanged) {
 					logger.debug(`Media entity ${mediaEntity} state unchanged, but eventType = ${eventType}`);
 				} else if (config.media_entity_load_unchanged) {
 					logger.debug(`Media entity ${mediaEntity} state unchanged, but media_entity_load_unchanged = true`);
@@ -4535,11 +4558,9 @@ function initWallpanel() {
 			if (!element) {
 				this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
 				if (this.isPlaylistActive()) {
-					this.playlistIndex = prevPlaylistIndex;
-					this.playlistCycle = prevPlaylistCycle;
-					if (playlistAdvanced) {
-						this.applyPlaylistItem(prevPlaylistIndex, false);
-					}
+					// Do not revert to the previous item: that would retry the failing item forever.
+					// Exhaust the current item's cycles so the next retry advances to the next item.
+					this.skipCurrentPlaylistItem();
 				}
 				return;
 			}

@@ -281,8 +281,8 @@ You can sequence multiple media sources into an automated playlist using the `pl
 WallPanel will cycle through each item in the playlist according to the specified number of `cycles` before advancing to the next source in the list.
 
 Each item in `playlist` can define:
-- `image_url`: Media source URL (required).
-- `cycles`: Number of display cycles to show before switching to the next playlist item (default: `1`).
+- `image_url`: Media source URL. May be omitted for items that inherit the top-level source.
+- `cycles`: Number of slides to show before switching to the next playlist item (default: `1`). One cycle is one displayed slide, not a full pass through the item's media list. An item that fails to load is skipped.
 - Optional per-item overrides: `display_time`, `crossfade_time`, `image_fit_landscape`, `image_fit_portrait`, `iframe_interaction`, Immich parameters (`immich_album_names`, etc.).
 
 Example:
