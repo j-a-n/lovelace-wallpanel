@@ -23,6 +23,7 @@
 		"regenerator-runtime": "^0.14.1"
 	},
 	"scripts": {
-		"build": "rollup -c"
+		"build": "rollup -c",
+		"test:immich": "node --test tests/immich-tag-exclusion.test.cjs"
 	}
 }

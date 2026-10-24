@@ -3390,6 +3390,10 @@ function initWallpanel() {
 			);
 			let urls = [];
 			const mediaInfo = {};
+			const excludedAssetIds = new Set();
+			const assetIdsNeedingTagDetails = new Set();
+			const excludedTagNames = new Set((config.immich_exclude_tag_names || []).map((value) => value.toLowerCase()));
+			let tagLookupUserId = null;
 			const apiUrl = config.image_url.replace(/^immich\+/, "");
 			const excludeRegExp = [];
 			if (config.exclude_filenames) {
@@ -3428,8 +3432,54 @@ function initWallpanel() {
 				return dimensions.width >= dimensions.height ? "landscape" : "portrait";
 			}
 
+			async function fetchExcludedAssetIds(apiKey) {
+				excludedAssetIds.clear();
+				assetIdsNeedingTagDetails.clear();
+				tagLookupUserId = null;
+				if (!excludedTagNames.size) {
+					return;
+				}
+				try {
+					const allTags = await wp._immichFetch(`${apiUrl}/tags`, apiKey);
+					const user = await wp._immichFetch(`${apiUrl}/users/me`, apiKey);
+					if (!user.id) {
+						throw new Error("Immich user response has no ID");
+					}
+					const matchingTags = allTags.filter((tag) => excludedTagNames.has(tag.value.toLowerCase()));
+					for (const tag of matchingTags) {
+						// Tag searches include descendants; check details to preserve exact path matching.
+						const hasChildren = allTags.some((other) => other.value.startsWith(`${tag.value}/`));
+						const targetIds = hasChildren ? assetIdsNeedingTagDetails : excludedAssetIds;
+						let page = 1;
+						while (true) {
+							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
+								method: "POST",
+								body: JSON.stringify({
+									tagIds: [tag.id],
+									page: page,
+									size: 1000
+								})
+							});
+							for (const asset of searchResults.assets.items) {
+								targetIds.add(asset.id);
+							}
+							if (!searchResults.assets.nextPage) {
+								break;
+							}
+							page = parseInt(searchResults.assets.nextPage, 10);
+						}
+					}
+					// Only this account's assets are covered by its tag list and unscoped search.
+					tagLookupUserId = user.id;
+					logger.debug(`Excluding ${excludedAssetIds.size} Immich assets by tag`);
+				} catch (error) {
+					excludedAssetIds.clear();
+					assetIdsNeedingTagDetails.clear();
+					logger.warning("Immich tag lookup failed; checking asset details instead:", error);
+				}
+			}
+
 			async function fetchAssetInfo(assets, apiKey) {
-				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
 				const needDimensions = !!exclude_media_orientation;
 				const assetInfoConcurrency = 10;
 				for (let offset = 0; offset < assets.length; offset += assetInfoConcurrency) {
@@ -3443,11 +3493,15 @@ function initWallpanel() {
 								(asset.width == null || asset.height == null || asset.isEdited === undefined);
 							const needsDetailForOrientation =
 								isImage && needDimensions && (asset.width == null || asset.height == null);
-							if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
+							const needsDetailForTags =
+								excludedTagNames.size > 0 &&
+								(!tagLookupUserId || asset.ownerId !== tagLookupUserId || assetIdsNeedingTagDetails.has(asset.id)) &&
+								!asset.tags;
+							if (!asset.exifInfo || needsDetailForTags || needsDetailForOrientation || needsDetailForEdit) {
 								logger.debug(`Fetching asset info for ${asset.id}`);
 								const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
 								asset.exifInfo = assetInfo.exifInfo;
-								asset.tags = (assetInfo.tags || []).map((v) => v.value);
+								asset.tags = assetInfo.tags || [];
 								asset.width = assetInfo.width;
 								asset.height = assetInfo.height;
 								asset.isEdited = assetInfo.isEdited;
@@ -3458,10 +3512,20 @@ function initWallpanel() {
 			}
 
 			async function processAssets(assets, apiKey, folderName = null) {
+				assets = assets.filter((asset) => !excludedAssetIds.has(asset.id));
 				await fetchAssetInfo(assets, apiKey);
 
 				for (const asset of assets) {
 					logger.debug("Processing immich asset", asset);
+					if (
+						excludedTagNames.size > 0 &&
+						(asset.tags || []).some((tag) =>
+							excludedTagNames.has((typeof tag === "string" ? tag : tag.value).toLowerCase())
+						)
+					) {
+						logger.debug("Media item excluded due to tag");
+						continue;
+					}
 
 					const assetType = asset.type.toLowerCase();
 					if (!["image", "video"].includes(assetType)) {
@@ -3483,14 +3547,6 @@ function initWallpanel() {
 					}
 					if (excludedByRegExp) {
 						continue;
-					}
-
-					if (config.immich_exclude_tag_names && config.immich_exclude_tag_names.length) {
-						const matchingTags = asset.tags.filter((tag) => config.immich_exclude_tag_names.includes(tag));
-						if (matchingTags.length > 0) {
-							logger.debug(`Media item excluded due to tag(s): ${matchingTags.join(", ")}`);
-							continue;
-						}
 					}
 
 					if (exclude_media_orientation) {
@@ -3557,6 +3613,7 @@ function initWallpanel() {
 			try {
 				for (const apiKey of config.immich_api_keys) {
 					logger.debug(`Using immich API key ${apiKey}`);
+					await fetchExcludedAssetIds(apiKey);
 					if (config.immich_persons && config.immich_persons.length) {
 						logger.debug("Searching for assets based on persons");
 						const orPersonNames = config.immich_persons.map((entry) =>

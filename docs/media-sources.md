@@ -197,6 +197,10 @@ The timeout for immich API requests can be set using the `immich_api_request_tim
 With the config option `immich_shared_albums` (`true` / `false`) you can include or exclude shared albums.
 To restrict the media items to be retrieved to specific albums, you can configure a list of album names in `immich_album_names`.
 Alternatively you can configure a list of tag names in `immich_tag_names`.
+Use `immich_exclude_tag_names` to exclude media with the specified full tag paths, such as `Family/Private`.
+Exclusions are matched case-insensitively. A parent tag excludes assets tagged with that exact path; it does not automatically exclude assets tagged only with a child path.
+For faster exclusion filtering, the API key can grant `tag.read` and `user.read` permissions.
+If these lookups fail, or an asset belongs to another account in a shared album, WallPanel checks individual asset details instead.
 You can select media elements that contain certain people with the configuration option `immich_persons`.
 Or show immich memories by setting `immich_memories` to `true`.
 With the config option `immich_resolution` (`preview` / `original`) you can select the resolution of the images. 
