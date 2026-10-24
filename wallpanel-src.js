@@ -224,7 +224,10 @@ function addToMediaInfoCache(mediaUrl, value) {
 	if (!Number.isFinite(maxSize) || maxSize <= 0) {
 		return;
 	}
-	while (!mediaInfoCache.has(mediaUrl) && mediaInfoCache.size >= maxSize) {
+	if (mediaInfoCache.has(mediaUrl)) {
+		mediaInfoCache.delete(mediaUrl);
+	}
+	while (mediaInfoCache.size >= maxSize) {
 		// Remove the oldest key (first inserted)
 		const oldestKey = mediaInfoCache.keys().next().value;
 		mediaInfoCache.delete(oldestKey);
@@ -1502,6 +1505,7 @@ function initWallpanel() {
 			this.lastImageUrlEntityValue = null;
 			this.blockEventsUntil = 0;
 			this.screensaverStartedAt;
+			this.screensaverSessionId = 0;
 			this.screensaverStoppedAt = new Date();
 			this.infoBoxContentCreatedDate;
 			this.idleSince = Date.now();
@@ -2433,6 +2437,13 @@ function initWallpanel() {
 					} catch (error) {
 						logger.debug(error);
 					}
+				}
+				// Removing src fires neither load nor error, so a load still pending on this
+				// element would never settle and updatingMedia would stay true forever.
+				// Fail the pending load explicitly so updateMedia() can finish.
+				if (typeof mediaElement.onerror === "function") {
+					mediaElement.mediaLoadCancelled = true;
+					mediaElement.dispatchEvent(new Event("error"));
 				}
 				const src = mediaElement.getAttribute("src") || "";
 				if (src.startsWith("blob:")) {
@@ -3437,6 +3448,10 @@ function initWallpanel() {
 			);
 			let urls = [];
 			const mediaInfo = {};
+			const excludedAssetIds = new Set();
+			const assetIdsNeedingTagDetails = new Set();
+			const excludedTagNames = new Set((config.immich_exclude_tag_names || []).map((value) => value.toLowerCase()));
+			let tagLookupUserId = null;
 			const apiUrl = config.image_url.replace(/^immich\+/, "");
 			const excludeRegExp = [];
 			if (config.exclude_filenames) {
@@ -3475,8 +3490,54 @@ function initWallpanel() {
 				return dimensions.width >= dimensions.height ? "landscape" : "portrait";
 			}
 
+			async function fetchExcludedAssetIds(apiKey) {
+				excludedAssetIds.clear();
+				assetIdsNeedingTagDetails.clear();
+				tagLookupUserId = null;
+				if (!excludedTagNames.size) {
+					return;
+				}
+				try {
+					const allTags = await wp._immichFetch(`${apiUrl}/tags`, apiKey);
+					const user = await wp._immichFetch(`${apiUrl}/users/me`, apiKey);
+					if (!user.id) {
+						throw new Error("Immich user response has no ID");
+					}
+					const matchingTags = allTags.filter((tag) => excludedTagNames.has(tag.value.toLowerCase()));
+					for (const tag of matchingTags) {
+						// Tag searches include descendants; check details to preserve exact path matching.
+						const hasChildren = allTags.some((other) => other.value.startsWith(`${tag.value}/`));
+						const targetIds = hasChildren ? assetIdsNeedingTagDetails : excludedAssetIds;
+						let page = 1;
+						while (true) {
+							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
+								method: "POST",
+								body: JSON.stringify({
+									tagIds: [tag.id],
+									page: page,
+									size: 1000
+								})
+							});
+							for (const asset of searchResults.assets.items) {
+								targetIds.add(asset.id);
+							}
+							if (!searchResults.assets.nextPage) {
+								break;
+							}
+							page = parseInt(searchResults.assets.nextPage, 10);
+						}
+					}
+					// Only this account's assets are covered by its tag list and unscoped search.
+					tagLookupUserId = user.id;
+					logger.debug(`Excluding ${excludedAssetIds.size} Immich assets by tag`);
+				} catch (error) {
+					excludedAssetIds.clear();
+					assetIdsNeedingTagDetails.clear();
+					logger.warning("Immich tag lookup failed; checking asset details instead:", error);
+				}
+			}
+
 			async function fetchAssetInfo(assets, apiKey) {
-				const fetchTags = config.immich_exclude_tag_names && config.immich_exclude_tag_names.length;
 				const needDimensions = !!exclude_media_orientation;
 				const assetInfoConcurrency = 10;
 				for (let offset = 0; offset < assets.length; offset += assetInfoConcurrency) {
@@ -3490,11 +3551,15 @@ function initWallpanel() {
 								(asset.width == null || asset.height == null || asset.isEdited === undefined);
 							const needsDetailForOrientation =
 								isImage && needDimensions && (asset.width == null || asset.height == null);
-							if (!asset.exifInfo || (fetchTags && !asset.tags) || needsDetailForOrientation || needsDetailForEdit) {
+							const needsDetailForTags =
+								excludedTagNames.size > 0 &&
+								(!tagLookupUserId || asset.ownerId !== tagLookupUserId || assetIdsNeedingTagDetails.has(asset.id)) &&
+								!asset.tags;
+							if (!asset.exifInfo || needsDetailForTags || needsDetailForOrientation || needsDetailForEdit) {
 								logger.debug(`Fetching asset info for ${asset.id}`);
 								const assetInfo = await wp._immichFetch(`${apiUrl}/assets/${asset.id}`, apiKey);
 								asset.exifInfo = assetInfo.exifInfo;
-								asset.tags = (assetInfo.tags || []).map((v) => v.value);
+								asset.tags = assetInfo.tags || [];
 								asset.width = assetInfo.width;
 								asset.height = assetInfo.height;
 								asset.isEdited = assetInfo.isEdited;
@@ -3505,10 +3570,20 @@ function initWallpanel() {
 			}
 
 			async function processAssets(assets, apiKey, folderName = null) {
+				assets = assets.filter((asset) => !excludedAssetIds.has(asset.id));
 				await fetchAssetInfo(assets, apiKey);
 
 				for (const asset of assets) {
 					logger.debug("Processing immich asset", asset);
+					if (
+						excludedTagNames.size > 0 &&
+						(asset.tags || []).some((tag) =>
+							excludedTagNames.has((typeof tag === "string" ? tag : tag.value).toLowerCase())
+						)
+					) {
+						logger.debug("Media item excluded due to tag");
+						continue;
+					}
 
 					const assetType = asset.type.toLowerCase();
 					if (!["image", "video"].includes(assetType)) {
@@ -3530,14 +3605,6 @@ function initWallpanel() {
 					}
 					if (excludedByRegExp) {
 						continue;
-					}
-
-					if (config.immich_exclude_tag_names && config.immich_exclude_tag_names.length) {
-						const matchingTags = asset.tags.filter((tag) => config.immich_exclude_tag_names.includes(tag));
-						if (matchingTags.length > 0) {
-							logger.debug(`Media item excluded due to tag(s): ${matchingTags.join(", ")}`);
-							continue;
-						}
 					}
 
 					if (exclude_media_orientation) {
@@ -3604,6 +3671,7 @@ function initWallpanel() {
 			try {
 				for (const apiKey of config.immich_api_keys) {
 					logger.debug(`Using immich API key ${apiKey}`);
+					await fetchExcludedAssetIds(apiKey);
 					if (config.immich_persons && config.immich_persons.length) {
 						logger.debug("Searching for assets based on persons");
 						const orPersonNames = config.immich_persons.map((entry) =>
@@ -3831,6 +3899,7 @@ function initWallpanel() {
 				if (!loadEventName) {
 					throw new Error(`Unsupported element tag "${elem.tagName}"`);
 				}
+				elem.mediaLoadCancelled = false;
 
 				const promise = new Promise((resolve, reject) => {
 					const cleanup = () => {
@@ -3879,6 +3948,9 @@ function initWallpanel() {
 					elem.addEventListener(loadEventName, onLoad);
 					elem.onerror = onError;
 				});
+				// Fetch can still be pending when releaseMediaElement() rejects this promise.
+				// Attach a handler now so the rejection is not reported as unhandled.
+				promise.catch(() => {});
 				if (useFetch) {
 					headers = headers || {};
 					if (config.stream_load_media) {
@@ -3911,6 +3983,7 @@ function initWallpanel() {
 						if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
 							URL.revokeObjectURL(elem.src);
 						}
+						if (elem.mediaLoadCancelled) return promise;
 						elem.src = URL.createObjectURL(blob);
 					} else {
 						const response = await fetch(url, { headers: headers });
@@ -3924,6 +3997,7 @@ function initWallpanel() {
 							URL.revokeObjectURL(elem.src);
 						}
 						const blob = await response.blob();
+						if (elem.mediaLoadCancelled) return promise;
 						elem.src = URL.createObjectURL(blob);
 					}
 				} else {
@@ -3950,7 +4024,7 @@ function initWallpanel() {
 					await loadMediaWithElement(currentElem);
 					return currentElem;
 				} catch (e) {
-					if (withFallback) {
+					if (withFallback && !currentElem.mediaLoadCancelled) {
 						return await handleFallback(currentElem, null, e);
 					} else {
 						throw e;
@@ -4198,18 +4272,21 @@ function initWallpanel() {
 							if (element.readyState >= element.HAVE_ENOUGH_DATA) {
 								resolve();
 							} else {
-								const onCanPlay = () => {
+								const cleanup = () => {
 									element.removeEventListener("canplay", onCanPlay);
-									element.removeEventListener("error", onError);
+									element.onerror = null;
+								};
+								const onCanPlay = () => {
+									cleanup();
 									resolve();
 								};
 								const onError = () => {
-									element.removeEventListener("canplay", onCanPlay);
-									element.removeEventListener("error", onError);
+									cleanup();
 									reject(new Error("Video failed to load"));
 								};
 								element.addEventListener("canplay", onCanPlay);
-								element.addEventListener("error", onError);
+								// releaseMediaElement() uses onerror to settle pending loads.
+								element.onerror = onError;
 							}
 						});
 					}
@@ -4445,8 +4522,18 @@ function initWallpanel() {
 				}
 			}
 
+			const screensaverSessionId = this.screensaverSessionId;
 			const updateElement = this.getInactiveMediaElement();
 			const element = await this.updateMedia(updateElement);
+			if (!this.screensaverRunning() || this.screensaverSessionId !== screensaverSessionId) {
+				if (element) {
+					this.releaseMediaElement(element);
+				}
+				if (this.screensaverRunning()) {
+					this.mediaLoadRetryAt = Date.now();
+				}
+				return;
+			}
 			if (!element) {
 				this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
 				return;
@@ -4527,6 +4614,7 @@ function initWallpanel() {
 			}
 			this.mediaLoadRetryAt = 0;
 			this.screensaverStartedAt = Date.now();
+			const screensaverSessionId = ++this.screensaverSessionId;
 			this.screensaverStoppedAt = null;
 			this.currentWidth = this.screensaverContainer.clientWidth;
 			this.currentHeight = this.screensaverContainer.clientHeight;
@@ -4552,6 +4640,9 @@ function initWallpanel() {
 
 			this.setDisplayTime();
 			await this.switchActiveMedia("start");
+			if (!this.screensaverRunning() || this.screensaverSessionId !== screensaverSessionId) {
+				return;
+			}
 			this.setupScreensaver();
 
 			if (config.keep_screen_on_time > 0) {
@@ -5103,7 +5194,7 @@ function initWallpanel() {
 function activateWallpanel() {
 	logger.debug("activateWallpanel");
 	let hideToolbar = config.hide_toolbar;
-	let hideActionItems = config.hide_toolbar_action_icons;
+	const hideActionItems = config.hide_toolbar_action_icons;
 	if (hideToolbar && !config.hide_toolbar_on_subviews && activeTab) {
 		const pl = getHaPanelLovelace();
 		if (pl && pl.lovelace && pl.lovelace.rawConfig && pl.lovelace.rawConfig.views) {
@@ -5112,7 +5203,6 @@ function activateWallpanel() {
 					if (pl.lovelace.rawConfig.views[i].subview) {
 						logger.debug(`Current tab '${activeTab}' is a subview, not hiding toolbar`);
 						hideToolbar = false;
-						hideActionItems = false;
 					}
 					break;
 				}
@@ -5200,44 +5290,45 @@ function locationChanged() {
 	}
 }
 
-function waitForEnv(callback, startTime = null) {
+function waitForEnv(callback, startTime = null, keepWaiting = false) {
 	const now = Date.now();
 	if (startTime === null) {
 		startTime = now;
 	}
 	const startupSeconds = (now - startTime) / 1000;
+	const retryDelay = startupSeconds >= 5.0 ? 1000 : 100;
 
 	elHass = document.querySelector("body > home-assistant");
 	if (elHass && elHass.shadowRoot) {
 		elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 	}
 	if (!elHass || !elHass.shadowRoot || !elHaMain) {
-		if (startupSeconds >= 5.0) {
+		if (startupSeconds >= 5.0 && !keepWaiting) {
 			logger.error(
 				`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`
 			);
 			return;
 		}
-		setTimeout(waitForEnv, 100, callback, startTime);
+		setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 		return;
 	}
 
 	const pl = getHaPanelLovelace();
 	if (!pl || !pl.lovelace || !pl.lovelace.config || !pl.lovelace.config) {
-		if (startupSeconds >= 5.0) {
+		if (startupSeconds >= 5.0 && !keepWaiting) {
 			logger.info(`No lovelace config found after ${startupSeconds} seconds`);
 			return;
 		}
-		setTimeout(waitForEnv, 100, callback, startTime);
+		setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 		return;
 	}
 
 	if (!customElements.get("hui-view")) {
-		if (startupSeconds >= 5.0) {
+		if (startupSeconds >= 5.0 && !keepWaiting) {
 			logger.error(`Wallpanel startup failed after ${startupSeconds} seconds, hui-view not found.`);
 			return;
 		}
-		setTimeout(waitForEnv, 100, callback, startTime);
+		setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 		return;
 	}
 
@@ -5247,7 +5338,7 @@ function waitForEnv(callback, startTime = null) {
 			waitTime = defaultConfig["wait_for_browser_mod_time"];
 		}
 		if (startupSeconds < waitTime) {
-			setTimeout(waitForEnv, 100, callback, startTime);
+			setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 			return;
 		}
 	}
@@ -5325,7 +5416,8 @@ function startup() {
 
 console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 try {
-	waitForEnv(startup);
+	// Initial startup must survive slow frontend loading; dashboard switches remain bounded.
+	waitForEnv(startup, null, true);
 } catch (error) {
 	logger.error(error.stack);
 }
