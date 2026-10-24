@@ -23,6 +23,23 @@ If you're opening a new issue, please:
     ```
     ````
 
+## Crossfade stuttering on TV browsers
+
+If crossfades become choppy after prolonged use, try retaining faded-out media
+until its buffer is reused:
+
+```yaml
+wallpanel:
+  release_inactive_media: false
+```
+
+Reload the dashboard after updating WallPanel, and test for longer than it usually
+takes for the stuttering to appear. This is an experimental workaround for
+[issue #591](https://github.com/j-a-n/lovelace-wallpanel/issues/591).
+The default is `true`, which unloads faded-out media to reduce memory use.
+Setting it to `false` can use more memory. Videos and camera streams still stop
+playing after fading out, and stopping the screensaver still releases all media.
+
 ## Browser Console
 If you are using a browser to access the Home Assistant user interface, you can take a look at the browser console.
 

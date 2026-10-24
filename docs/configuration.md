@@ -26,6 +26,7 @@ You can set the following configuration parameters for every individual Home Ass
 | fade_out_time_browser_mod_popup  | Screensaver fade-out time in seconds when the screensaver is stopped because of an browser mod popup.  | 1.0       |
 | fade_out_time_interaction        | Screensaver fade-out time in seconds when the screensaver is stopped because of user input.            | 0.3       |
 | crossfade_time                   | Crossfade duration in seconds for screensaver images.                                                  | 3.0       |
+| release_inactive_media           | Unload faded-out media to free memory. Set to `false` to try retaining media until buffer reuse if crossfades stutter on a TV browser. Videos and camera playback still stop after fading out; media is always released when the screensaver stops or disconnects. Retaining media can use more memory. | true |
 | display_time                     | Duration in seconds after which the next screensaver image will be shown.                              | 15.0      |
 | keep_screen_on_time              | Time in seconds for how long to prevent screen to dimm or lock (0 = disabled).                         | 0         |
 | black_screen_after_time          | Time in seconds after which the screensaver will show just a black screen (0 = disabled).              | 0         |

@@ -33,6 +33,7 @@ const defaultConfig = {
 	fade_out_time_browser_mod_popup: 1.0,
 	fade_out_time_interaction: 0.3,
 	crossfade_time: 3.0,
+	release_inactive_media: true,
 	display_time: 15.0,
 	keep_screen_on_time: 0,
 	black_screen_after_time: 0,
@@ -4595,9 +4596,34 @@ function initWallpanel() {
 				// A rapid manual switch may reuse this buffer before the old fade timer
 				// fires. Only release it while it is still the inactive buffer.
 				if (curMedia === wp.getInactiveMediaElement()) {
-					wp.releaseMediaElement(curMedia);
+					wp.finishMediaFadeout(curMedia);
 				}
 			}, crossfadeMillis);
+		}
+
+		finishMediaFadeout(mediaElement) {
+			if (config.release_inactive_media !== false) {
+				this.releaseMediaElement(mediaElement);
+				return;
+			}
+
+			// Some TV browsers stutter after repeatedly unloading image buffers. Keep
+			// their sources until reuse, but still stop invisible video/camera playback.
+			try {
+				if (mediaElement.tagName.toLowerCase() === "ha-camera-stream") {
+					const [player, video] = getHaCameraStreamPlayerAndVideo(mediaElement);
+					if (video) {
+						video.pause();
+					}
+					if (player && typeof player.stop === "function") {
+						player.stop();
+					}
+				} else if (typeof mediaElement.pause === "function") {
+					mediaElement.pause();
+				}
+			} catch (error) {
+				logger.debug(error);
+			}
 		}
 
 		setupScreensaver() {
