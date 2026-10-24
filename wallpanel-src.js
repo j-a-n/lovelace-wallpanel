@@ -223,7 +223,10 @@ function addToMediaInfoCache(mediaUrl, value) {
 	if (!Number.isFinite(maxSize) || maxSize <= 0) {
 		return;
 	}
-	while (!mediaInfoCache.has(mediaUrl) && mediaInfoCache.size >= maxSize) {
+	if (mediaInfoCache.has(mediaUrl)) {
+		mediaInfoCache.delete(mediaUrl);
+	}
+	while (mediaInfoCache.size >= maxSize) {
 		// Remove the oldest key (first inserted)
 		const oldestKey = mediaInfoCache.keys().next().value;
 		mediaInfoCache.delete(oldestKey);
