@@ -5141,44 +5141,45 @@ function locationChanged() {
 	}
 }
 
-function waitForEnv(callback, startTime = null) {
+function waitForEnv(callback, startTime = null, keepWaiting = false) {
 	const now = Date.now();
 	if (startTime === null) {
 		startTime = now;
 	}
 	const startupSeconds = (now - startTime) / 1000;
+	const retryDelay = startupSeconds >= 5.0 ? 1000 : 100;
 
 	elHass = document.querySelector("body > home-assistant");
 	if (elHass && elHass.shadowRoot) {
 		elHaMain = elHass.shadowRoot.querySelector("home-assistant-main");
 	}
 	if (!elHass || !elHass.shadowRoot || !elHaMain) {
-		if (startupSeconds >= 5.0) {
+		if (startupSeconds >= 5.0 && !keepWaiting) {
 			logger.error(
 				`Wallpanel startup failed after ${startupSeconds} seconds, element home-assistant / home-assistant-main not found.`
 			);
 			return;
 		}
-		setTimeout(waitForEnv, 100, callback, startTime);
+		setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 		return;
 	}
 
 	const pl = getHaPanelLovelace();
 	if (!pl || !pl.lovelace || !pl.lovelace.config || !pl.lovelace.config) {
-		if (startupSeconds >= 5.0) {
+		if (startupSeconds >= 5.0 && !keepWaiting) {
 			logger.info(`No lovelace config found after ${startupSeconds} seconds`);
 			return;
 		}
-		setTimeout(waitForEnv, 100, callback, startTime);
+		setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 		return;
 	}
 
 	if (!customElements.get("hui-view")) {
-		if (startupSeconds >= 5.0) {
+		if (startupSeconds >= 5.0 && !keepWaiting) {
 			logger.error(`Wallpanel startup failed after ${startupSeconds} seconds, hui-view not found.`);
 			return;
 		}
-		setTimeout(waitForEnv, 100, callback, startTime);
+		setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 		return;
 	}
 
@@ -5188,7 +5189,7 @@ function waitForEnv(callback, startTime = null) {
 			waitTime = defaultConfig["wait_for_browser_mod_time"];
 		}
 		if (startupSeconds < waitTime) {
-			setTimeout(waitForEnv, 100, callback, startTime);
+			setTimeout(waitForEnv, retryDelay, callback, startTime, keepWaiting);
 			return;
 		}
 	}
@@ -5266,7 +5267,8 @@ function startup() {
 
 console.info(`%c🖼️ Wallpanel version ${version}`, "color: #34b6f9; font-weight: bold;");
 try {
-	waitForEnv(startup);
+	// Initial startup must survive slow frontend loading; dashboard switches remain bounded.
+	waitForEnv(startup, null, true);
 } catch (error) {
 	logger.error(error.stack);
 }
