@@ -2740,13 +2740,15 @@ function initWallpanel() {
 			window.addEventListener("hass-more-info", hassMoreInfoHandler);
 			this.windowEventHandlers.push({ eventName: "hass-more-info", handler: hassMoreInfoHandler });
 
-			this.infoBoxResizeObserver = new ResizeObserver(() => {
-				if (config.info_move_pattern === "corners") {
-					// Correct position
-					this.moveAroundCorners(true);
-				}
-			});
-			this.infoBoxResizeObserver.observe(this.infoBoxContent);
+			if (typeof ResizeObserver !== "undefined") {
+				this.infoBoxResizeObserver = new ResizeObserver(() => {
+					if (config.info_move_pattern === "corners") {
+						// Correct position
+						this.moveAroundCorners(true);
+					}
+				});
+				this.infoBoxResizeObserver.observe(this.infoBoxContent);
+			}
 
 			// Correct possibly incorrect entity state
 			this.setScreensaverEntityState();
