@@ -1504,6 +1504,7 @@ function initWallpanel() {
 			this.lastImageUrlEntityValue = null;
 			this.blockEventsUntil = 0;
 			this.screensaverStartedAt;
+			this.screensaverSessionId = 0;
 			this.screensaverStoppedAt = new Date();
 			this.infoBoxContentCreatedDate;
 			this.idleSince = Date.now();
@@ -2383,6 +2384,7 @@ function initWallpanel() {
 				// element would never settle and updatingMedia would stay true forever.
 				// Fail the pending load explicitly so updateMedia() can finish.
 				if (typeof mediaElement.onerror === "function") {
+					mediaElement.mediaLoadCancelled = true;
 					mediaElement.dispatchEvent(new Event("error"));
 				}
 				const src = mediaElement.getAttribute("src") || "";
@@ -3782,6 +3784,7 @@ function initWallpanel() {
 				if (!loadEventName) {
 					throw new Error(`Unsupported element tag "${elem.tagName}"`);
 				}
+				elem.mediaLoadCancelled = false;
 
 				const promise = new Promise((resolve, reject) => {
 					const cleanup = () => {
@@ -3830,6 +3833,9 @@ function initWallpanel() {
 					elem.addEventListener(loadEventName, onLoad);
 					elem.onerror = onError;
 				});
+				// Fetch can still be pending when releaseMediaElement() rejects this promise.
+				// Attach a handler now so the rejection is not reported as unhandled.
+				promise.catch(() => {});
 				if (useFetch) {
 					headers = headers || {};
 					if (config.stream_load_media) {
@@ -3862,6 +3868,7 @@ function initWallpanel() {
 						if (typeof elem.src === "string" && elem.src.startsWith("blob:")) {
 							URL.revokeObjectURL(elem.src);
 						}
+						if (elem.mediaLoadCancelled) return promise;
 						elem.src = URL.createObjectURL(blob);
 					} else {
 						const response = await fetch(url, { headers: headers });
@@ -3875,6 +3882,7 @@ function initWallpanel() {
 							URL.revokeObjectURL(elem.src);
 						}
 						const blob = await response.blob();
+						if (elem.mediaLoadCancelled) return promise;
 						elem.src = URL.createObjectURL(blob);
 					}
 				} else {
@@ -3901,7 +3909,7 @@ function initWallpanel() {
 					await loadMediaWithElement(currentElem);
 					return currentElem;
 				} catch (e) {
-					if (withFallback) {
+					if (withFallback && !currentElem.mediaLoadCancelled) {
 						return await handleFallback(currentElem, null, e);
 					} else {
 						throw e;
@@ -4149,18 +4157,21 @@ function initWallpanel() {
 							if (element.readyState >= element.HAVE_ENOUGH_DATA) {
 								resolve();
 							} else {
-								const onCanPlay = () => {
+								const cleanup = () => {
 									element.removeEventListener("canplay", onCanPlay);
-									element.removeEventListener("error", onError);
+									element.onerror = null;
+								};
+								const onCanPlay = () => {
+									cleanup();
 									resolve();
 								};
 								const onError = () => {
-									element.removeEventListener("canplay", onCanPlay);
-									element.removeEventListener("error", onError);
+									cleanup();
 									reject(new Error("Video failed to load"));
 								};
 								element.addEventListener("canplay", onCanPlay);
-								element.addEventListener("error", onError);
+								// releaseMediaElement() uses onerror to settle pending loads.
+								element.onerror = onError;
 							}
 						});
 					}
@@ -4396,8 +4407,18 @@ function initWallpanel() {
 				}
 			}
 
+			const screensaverSessionId = this.screensaverSessionId;
 			const updateElement = this.getInactiveMediaElement();
 			const element = await this.updateMedia(updateElement);
+			if (!this.screensaverRunning() || this.screensaverSessionId !== screensaverSessionId) {
+				if (element) {
+					this.releaseMediaElement(element);
+				}
+				if (this.screensaverRunning()) {
+					this.mediaLoadRetryAt = Date.now();
+				}
+				return;
+			}
 			if (!element) {
 				this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
 				return;
@@ -4478,6 +4499,7 @@ function initWallpanel() {
 			}
 			this.mediaLoadRetryAt = 0;
 			this.screensaverStartedAt = Date.now();
+			const screensaverSessionId = ++this.screensaverSessionId;
 			this.screensaverStoppedAt = null;
 			this.currentWidth = this.screensaverContainer.clientWidth;
 			this.currentHeight = this.screensaverContainer.clientHeight;
@@ -4503,6 +4525,9 @@ function initWallpanel() {
 
 			this.setDisplayTime();
 			await this.switchActiveMedia("start");
+			if (!this.screensaverRunning() || this.screensaverSessionId !== screensaverSessionId) {
+				return;
+			}
 			this.setupScreensaver();
 
 			if (config.keep_screen_on_time > 0) {
