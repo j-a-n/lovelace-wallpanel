@@ -1657,22 +1657,25 @@ function initWallpanel() {
 		}
 
 		// Executes the command in the state of the command_entity ("<command>" or "<command>|<counter>")
-		// when the state changes. The state at load time is only remembered.
+		// when its value changes. Remember values across reconnects to avoid replaying old commands.
 		handleCommandEntity() {
 			const commandEntity = config.command_entity;
+			if (commandEntity !== this.lastCommandEntityId) {
+				this.lastCommandEntityId = commandEntity;
+				this.lastCommandEntityState = undefined;
+			}
 			const entity = commandEntity ? this.__hass.states[commandEntity] : null;
 			if (!entity) {
-				this.lastCommandEntityKey = null;
 				return;
 			}
-			const key = `${commandEntity}|${entity.state}|${entity.last_changed}`;
-			const lastKey = this.lastCommandEntityKey;
-			this.lastCommandEntityKey = key;
-			if (!lastKey || !lastKey.startsWith(`${commandEntity}|`) || key == lastKey) {
+			const state = String(entity.state);
+			const command = state.split("|")[0].trim().toLowerCase();
+			if (command == "unknown" || command == "unavailable") {
 				return;
 			}
-			const command = String(entity.state).split("|")[0].trim().toLowerCase();
-			if (!command || command == "unknown" || command == "unavailable") {
+			const lastState = this.lastCommandEntityState;
+			this.lastCommandEntityState = state;
+			if (lastState === undefined || state === lastState || !command) {
 				return;
 			}
 			this.executeCommand(command);

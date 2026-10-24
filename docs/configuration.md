@@ -303,6 +303,7 @@ A profile can be selected using a URL parameter:
 With `command_entity`, WallPanel can be controlled from Home Assistant, for example with buttons on a card shown over the screensaver.
 WallPanel watches the state of the `input_text` entity and executes the command when the state changes.
 The state at load time is not executed.
+Restoring the same value after a reconnect or a temporary `unknown` or `unavailable` state does not execute it again.
 
 The state has the format `<command>` or `<command>|<anything>`.
 Add a changing value like a timestamp after the `|`, so that the same command can be sent several times in a row.
