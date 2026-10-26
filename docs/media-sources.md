@@ -32,6 +32,8 @@ image_info_template: '<span style="color:#990000">//</span> ${description|alt_de
 
 See [Unsplash API documentation (Get a random photo)](https://unsplash.com/documentation#get-a-random-photo) for details.
 
+The fetched media list is stored in the browser's `localStorage` and reused after a page reload until `media_list_update_interval` has elapsed, so reloading a dashboard does not use up additional API requests.
+
 ## Local Media Source
 
 It is also possible to use images from the Home Assistant Local Media Source.
