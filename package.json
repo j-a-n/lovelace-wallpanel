@@ -27,6 +27,7 @@
 		"test:commands": "node --test tests/command-entity.test.cjs",
 		"test:media": "node --test tests/media-fadeout.test.cjs",
 		"test:media-loading": "node --test tests/media-loading.test.cjs",
-		"test:immich": "node --test tests/immich-tag-exclusion.test.cjs"
+		"test:immich": "node --test tests/immich-tag-exclusion.test.cjs",
+		"test:unsplash": "node --test tests/unsplash-media-list-cache.test.cjs"
 	}
 }
