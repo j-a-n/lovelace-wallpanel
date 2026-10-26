@@ -299,6 +299,40 @@ function getRetryAfterDelay(response) {
 	return null;
 }
 
+// The Unsplash media list is kept in localStorage, so a page reload does not
+// spend another API request before media_list_update_interval has elapsed.
+const unsplashMediaListStorageKey = "wallpanel-unsplash-media-list";
+
+function loadUnsplashMediaList(source, maxAge) {
+	try {
+		const stored = JSON.parse(localStorage.getItem(unsplashMediaListStorageKey));
+		const age = Date.now() - stored?.fetchedAt;
+		if (
+			stored?.source === source &&
+			age >= 0 &&
+			age < maxAge &&
+			Array.isArray(stored.entries) &&
+			stored.entries.length
+		) {
+			return stored;
+		}
+	} catch (error) {
+		logger.debug("Failed to load cached Unsplash media list:", error);
+	}
+	return null;
+}
+
+function saveUnsplashMediaList(source, entries) {
+	try {
+		localStorage.setItem(
+			unsplashMediaListStorageKey,
+			JSON.stringify({ source: source, fetchedAt: Date.now(), entries: entries })
+		);
+	} catch (error) {
+		logger.debug("Failed to save Unsplash media list:", error);
+	}
+}
+
 // The message container lives in the document, not in the wallpanel element's
 // shadow root, so messages can also be shown before that element exists - e.g.
 // config errors raised while the configuration is being parsed. Those used to
@@ -3359,7 +3393,29 @@ function initWallpanel() {
 		}
 
 		async updateMediaListFromUnsplashAPI() {
-			const urls = [];
+			const setMediaList = (entries) => {
+				const urls = [];
+				entries.forEach((entry) => {
+					logger.debug(entry);
+					const url = `${entry.urls.raw}&w=\${width}&h=\${height}&auto=format`;
+					urls.push(url);
+					addToMediaInfoCache(url, entry);
+				});
+				this.mediaList = urls;
+			};
+
+			const cached = loadUnsplashMediaList(config.image_url, config.media_list_update_interval * 1000);
+			if (cached) {
+				try {
+					setMediaList(cached.entries);
+					logger.debug("Using cached Unsplash media list");
+					this.lastMediaListUpdate = cached.fetchedAt;
+					return;
+				} catch (error) {
+					logger.debug("Ignoring invalid cached Unsplash media list:", error);
+				}
+			}
+
 			const requestUrl = `${config.image_url}&count=30`;
 
 			logger.debug(`Unsplash API request: ${requestUrl}`);
@@ -3390,13 +3446,8 @@ function initWallpanel() {
 				const json = await response.json();
 				logger.debug("Got Unsplash API response");
 
-				json.forEach((entry) => {
-					logger.debug(entry);
-					const url = `${entry.urls.raw}&w=\${width}&h=\${height}&auto=format`;
-					urls.push(url);
-					addToMediaInfoCache(url, entry);
-				});
-				this.mediaList = urls;
+				setMediaList(json);
+				saveUnsplashMediaList(config.image_url, json);
 			} catch (error) {
 				if (error.name === "AbortError") {
 					throw new Error(`Unsplash API request timed out: ${requestUrl}`);
