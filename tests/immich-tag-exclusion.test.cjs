@@ -90,12 +90,14 @@ async function playlist(accounts, overrides = {}) {
 		error() {},
 		warning: (...args) => warnings.push(args)
 	};
-	await makeUpdate(config, logger, () => {}).call(wp);
+	const cache = new Map();
+	await makeUpdate(config, logger, (url, info) => cache.set(url, info)).call(wp);
 	return {
 		ids: wp.mediaList.map((url) => url.match(/\/assets\/([^/]+)\//)[1]).sort(),
 		details: requests.filter(({ route }) => route.startsWith("/assets/")),
 		requests,
-		warnings
+		warnings,
+		cache
 	};
 }
 
@@ -209,3 +211,49 @@ test("disabled exclusions do not add tag or user lookups", async () => {
 	assert.equal(result.details.length, 0);
 	assert.ok(!result.requests.some(({ route }) => route === "/tags" || route === "/users/me"));
 });
+
+test("maps Immich exifInfo to standard EXIF and location tags while preserving camelCase keys", async () => {
+	const photo = {
+		...asset("photo1"),
+		exifInfo: {
+			dateTimeOriginal: "2023-08-15T14:32:10.000Z",
+			city: "Munich",
+			state: "Bavaria",
+			country: "Germany",
+			make: "Sony",
+			model: "A7IV",
+			latitude: -33.8688,
+			longitude: 151.2093
+		}
+	};
+	const result = await playlist({ key: { assets: [photo] } }, { immich_exclude_tag_names: [] });
+	const [, info] = [...result.cache.entries()][0];
+	assert.equal(info.DateTimeOriginal, "2023-08-15T14:32:10.000Z");
+	assert.equal(info.dateTimeOriginal, "2023-08-15T14:32:10.000Z");
+	assert.equal(info.City, "Munich");
+	assert.equal(info.city, "Munich");
+	assert.equal(info.State, "Bavaria");
+	assert.equal(info.Country, "Germany");
+	assert.equal(info.Make, "Sony");
+	assert.equal(info.Model, "A7IV");
+	assert.deepEqual(info.GPSLatitude, [33.8688]);
+	assert.equal(info.GPSLatitudeRef, "S");
+	assert.deepEqual(info.GPSLongitude, [151.2093]);
+	assert.equal(info.GPSLongitudeRef, "E");
+});
+
+test("passes immich_taken_after and immich_taken_before to metadata search", async () => {
+	const result = await playlist(
+		{ key: { assets: [asset("keep")] } },
+		{
+			immich_exclude_tag_names: [],
+			immich_taken_after: "2013-10-01T00:00:00.000Z",
+			immich_taken_before: "2025-12-31T23:59:59.999Z"
+		}
+	);
+	const searchReq = result.requests.find(({ route }) => route === "/search/metadata");
+	assert.equal(searchReq.body.takenAfter, "2013-10-01T00:00:00.000Z");
+	assert.equal(searchReq.body.takenBefore, "2025-12-31T23:59:59.999Z");
+	assert.equal(searchReq.body.withExif, true);
+});
+
