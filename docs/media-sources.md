@@ -203,6 +203,7 @@ For faster exclusion filtering, the API key can grant `tag.read` and `user.read`
 If these lookups fail, or an asset belongs to another account in a shared album, WallPanel checks individual asset details instead.
 You can select media elements that contain certain people with the configuration option `immich_persons`.
 Or show immich memories by setting `immich_memories` to `true`.
+You can filter media items by capture date using `immich_taken_after` and `immich_taken_before` (ISO 8601 timestamps, e.g. `2013-10-01T00:00:00.000Z`).
 With the config option `immich_resolution` (`preview` / `original`) you can select the resolution of the images. 
 
 Example using album names:

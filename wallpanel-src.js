@@ -65,6 +65,8 @@ const defaultConfig = {
 	immich_persons: [],
 	immich_memories: false,
 	immich_favorites: false,
+	immich_taken_after: "",
+	immich_taken_before: "",
 	immich_resolution: "preview",
 	image_fit_landscape: "cover", // cover / contain
 	image_fit_portrait: "contain", // cover / contain
@@ -2822,7 +2824,9 @@ function initWallpanel() {
 						config.immich_favorites != oldConfig.immich_favorites ||
 						JSON.stringify(config.immich_album_names) != JSON.stringify(oldConfig.immich_album_names) ||
 						JSON.stringify(config.immich_tag_names) != JSON.stringify(oldConfig.immich_tag_names) ||
-						JSON.stringify(config.immich_persons) != JSON.stringify(oldConfig.immich_persons)));
+						JSON.stringify(config.immich_persons) != JSON.stringify(oldConfig.immich_persons) ||
+						config.immich_taken_after != oldConfig.immich_taken_after ||
+						config.immich_taken_before != oldConfig.immich_taken_before));
 			if (
 				config.show_images &&
 				(!this.mediaList || !this.mediaList.length || !oldConfigAvailable || !oldConfig.show_images || sourceChange)
@@ -2889,6 +2893,68 @@ function initWallpanel() {
 			showDialog();
 		}
 
+		fetchAddressData(infoCacheUrl, mediaElement = null) {
+			if (!config.fetch_address_data || !infoCacheUrl) {
+				return;
+			}
+			const mediaInfo = mediaInfoCache.get(infoCacheUrl);
+			if (!mediaInfo || mediaInfo.address) {
+				return;
+			}
+			const exifLat = mediaInfo.GPSLatitude;
+			const exifLong = mediaInfo.GPSLongitude;
+			let latitude = null;
+			let longitude = null;
+			if (exifLat && !isNaN(exifLat[0])) {
+				const m = mediaInfo.GPSLatitudeRef == "S" ? -1 : 1;
+				latitude =
+					exifLat.length >= 3 ? exifLat[0] * m + (exifLat[1] * m * 60 + exifLat[2] * m) / 3600 : exifLat[0] * m;
+			}
+			if (exifLong && !isNaN(exifLong[0])) {
+				const m = mediaInfo.GPSLongitudeRef == "W" ? -1 : 1;
+				longitude =
+					exifLong.length >= 3 ? exifLong[0] * m + (exifLong[1] * m * 60 + exifLong[2] * m) / 3600 : exifLong[0] * m;
+			}
+			if (latitude === null || longitude === null) {
+				return;
+			}
+
+			const wp = this;
+			mediaInfo.address = {};
+			logger.debug(`Fetching nominatim data for lat=${latitude} lon=${longitude}`);
+
+			const xhr = new XMLHttpRequest();
+			xhr.onload = function () {
+				if (this.status == 200 || this.status === 0) {
+					const info = JSON.parse(xhr.responseText);
+					logger.debug("nominatim data:", info);
+					if (info && info.address) {
+						const cachedInfo = mediaInfoCache.get(infoCacheUrl);
+						if (cachedInfo) {
+							cachedInfo.address = info.address;
+							wp.setMediaDataInfo(mediaElement);
+						} else {
+							logger.warn("URL not in cache:", infoCacheUrl);
+						}
+					}
+				} else {
+					delete mediaInfo.address;
+					logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
+				}
+			};
+			xhr.onerror = function (event) {
+				delete mediaInfo.address;
+				logger.error("nominatim error:", event);
+			};
+			xhr.ontimeout = function (event) {
+				delete mediaInfo.address;
+				logger.error("nominatim timeout:", event);
+			};
+			xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+			xhr.timeout = 15000;
+			xhr.send();
+		}
+
 		fetchEXIFInfo(img) {
 			const wp = this;
 
@@ -2903,44 +2969,6 @@ function initWallpanel() {
 				logger.debug("EXIF data:", tmpImg.exifdata);
 				addToMediaInfoCache(tmpImg.infoCacheUrl, tmpImg.exifdata);
 				wp.setMediaDataInfo(tmpImg);
-
-				const exifLong = tmpImg.exifdata["GPSLongitude"];
-				const exifLat = tmpImg.exifdata["GPSLatitude"];
-				if (config.fetch_address_data && exifLong && !isNaN(exifLong[0]) && exifLat && !isNaN(exifLat[0])) {
-					let m = tmpImg.exifdata["GPSLatitudeRef"] == "S" ? -1 : 1;
-					const latitude = exifLat[0] * m + (exifLat[1] * m * 60 + exifLat[2] * m) / 3600;
-					m = tmpImg.exifdata["GPSLongitudeRef"] == "W" ? -1 : 1;
-					const longitude = exifLong[0] * m + (exifLong[1] * m * 60 + exifLong[2] * m) / 3600;
-					logger.debug(`Fetching nominatim data for lat=${latitude} lon=${longitude}`);
-
-					const xhr = new XMLHttpRequest();
-					xhr.onload = function () {
-						if (this.status == 200 || this.status === 0) {
-							const info = JSON.parse(xhr.responseText);
-							logger.debug("nominatim data:", info);
-							if (info && info.address) {
-								const mediaInfo = mediaInfoCache.get(tmpImg.infoCacheUrl);
-								if (mediaInfo) {
-									mediaInfo.address = info.address;
-									wp.setMediaDataInfo(tmpImg);
-								} else {
-									logger.warn("URL not in cache:", tmpImg.infoCacheUrl);
-								}
-							}
-						} else {
-							logger.error("nominatim error:", this.status, xhr.status, xhr.responseText);
-						}
-					};
-					xhr.onerror = function (event) {
-						logger.error("nominatim error:", event);
-					};
-					xhr.ontimeout = function (event) {
-						logger.error("nominatim timeout:", event);
-					};
-					xhr.open("GET", `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-					xhr.timeout = 15000;
-					xhr.send();
-				}
 			});
 		}
 
@@ -3021,6 +3049,8 @@ function initWallpanel() {
 			mediaInfo.mediaCount = this.mediaList.length;
 
 			logger.debug("Media info:", mediaInfo);
+
+			this.fetchAddressData(infoCacheUrl, mediaElement);
 
 			let html = config.image_info_template || "";
 			if (html == "analyze") {
@@ -3495,6 +3525,43 @@ function initWallpanel() {
 				return dimensions.width >= dimensions.height ? "landscape" : "portrait";
 			}
 
+			function mapImmichExifToWallpanel(exifInfo) {
+				if (!exifInfo) return {};
+				const mapped = { ...exifInfo };
+				if (exifInfo.dateTimeOriginal) mapped.DateTimeOriginal = exifInfo.dateTimeOriginal;
+				if (exifInfo.make) mapped.Make = exifInfo.make;
+				if (exifInfo.model) mapped.Model = exifInfo.model;
+				if (exifInfo.fNumber) mapped.FNumber = exifInfo.fNumber;
+				if (exifInfo.exposureTime) mapped.ExposureTime = exifInfo.exposureTime;
+				if (exifInfo.focalLength) mapped.FocalLength = exifInfo.focalLength;
+				if (exifInfo.iso) mapped.ISOSpeedRatings = exifInfo.iso;
+				if (exifInfo.exifImageWidth) {
+					mapped.ImageWidth = exifInfo.exifImageWidth;
+					mapped.PixelXDimension = exifInfo.exifImageWidth;
+				}
+				if (exifInfo.exifImageHeight) {
+					mapped.ImageHeight = exifInfo.exifImageHeight;
+					mapped.PixelYDimension = exifInfo.exifImageHeight;
+				}
+				if (exifInfo.orientation) mapped.Orientation = exifInfo.orientation;
+				if (exifInfo.lensModel) mapped.LensModel = exifInfo.lensModel;
+				if (exifInfo.projectionType) mapped.ProjectionType = exifInfo.projectionType;
+				if (exifInfo.city) mapped.City = exifInfo.city;
+				if (exifInfo.state) mapped.State = exifInfo.state;
+				if (exifInfo.country) mapped.Country = exifInfo.country;
+				if (exifInfo.description) mapped.ImageDescription = exifInfo.description;
+				if (exifInfo.latitude !== undefined && exifInfo.latitude !== null && !isNaN(exifInfo.latitude)) {
+					mapped.GPSLatitude = [Math.abs(exifInfo.latitude)];
+					mapped.GPSLatitudeRef = exifInfo.latitude < 0 ? "S" : "N";
+				}
+				if (exifInfo.longitude !== undefined && exifInfo.longitude !== null && !isNaN(exifInfo.longitude)) {
+					mapped.GPSLongitude = [Math.abs(exifInfo.longitude)];
+					mapped.GPSLongitudeRef = exifInfo.longitude < 0 ? "W" : "E";
+				}
+				logger.debug("Mapped immich EXIF to wallpanel format:", mapped);
+				return mapped;
+			}
+
 			async function fetchExcludedAssetIds(apiKey) {
 				excludedAssetIds.clear();
 				assetIdsNeedingTagDetails.clear();
@@ -3638,7 +3705,7 @@ function initWallpanel() {
 					}
 					urls.push(url);
 
-					const info = asset.exifInfo || {};
+					const info = mapImmichExifToWallpanel(asset.exifInfo);
 					info["immichApiKey"] = apiKey;
 					info["mediaType"] = assetType;
 					info["image"] = {
@@ -3674,6 +3741,17 @@ function initWallpanel() {
 			}
 
 			try {
+				function getImmichSearchParams(baseParams = {}) {
+					const params = { ...baseParams, withExif: true };
+					if (config.immich_taken_after) {
+						params.takenAfter = config.immich_taken_after;
+					}
+					if (config.immich_taken_before) {
+						params.takenBefore = config.immich_taken_before;
+					}
+					return params;
+				}
+
 				for (const apiKey of config.immich_api_keys) {
 					logger.debug(`Using immich API key ${apiKey}`);
 					await fetchExcludedAssetIds(apiKey);
@@ -3719,7 +3797,7 @@ function initWallpanel() {
 									logger.debug(`Fetching asset metadata page ${page}`);
 									const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
 										method: "POST",
-										body: JSON.stringify({ personIds: personIds, withExif: true, page: page, size: 1000 })
+										body: JSON.stringify(getImmichSearchParams({ personIds: personIds, page: page, size: 1000 }))
 									});
 									logger.debug(`Got immich API response`, searchResults);
 									if (!searchResults.assets.count) {
@@ -3762,7 +3840,7 @@ function initWallpanel() {
 							logger.debug(`Fetching asset metadata page ${page}`);
 							const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
 								method: "POST",
-								body: JSON.stringify({ isFavorite: true, withExif: true, page: page, size: 1000 })
+								body: JSON.stringify(getImmichSearchParams({ isFavorite: true, page: page, size: 1000 }))
 							});
 							logger.debug("Got immich API response", searchResults);
 							if (!searchResults.assets.count) {
@@ -3799,7 +3877,7 @@ function initWallpanel() {
 								logger.debug(`Fetching asset metadata page ${page}`);
 								const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
 									method: "POST",
-									body: JSON.stringify({ tagIds: tagIds, withExif: true, page: page, size: 1000 })
+									body: JSON.stringify(getImmichSearchParams({ tagIds: tagIds, page: page, size: 1000 }))
 								});
 								logger.debug("Got immich API response", searchResults);
 								if (!searchResults.assets.count) {
@@ -3846,7 +3924,7 @@ function initWallpanel() {
 								while (true) {
 									const searchResults = await wp._immichFetch(`${apiUrl}/search/metadata`, apiKey, {
 										method: "POST",
-										body: JSON.stringify({ albumIds: [album.id], withExif: true, page })
+										body: JSON.stringify(getImmichSearchParams({ albumIds: [album.id], page }))
 									});
 									logger.debug(`Got immich album assets (page ${page})`, searchResults);
 									await processAssets(searchResults.assets.items, apiKey, album.albumName);

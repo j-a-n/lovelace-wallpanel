@@ -58,6 +58,8 @@ You can set the following configuration parameters for every individual Home Ass
 | immich_persons                   | Display media only featuring the specified people.                                                     | []        |
 | immich_memories                  | Display only today’s memories.                                                                         | false     |
 | immich_favorites                 | Display only media marked as favorite.                                                                 | false     |
+| immich_taken_after               | Display only media taken after the specified ISO 8601 date/time (e.g. `2013-10-01T00:00:00.000Z`).     |           |
+| immich_taken_before              | Display only media taken before the specified ISO 8601 date/time (e.g. `2025-12-31T23:59:59.999Z`).    |           |
 | immich_resolution                | The resolution to use for loading media from immich (possible values are: `preview` / `original`).     | preview   |
 | exclude_filenames                | List of regular expressions for excluding files and directories from media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
 | exclude_media_types              | List of media types to exlcude media sources. See [Media Sources](media-sources.md#exclude-files) for details. | []        |
