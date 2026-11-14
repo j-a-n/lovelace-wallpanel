@@ -5248,6 +5248,8 @@ function initWallpanel() {
 		customElements.define("wallpanel-view", WallpanelView);
 	}
 	wallpanelContainer = document.createElement("wallpanel-view-container");
+	// Avoid incorrect stacking in Firefox when home-assistant-main uses isolation: isolate.
+	wallpanelContainer.style.display = "block";
 	wallpanel = document.createElement("wallpanel-view");
 	wallpanelContainer.appendChild(wallpanel);
 	elHaMain.shadowRoot.appendChild(wallpanelContainer);
