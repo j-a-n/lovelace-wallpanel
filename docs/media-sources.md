@@ -2,10 +2,23 @@
 The media source for the screensaver slideshow is configured by `image_url`.
 This can be any HTTP URL, a Home Assistant media-source URL or a Home Assistant entity that has the `entity_picture` attribute.
 
-The default value of `image_url` is `http://picsum.photos/${width}/${height}?random=${timestamp}`.
+The default value of `image_url` is `https://picsum.photos/${width}/${height}?random=${timestamp}`.
 
 ## HTTP URL
 Media can be retrieved from an HTTP URL.
+
+By default, `media_type: auto` tries the current image or video element and, if loading fails, tries the other type. If both attempts fail, the error includes the details of both attempts. A video format error can therefore be the result of a failed image request rather than a video URL.
+
+For a URL known to provide images, set `media_type: image` to skip the video attempt:
+
+```yaml
+wallpanel:
+  enabled: true
+  image_url: 'https://picsum.photos/${width}/${height}?random=${timestamp}'
+  media_type: image
+```
+
+Use `media_type: video` for a URL known to provide video. This setting applies only to ordinary HTTP URLs; Home Assistant media sources, media entities, Unsplash API, Immich, iframe and embed sources retain their own type handling. It does not fix an unavailable image provider or bypass browser network restrictions. `force_load_media_with_fetch` changes how media is downloaded and still respects `media_type`.
 
 The following variables can be used in HTTP URLs:
 - `${timestamp}` = current unix timestamp

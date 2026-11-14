@@ -51,6 +51,7 @@ const defaultConfig = {
 	disable_screensaver_when_assist_active: true,
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
+	media_type: "auto", // auto / image / video (HTTP URLs only)
 	image_url_entity: "",
 	force_load_media_with_fetch: false,
 	stream_load_media: false,
@@ -2813,6 +2814,7 @@ function initWallpanel() {
 
 			const sourceChange =
 				oldConfig.image_url != config.image_url ||
+				oldConfig.media_type != config.media_type ||
 				oldConfig.media_order != config.media_order ||
 				oldConfig.media_list_max_size != config.media_list_max_size ||
 				JSON.stringify(oldConfig.exclude_filenames) != JSON.stringify(config.exclude_filenames) ||
@@ -4021,7 +4023,15 @@ function initWallpanel() {
 					await loadMediaWithElement(fallbackElem);
 					return fallbackElem;
 				} catch (e) {
-					throw originalError || e;
+					if (!originalError) {
+						throw e;
+					}
+					// Use a plain Error for older browsers without AggregateError support.
+					const error = new Error(
+						`Failed to load media "${url}" as both ${currentElem.tagName} and ${fallbackElem.tagName}`
+					);
+					error.errors = [originalError, e];
+					throw error;
 				}
 			};
 
@@ -4210,9 +4220,13 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromOtherSrc(element) {
+			if (!["auto", "image", "video"].includes(config.media_type)) {
+				throw new Error(`Invalid media_type "${config.media_type}": expected auto, image or video`);
+			}
+			const mediaType = { image: "img", video: "video" }[config.media_type] || null;
 			element.mediaUrl = this.fillPlaceholders(element.mediaUrl);
 			element.infoCacheUrl = element.mediaUrl;
-			return await this.updateMediaFromUrl(element, element.mediaUrl);
+			return await this.updateMediaFromUrl(element, element.mediaUrl, mediaType);
 		}
 
 		async updateMedia(element) {

@@ -26,6 +26,7 @@
 		"build": "rollup -c",
 		"test:commands": "node --test tests/command-entity.test.cjs",
 		"test:media": "node --test tests/media-fadeout.test.cjs",
+		"test:media-loading": "node --test tests/media-loading.test.cjs",
 		"test:immich": "node --test tests/immich-tag-exclusion.test.cjs"
 	}
 }
