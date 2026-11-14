@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.68.0";
+const version = "4.68.1";
 const mediaLoadRetryDelay = 1000;
 const mediaListRetryDelay = 3000;
 const mediaListRateLimitRetryDelay = 60000;
