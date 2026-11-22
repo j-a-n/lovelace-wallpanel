@@ -3,7 +3,7 @@
  * Released under the GNU General Public License v3.0
  */
 
-const version = "4.68.0";
+const version = "4.68.1";
 const mediaLoadRetryDelay = 1000;
 const mediaListRetryDelay = 3000;
 const mediaListRateLimitRetryDelay = 60000;
@@ -33,6 +33,7 @@ const defaultConfig = {
 	fade_out_time_browser_mod_popup: 1.0,
 	fade_out_time_interaction: 0.3,
 	crossfade_time: 3.0,
+	release_inactive_media: true,
 	display_time: 15.0,
 	keep_screen_on_time: 0,
 	black_screen_after_time: 0,
@@ -50,6 +51,7 @@ const defaultConfig = {
 	disable_screensaver_when_assist_active: true,
 	show_images: true,
 	image_url: "https://picsum.photos/${width}/${height}?random=${timestamp}",
+	media_type: "auto", // auto / image / video (HTTP URLs only)
 	image_url_entity: "",
 	force_load_media_with_fetch: false,
 	stream_load_media: false,
@@ -2814,6 +2816,7 @@ function initWallpanel() {
 
 			const sourceChange =
 				oldConfig.image_url != config.image_url ||
+				oldConfig.media_type != config.media_type ||
 				oldConfig.media_order != config.media_order ||
 				oldConfig.media_list_max_size != config.media_list_max_size ||
 				JSON.stringify(oldConfig.exclude_filenames) != JSON.stringify(config.exclude_filenames) ||
@@ -4098,7 +4101,15 @@ function initWallpanel() {
 					await loadMediaWithElement(fallbackElem);
 					return fallbackElem;
 				} catch (e) {
-					throw originalError || e;
+					if (!originalError) {
+						throw e;
+					}
+					// Use a plain Error for older browsers without AggregateError support.
+					const error = new Error(
+						`Failed to load media "${url}" as both ${currentElem.tagName} and ${fallbackElem.tagName}`
+					);
+					error.errors = [originalError, e];
+					throw error;
 				}
 			};
 
@@ -4287,9 +4298,13 @@ function initWallpanel() {
 		}
 
 		async updateMediaFromOtherSrc(element) {
+			if (!["auto", "image", "video"].includes(config.media_type)) {
+				throw new Error(`Invalid media_type "${config.media_type}": expected auto, image or video`);
+			}
+			const mediaType = { image: "img", video: "video" }[config.media_type] || null;
 			element.mediaUrl = this.fillPlaceholders(element.mediaUrl);
 			element.infoCacheUrl = element.mediaUrl;
-			return await this.updateMediaFromUrl(element, element.mediaUrl);
+			return await this.updateMediaFromUrl(element, element.mediaUrl, mediaType);
 		}
 
 		async updateMedia(element) {
@@ -4673,9 +4688,34 @@ function initWallpanel() {
 				// A rapid manual switch may reuse this buffer before the old fade timer
 				// fires. Only release it while it is still the inactive buffer.
 				if (curMedia === wp.getInactiveMediaElement()) {
-					wp.releaseMediaElement(curMedia);
+					wp.finishMediaFadeout(curMedia);
 				}
 			}, crossfadeMillis);
+		}
+
+		finishMediaFadeout(mediaElement) {
+			if (config.release_inactive_media !== false) {
+				this.releaseMediaElement(mediaElement);
+				return;
+			}
+
+			// Some TV browsers stutter after repeatedly unloading image buffers. Keep
+			// their sources until reuse, but still stop invisible video/camera playback.
+			try {
+				if (mediaElement.tagName.toLowerCase() === "ha-camera-stream") {
+					const [player, video] = getHaCameraStreamPlayerAndVideo(mediaElement);
+					if (video) {
+						video.pause();
+					}
+					if (player && typeof player.stop === "function") {
+						player.stop();
+					}
+				} else if (typeof mediaElement.pause === "function") {
+					mediaElement.pause();
+				}
+			} catch (error) {
+				logger.debug(error);
+			}
 		}
 
 		setupScreensaver() {
@@ -5300,6 +5340,8 @@ function initWallpanel() {
 		customElements.define("wallpanel-view", WallpanelView);
 	}
 	wallpanelContainer = document.createElement("wallpanel-view-container");
+	// Avoid incorrect stacking in Firefox when home-assistant-main uses isolation: isolate.
+	wallpanelContainer.style.display = "block";
 	wallpanel = document.createElement("wallpanel-view");
 	wallpanelContainer.appendChild(wallpanel);
 	elHaMain.shadowRoot.appendChild(wallpanelContainer);
