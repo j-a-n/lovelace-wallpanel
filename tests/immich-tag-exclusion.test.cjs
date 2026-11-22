@@ -55,6 +55,7 @@ async function playlist(accounts, overrides = {}) {
 			if (route === "/users/me") return { id: account.userId || "owner" };
 			if (route === "/server/version") return { major: 3 };
 			if (route === "/albums") return [{ id: "album", albumName: "Selected" }];
+			if (route === "/memories") return structuredClone(account.memories || []);
 			if (route === "/search/metadata") {
 				if (body.tagIds) {
 					assert.equal(body.tagIds.length, 1, "Search tags separately to preserve union semantics");
@@ -74,7 +75,10 @@ async function playlist(accounts, overrides = {}) {
 			}
 			if (route.startsWith("/assets/")) {
 				const id = route.slice("/assets/".length);
-				const original = account.assets.find((entry) => entry.id === id);
+				const original =
+					account.assetDetails?.[id] ||
+					(account.assets || []).find((entry) => entry.id === id) ||
+					(account.memories || []).flatMap((memory) => memory.assets || []).find((entry) => entry.id === id);
 				assert.ok(original, `Unexpected asset detail request: ${id}`);
 				return structuredClone({
 					...original,
@@ -257,3 +261,104 @@ test("passes immich_taken_after and immich_taken_before to metadata search", asy
 	assert.equal(searchReq.body.withExif, true);
 });
 
+test("applies immich_taken_after and immich_taken_before to memory assets", async () => {
+	const now = Date.now();
+	const memoryWindow = {
+		showAt: new Date(now - 3600_000).toISOString(),
+		hideAt: new Date(now + 3600_000).toISOString()
+	};
+	const beforeRange = {
+		...asset("photo-2010"),
+		exifInfo: { dateTimeOriginal: "2010-11-22T10:00:00.000Z" }
+	};
+	const beforeRangeFileCreatedNoExif = {
+		...asset("photo-2012-filecreated"),
+		fileCreatedAt: "2012-11-22T10:00:00.000Z",
+		exifInfo: undefined
+	};
+	const beforeRangeViaDetails = {
+		...asset("photo-2010-details"),
+		exifInfo: undefined
+	};
+	const inRangeExif = {
+		...asset("photo-2022"),
+		exifInfo: { dateTimeOriginal: "2022-11-22T10:00:00.000Z" }
+	};
+	const inRangeFileCreated = {
+		...asset("photo-2023-filecreated"),
+		fileCreatedAt: "2023-11-22T10:00:00.000Z",
+		exifInfo: { dateTimeOriginal: "2018-11-22T10:00:00.000Z" }
+	};
+	const afterRange = {
+		...asset("photo-2026"),
+		exifInfo: { dateTimeOriginal: "2026-11-22T10:00:00.000Z" }
+	};
+	const undated = asset("photo-undated");
+	const skippedYearAsset = {
+		...asset("photo-2010-skipped-memory"),
+		exifInfo: undefined
+	};
+
+	const result = await playlist(
+		{
+			key: {
+				memories: [
+					{
+						...memoryWindow,
+						data: { year: 2010 },
+						assets: [skippedYearAsset]
+					},
+					{
+						...memoryWindow,
+						assets: [
+							beforeRange,
+							beforeRangeFileCreatedNoExif,
+							beforeRangeViaDetails,
+							inRangeExif,
+							inRangeFileCreated,
+							afterRange,
+							undated
+						]
+					}
+				],
+				assetDetails: {
+					"photo-2010-details": {
+						...asset("photo-2010-details"),
+						exifInfo: { dateTimeOriginal: "2010-05-01T08:00:00.000Z" }
+					}
+				}
+			}
+		},
+		{
+			immich_exclude_tag_names: [],
+			immich_memories: true,
+			immich_taken_after: "2020-01-01T00:00:00.000Z",
+			immich_taken_before: "2025-12-31T23:59:59.999Z"
+		}
+	);
+	assert.deepEqual(result.ids, ["photo-2022", "photo-2023-filecreated"]);
+	assert.deepEqual(
+		result.details.map(({ route }) => route),
+		["/assets/photo-2010-details"]
+	);
+});
+
+test("rejects invalid immich_taken_after or immich_taken_before dates before loading media", async () => {
+	const failOnAnyRequest = () => "Unexpected API call for invalid date";
+	await assert.rejects(
+		() =>
+			playlist(
+				{ key: { memories: [], fail: failOnAnyRequest } },
+				{ immich_exclude_tag_names: [], immich_memories: true, immich_taken_after: "not-a-date" }
+			),
+		(error) => /Invalid immich_taken_after date/.test(error.message) && error.noRetry === true
+	);
+	await assert.rejects(
+		() =>
+			playlist(
+				{ key: { assets: [asset("keep")], fail: failOnAnyRequest } },
+				{ immich_exclude_tag_names: [], immich_taken_before: "2025-13-45" }
+			),
+		(error) => /Invalid immich_taken_before date/.test(error.message) && error.noRetry === true
+	);
+});

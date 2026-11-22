@@ -3215,20 +3215,24 @@ function initWallpanel() {
 						retryDelay = Math.min(mediaListRateLimitRetryDelay * 2 ** retryCount, maxMediaListRateLimitRetryDelay);
 					}
 				}
-				logger.warn(`Failed to update media list from ${sourceType}:`, error);
-				if (retryCount < maxRetries) {
-					logger.warn(
-						`Retrying media list update in ${retryDelay / 1000} seconds (attempt ${retryCount + 1}/${maxRetries})...`
-					);
-					this.mediaListRetryAt = Date.now() + retryDelay;
-					this.mediaListRetryTimer = setTimeout(() => {
-						wp.mediaListRetryTimer = null;
-						wp.mediaListRetryAt = 0;
-						wp.updateMediaList(callback, true, retryCount + 1);
-					}, retryDelay);
+				if (error.noRetry) {
+					logger.error(`Failed to update media list from ${config.image_url}: ${error.message || stringify(error)}`);
 				} else {
-					const errorMsg = `Failed to update media list from ${config.image_url} after ${maxRetries} retries: ${error.message || stringify(error)}`;
-					logger.error(errorMsg);
+					logger.warn(`Failed to update media list from ${sourceType}:`, error);
+					if (retryCount < maxRetries) {
+						logger.warn(
+							`Retrying media list update in ${retryDelay / 1000} seconds (attempt ${retryCount + 1}/${maxRetries})...`
+						);
+						this.mediaListRetryAt = Date.now() + retryDelay;
+						this.mediaListRetryTimer = setTimeout(() => {
+							wp.mediaListRetryTimer = null;
+							wp.mediaListRetryAt = 0;
+							wp.updateMediaList(callback, true, retryCount + 1);
+						}, retryDelay);
+					} else {
+						const errorMsg = `Failed to update media list from ${config.image_url} after ${maxRetries} retries: ${error.message || stringify(error)}`;
+						logger.error(errorMsg);
+					}
 				}
 			}
 			this.updatingMediaList = false;
@@ -3498,6 +3502,64 @@ function initWallpanel() {
 				}
 			}
 
+			function parseImmichDateBound(value, optionName) {
+				if (value === undefined || value === null || value === "") {
+					return null;
+				}
+				const ms = value instanceof Date ? value.getTime() : Date.parse(value);
+				if (Number.isNaN(ms)) {
+					const error = new Error(`Invalid ${optionName} date: "${value}"`);
+					error.noRetry = true;
+					throw error;
+				}
+				return ms;
+			}
+
+			const takenAfterMs = parseImmichDateBound(config.immich_taken_after, "immich_taken_after");
+			const takenBeforeMs = parseImmichDateBound(config.immich_taken_before, "immich_taken_before");
+
+			function getAssetCaptureDate(asset) {
+				return asset.fileCreatedAt || asset.exifInfo?.dateTimeOriginal || asset.localDateTime || null;
+			}
+
+			function isAssetWithinDateBounds(asset) {
+				if (takenAfterMs === null && takenBeforeMs === null) {
+					return true;
+				}
+				const rawDate = getAssetCaptureDate(asset);
+				if (!rawDate) {
+					return false;
+				}
+				const assetMs = rawDate instanceof Date ? rawDate.getTime() : Date.parse(rawDate);
+				if (Number.isNaN(assetMs)) {
+					return false;
+				}
+				if (takenAfterMs !== null && assetMs < takenAfterMs) {
+					return false;
+				}
+				if (takenBeforeMs !== null && assetMs > takenBeforeMs) {
+					return false;
+				}
+				return true;
+			}
+
+			function isMemoryWithinDateBounds(memory) {
+				const year = memory?.data?.year;
+				if (!Number.isInteger(year)) {
+					return true;
+				}
+				// Allow full UTC timezone range (-12h to +14h) so boundary years are checked per asset.
+				const yearStartMs = Date.UTC(year, 0, 1) - 14 * 3600 * 1000;
+				const yearEndMs = Date.UTC(year + 1, 0, 1) + 12 * 3600 * 1000;
+				if (takenAfterMs !== null && yearEndMs < takenAfterMs) {
+					return false;
+				}
+				if (takenBeforeMs !== null && yearStartMs > takenBeforeMs) {
+					return false;
+				}
+				return true;
+			}
+
 			function getImmichExifDimensions(exif) {
 				if (!exif?.exifImageWidth || !exif?.exifImageHeight) {
 					return null;
@@ -3638,18 +3700,31 @@ function initWallpanel() {
 								asset.width = assetInfo.width;
 								asset.height = assetInfo.height;
 								asset.isEdited = assetInfo.isEdited;
+								if (assetInfo.fileCreatedAt) {
+									asset.fileCreatedAt = assetInfo.fileCreatedAt;
+								}
+								if (assetInfo.localDateTime) {
+									asset.localDateTime = assetInfo.localDateTime;
+								}
 							}
 						})
 					);
 				}
 			}
 
-			async function processAssets(assets, apiKey, folderName = null) {
+			async function processAssets(assets, apiKey, folderName = null, applyDateBounds = false) {
 				assets = assets.filter((asset) => !excludedAssetIds.has(asset.id));
+				if (applyDateBounds && (takenAfterMs !== null || takenBeforeMs !== null)) {
+					assets = assets.filter((asset) => !getAssetCaptureDate(asset) || isAssetWithinDateBounds(asset));
+				}
 				await fetchAssetInfo(assets, apiKey);
 
 				for (const asset of assets) {
 					logger.debug("Processing immich asset", asset);
+					if (applyDateBounds && !isAssetWithinDateBounds(asset)) {
+						logger.debug("Media item excluded due to capture date bounds");
+						continue;
+					}
 					if (
 						excludedTagNames.size > 0 &&
 						(asset.tags || []).some((tag) =>
@@ -3826,14 +3901,14 @@ function initWallpanel() {
 						const visibleMemories = allMemories.filter((memory) => {
 							const showAt = new Date(memory.showAt);
 							const hideAt = new Date(memory.hideAt);
-							return now >= showAt && now <= hideAt;
+							return now >= showAt && now <= hideAt && isMemoryWithinDateBounds(memory);
 						});
 						logger.debug(`Found ${visibleMemories.length} visible memories`);
 
 						await Promise.all(
 							visibleMemories.map(async (memory) => {
 								logger.debug("Processing memory:", memory);
-								await processAssets(memory.assets, apiKey);
+								await processAssets(memory.assets, apiKey, null, true);
 							})
 						);
 					} else if (config.immich_favorites) {
