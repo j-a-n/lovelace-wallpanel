@@ -305,6 +305,13 @@ function getRetryAfterDelay(response) {
 // spend another API request before media_list_update_interval has elapsed.
 const unsplashMediaListStorageKey = "wallpanel-unsplash-media-list";
 
+// An entry without a raw URL cannot produce a usable image URL - it would end up
+// as "undefined&w=${width}..." and the list would be applied successfully, so the
+// API fallback would be skipped until the cached list expires.
+function hasUnsplashRawUrl(entry) {
+	return typeof entry?.urls?.raw === "string" && entry.urls.raw.trim() !== "";
+}
+
 function loadUnsplashMediaList(source, maxAge) {
 	try {
 		const stored = JSON.parse(localStorage.getItem(unsplashMediaListStorageKey));
@@ -3396,7 +3403,15 @@ function initWallpanel() {
 		}
 
 		async updateMediaListFromUnsplashAPI() {
+			// The configuration can change while the request is in flight, so the
+			// source is captured once and used for the request, for the cache key and
+			// for checking whether the response is still wanted when it arrives.
+			const source = config.image_url;
+
 			const setMediaList = (entries) => {
+				if (!Array.isArray(entries) || !entries.every(hasUnsplashRawUrl)) {
+					throw new Error("Unsplash media list contains an entry without a raw URL");
+				}
 				const urls = [];
 				entries.forEach((entry) => {
 					logger.debug(entry);
@@ -3407,7 +3422,7 @@ function initWallpanel() {
 				this.mediaList = urls;
 			};
 
-			const cached = loadUnsplashMediaList(config.image_url, config.media_list_update_interval * 1000);
+			const cached = loadUnsplashMediaList(source, config.media_list_update_interval * 1000);
 			if (cached) {
 				try {
 					setMediaList(cached.entries);
@@ -3419,7 +3434,7 @@ function initWallpanel() {
 				}
 			}
 
-			const requestUrl = `${config.image_url}&count=30`;
+			const requestUrl = `${source}&count=30`;
 
 			logger.debug(`Unsplash API request: ${requestUrl}`);
 			try {
@@ -3449,8 +3464,23 @@ function initWallpanel() {
 				const json = await response.json();
 				logger.debug("Got Unsplash API response");
 
+				if (config.image_url !== source) {
+					// The source changed while the request was pending: this response
+					// belongs to a query that is no longer configured, so it must not be
+					// applied or cached under the current one. Ask for the new source as
+					// soon as this update has finished, because the running update blocks
+					// further updateMediaList() calls.
+					logger.debug(`Discarding Unsplash API response: image_url changed from ${source} to ${config.image_url}`);
+					setTimeout(() => {
+						if (typeof this.updateMediaList === "function") {
+							this.updateMediaList(null, true);
+						}
+					}, 0);
+					return;
+				}
+
 				setMediaList(json);
-				saveUnsplashMediaList(config.image_url, json);
+				saveUnsplashMediaList(source, json);
 			} catch (error) {
 				if (error.name === "AbortError") {
 					throw new Error(`Unsplash API request timed out: ${requestUrl}`);

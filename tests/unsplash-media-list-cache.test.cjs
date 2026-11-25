@@ -31,8 +31,9 @@ const makeUpdate = new Function(
 const imageUrl = "https://api.unsplash.com/photos/random?client_id=KEY&query=nature";
 const entry = (id) => ({ id, urls: { raw: `https://images.unsplash.com/${id}?ixid=x` } });
 
-function setup({ storage = new Map(), interval = 3600, response = [entry("a"), entry("b")], fail } = {}) {
+function setup({ storage = new Map(), interval = 3600, response = [entry("a"), entry("b")], fail, onFetch } = {}) {
 	const requests = [];
+	const updates = [];
 	const config = { image_url: imageUrl, media_list_update_interval: interval, immich_api_request_timeout: 10 };
 	const localStorage = {
 		getItem: (key) => (storage.has(key) ? storage.get(key) : null),
@@ -40,13 +41,18 @@ function setup({ storage = new Map(), interval = 3600, response = [entry("a"), e
 	};
 	const fetch = async (url) => {
 		requests.push(url);
+		if (onFetch) onFetch(config, url);
 		if (fail) throw fail;
 		return { ok: true, json: async () => JSON.parse(JSON.stringify(response)) };
 	};
 	const logger = { debug() {} };
 	const update = makeUpdate(config, logger, () => {}, localStorage, fetch);
-	const wp = { mediaList: [], lastMediaListUpdate: Date.now() };
-	return { config, storage, requests, wp, run: () => update.call(wp) };
+	const wp = {
+		mediaList: [],
+		lastMediaListUpdate: Date.now(),
+		updateMediaList: (...args) => updates.push(args)
+	};
+	return { config, storage, requests, updates, wp, run: () => update.call(wp) };
 }
 
 test("a reload reuses the stored list until media_list_update_interval elapses", async () => {
@@ -127,4 +133,71 @@ test("API errors still propagate to the existing retry handling", async () => {
 	const { storage, run } = setup({ fail: new Error("Failed to fetch") });
 	await assert.rejects(run(), /Failed to fetch/);
 	assert.equal(storage.size, 0);
+});
+
+test("cached entries without a usable raw URL fall back to the API", async () => {
+	for (const badEntry of [
+		{ id: "no-urls" },
+		{ id: "empty-urls", urls: {} },
+		{ id: "blank-url", urls: { raw: "   " } },
+		{ id: "null-url", urls: { raw: null } }
+	]) {
+		const label = JSON.stringify(badEntry);
+		const storage = new Map([
+			[
+				"wallpanel-unsplash-media-list",
+				JSON.stringify({ source: imageUrl, fetchedAt: Date.now(), entries: [badEntry] })
+			]
+		]);
+		const { requests, wp, run } = setup({ storage });
+		await run();
+		assert.equal(requests.length, 1, label);
+		assert.ok(wp.mediaList.length > 0, label);
+		assert.ok(
+			wp.mediaList.every((url) => !url.startsWith("undefined")),
+			`${label} must not become an image URL`
+		);
+	}
+});
+
+test("an API response with an entry without a raw URL is rejected instead of applied", async () => {
+	const { storage, wp, run } = setup({ response: [entry("a"), { id: "broken", urls: {} }] });
+	await assert.rejects(run(), /without a raw URL/);
+	assert.deepEqual(wp.mediaList, []);
+	assert.equal(storage.size, 0);
+});
+
+test("a response for a source that changed mid-request is neither applied nor cached", async () => {
+	const { storage, updates, wp, run, requests } = setup({
+		onFetch: (config) => {
+			config.image_url = `${imageUrl}&query=cats`;
+		}
+	});
+	await run();
+	assert.equal(requests.length, 1);
+	assert.deepEqual(wp.mediaList, [], "the stale list must not be applied");
+	assert.equal(storage.size, 0, "the stale list must not be cached under the new source");
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	assert.deepEqual(updates, [[null, true]], "the new source is fetched after the running update");
+});
+
+test("the request and the cache key use the source captured before the request", async () => {
+	let changed = false;
+	const newSource = `${imageUrl}&query=cats`;
+	const { storage, wp, run, requests } = setup({
+		onFetch: (config) => {
+			if (!changed) {
+				changed = true;
+				config.image_url = newSource;
+			}
+		}
+	});
+	await run();
+	await new Promise((resolve) => setTimeout(resolve, 5));
+	await run();
+
+	assert.deepEqual(requests, [`${imageUrl}&count=30`, `${newSource}&count=30`]);
+	const stored = JSON.parse(storage.get("wallpanel-unsplash-media-list"));
+	assert.equal(stored.source, newSource);
+	assert.ok(wp.mediaList.length > 0);
 });
