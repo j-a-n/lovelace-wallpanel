@@ -55,6 +55,7 @@ async function playlist(accounts, overrides = {}) {
 			if (route === "/users/me") return { id: account.userId || "owner" };
 			if (route === "/server/version") return { major: 3 };
 			if (route === "/albums") return [{ id: "album", albumName: "Selected" }];
+			if (route === "/memories") return structuredClone(account.memories || []);
 			if (route === "/search/metadata") {
 				if (body.tagIds) {
 					assert.equal(body.tagIds.length, 1, "Search tags separately to preserve union semantics");
@@ -74,7 +75,10 @@ async function playlist(accounts, overrides = {}) {
 			}
 			if (route.startsWith("/assets/")) {
 				const id = route.slice("/assets/".length);
-				const original = account.assets.find((entry) => entry.id === id);
+				const original =
+					account.assetDetails?.[id] ||
+					(account.assets || []).find((entry) => entry.id === id) ||
+					(account.memories || []).flatMap((memory) => memory.assets || []).find((entry) => entry.id === id);
 				assert.ok(original, `Unexpected asset detail request: ${id}`);
 				return structuredClone({
 					...original,
@@ -90,12 +94,14 @@ async function playlist(accounts, overrides = {}) {
 		error() {},
 		warning: (...args) => warnings.push(args)
 	};
-	await makeUpdate(config, logger, () => {}).call(wp);
+	const cache = new Map();
+	await makeUpdate(config, logger, (url, info) => cache.set(url, info)).call(wp);
 	return {
 		ids: wp.mediaList.map((url) => url.match(/\/assets\/([^/]+)\//)[1]).sort(),
 		details: requests.filter(({ route }) => route.startsWith("/assets/")),
 		requests,
-		warnings
+		warnings,
+		cache
 	};
 }
 
@@ -208,4 +214,151 @@ test("disabled exclusions do not add tag or user lookups", async () => {
 	assert.deepEqual(result.ids, ["keep"]);
 	assert.equal(result.details.length, 0);
 	assert.ok(!result.requests.some(({ route }) => route === "/tags" || route === "/users/me"));
+});
+
+test("maps Immich exifInfo to standard EXIF and location tags while preserving camelCase keys", async () => {
+	const photo = {
+		...asset("photo1"),
+		exifInfo: {
+			dateTimeOriginal: "2023-08-15T14:32:10.000Z",
+			city: "Munich",
+			state: "Bavaria",
+			country: "Germany",
+			make: "Sony",
+			model: "A7IV",
+			latitude: -33.8688,
+			longitude: 151.2093
+		}
+	};
+	const result = await playlist({ key: { assets: [photo] } }, { immich_exclude_tag_names: [] });
+	const [, info] = [...result.cache.entries()][0];
+	assert.equal(info.DateTimeOriginal, "2023-08-15T14:32:10.000Z");
+	assert.equal(info.dateTimeOriginal, "2023-08-15T14:32:10.000Z");
+	assert.equal(info.City, "Munich");
+	assert.equal(info.city, "Munich");
+	assert.equal(info.State, "Bavaria");
+	assert.equal(info.Country, "Germany");
+	assert.equal(info.Make, "Sony");
+	assert.equal(info.Model, "A7IV");
+	assert.deepEqual(info.GPSLatitude, [33.8688]);
+	assert.equal(info.GPSLatitudeRef, "S");
+	assert.deepEqual(info.GPSLongitude, [151.2093]);
+	assert.equal(info.GPSLongitudeRef, "E");
+});
+
+test("passes immich_taken_after and immich_taken_before to metadata search", async () => {
+	const result = await playlist(
+		{ key: { assets: [asset("keep")] } },
+		{
+			immich_exclude_tag_names: [],
+			immich_taken_after: "2013-10-01T00:00:00.000Z",
+			immich_taken_before: "2025-12-31T23:59:59.999Z"
+		}
+	);
+	const searchReq = result.requests.find(({ route }) => route === "/search/metadata");
+	assert.equal(searchReq.body.takenAfter, "2013-10-01T00:00:00.000Z");
+	assert.equal(searchReq.body.takenBefore, "2025-12-31T23:59:59.999Z");
+	assert.equal(searchReq.body.withExif, true);
+});
+
+test("applies immich_taken_after and immich_taken_before to memory assets", async () => {
+	const now = Date.now();
+	const memoryWindow = {
+		showAt: new Date(now - 3600_000).toISOString(),
+		hideAt: new Date(now + 3600_000).toISOString()
+	};
+	const beforeRange = {
+		...asset("photo-2010"),
+		exifInfo: { dateTimeOriginal: "2010-11-22T10:00:00.000Z" }
+	};
+	const beforeRangeFileCreatedNoExif = {
+		...asset("photo-2012-filecreated"),
+		fileCreatedAt: "2012-11-22T10:00:00.000Z",
+		exifInfo: undefined
+	};
+	const beforeRangeViaDetails = {
+		...asset("photo-2010-details"),
+		exifInfo: undefined
+	};
+	const inRangeExif = {
+		...asset("photo-2022"),
+		exifInfo: { dateTimeOriginal: "2022-11-22T10:00:00.000Z" }
+	};
+	const inRangeFileCreated = {
+		...asset("photo-2023-filecreated"),
+		fileCreatedAt: "2023-11-22T10:00:00.000Z",
+		exifInfo: { dateTimeOriginal: "2018-11-22T10:00:00.000Z" }
+	};
+	const afterRange = {
+		...asset("photo-2026"),
+		exifInfo: { dateTimeOriginal: "2026-11-22T10:00:00.000Z" }
+	};
+	const undated = asset("photo-undated");
+	const skippedYearAsset = {
+		...asset("photo-2010-skipped-memory"),
+		exifInfo: undefined
+	};
+
+	const result = await playlist(
+		{
+			key: {
+				memories: [
+					{
+						...memoryWindow,
+						data: { year: 2010 },
+						assets: [skippedYearAsset]
+					},
+					{
+						...memoryWindow,
+						assets: [
+							beforeRange,
+							beforeRangeFileCreatedNoExif,
+							beforeRangeViaDetails,
+							inRangeExif,
+							inRangeFileCreated,
+							afterRange,
+							undated
+						]
+					}
+				],
+				assetDetails: {
+					"photo-2010-details": {
+						...asset("photo-2010-details"),
+						exifInfo: { dateTimeOriginal: "2010-05-01T08:00:00.000Z" }
+					}
+				}
+			}
+		},
+		{
+			immich_exclude_tag_names: [],
+			immich_memories: true,
+			immich_taken_after: "2020-01-01T00:00:00.000Z",
+			immich_taken_before: "2025-12-31T23:59:59.999Z"
+		}
+	);
+	assert.deepEqual(result.ids, ["photo-2022", "photo-2023-filecreated"]);
+	assert.deepEqual(
+		result.details.map(({ route }) => route),
+		["/assets/photo-2010-details"]
+	);
+});
+
+test("rejects invalid immich_taken_after or immich_taken_before dates before loading media", async () => {
+	const failOnAnyRequest = () => "Unexpected API call for invalid date";
+	await assert.rejects(
+		() =>
+			playlist(
+				{ key: { memories: [], fail: failOnAnyRequest } },
+				{ immich_exclude_tag_names: [], immich_memories: true, immich_taken_after: "not-a-date" }
+			),
+		(error) => /Invalid immich_taken_after date/.test(error.message) && error.noRetry === true
+	);
+	await assert.rejects(
+		() =>
+			playlist(
+				{ key: { assets: [asset("keep")], fail: failOnAnyRequest } },
+				{ immich_exclude_tag_names: [], immich_taken_before: "2025-13-45" }
+			),
+		(error) => /Invalid immich_taken_before date/.test(error.message) && error.noRetry === true
+	);
 });

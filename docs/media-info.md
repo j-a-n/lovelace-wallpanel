@@ -6,6 +6,7 @@ Set the configuration opttion `show_image_info` to `true` to activate this featu
 The image info can be formatted by specifying HTML code in `image_info_template`.
 Placeholders like `${EXIF-tag-name}` will be replaced with the corresponding EXIF tag value.
 See [exif.js](https://github.com/exif-js/exif-js/blob/master/exif.js) for available EXIF tag names.
+When using the Immich media source, standard EXIF tag names (such as `DateTimeOriginal`, `Make`, `Model`, `FNumber`, `ExposureTime`, `FocalLength`, `ISOSpeedRatings`, `LensModel`, `ImageDescription`) as well as Immich's reverse-geocoded location tags (`City`, `State`, `Country` or `city`, `state`, `country`) are available directly without requiring `fetch_address_data`.
 
 If the EXIF data contains GPS location information and the `fetch_address_data` configuration is set to `true`,
 address data for the GPS coordinates will be fetched from `nominatim.openstreetmap.org`.
