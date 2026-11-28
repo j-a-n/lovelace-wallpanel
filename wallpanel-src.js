@@ -1153,9 +1153,7 @@ function updateConfig() {
 			// Unsplash API currently places a limit of 50 requests per hour
 			config.media_list_update_interval = 90;
 		}
-	} else if (config.playlist && Array.isArray(config.playlist) && config.playlist.length > 0) {
-		config.show_images = true;
-	} else {
+	} else if (!Array.isArray(config.playlist) || config.playlist.length === 0) {
 		config.show_images = false;
 	}
 
@@ -1501,6 +1499,8 @@ function initWallpanel() {
 			this.playlistIndex = 0;
 			this.playlistCycle = 0;
 			this.skipPlaylistItem = false;
+			this.playlistStylePending = false;
+			this.deferredUserSwitchDirection = null;
 			this.baseConfig = null;
 			this.playlistState = [];
 			this.mediaPathLists = [];
@@ -2141,11 +2141,11 @@ function initWallpanel() {
 			} else {
 				this.infoContainer.style.visibility = "visible";
 				this.infoContainer.style.opacity = "1";
-				this.infoContainer.style.pointerEvents = config.card_interaction ? "auto" : "none";
+				this.infoContainer.style.pointerEvents = "none";
 				if (this.fixedInfoContainer) {
 					this.fixedInfoContainer.style.visibility = "visible";
 					this.fixedInfoContainer.style.opacity = "1";
-					this.fixedInfoContainer.style.pointerEvents = config.card_interaction ? "auto" : "none";
+					this.fixedInfoContainer.style.pointerEvents = "none";
 				}
 			}
 		}
@@ -2368,6 +2368,13 @@ function initWallpanel() {
 			this.skipPlaylistItem = true;
 		}
 
+		applyPendingPlaylistStyle() {
+			if (this.playlistStylePending) {
+				this.playlistStylePending = false;
+				this.updateStyle();
+			}
+		}
+
 		applyPlaylistItem(index, preserveListState = true) {
 			if (!this.isPlaylistActive()) {
 				return;
@@ -2403,10 +2410,15 @@ function initWallpanel() {
 			for (const key in this.baseConfig) {
 				config[key] = this.baseConfig[key];
 			}
-			for (const key in item) {
+			for (const rawKey in item) {
+				const key = renamedConfigOptions[rawKey] || rawKey;
 				// "playlist" is excluded so an item cannot replace the playlist that is being sequenced
 				if (key !== "cycles" && key !== "playlist") {
-					config[key] = item[key];
+					let val = item[rawKey];
+					if (key === "immich_api_keys" && !Array.isArray(val)) {
+						val = [val];
+					}
+					config[key] = val;
 				}
 			}
 			if (config.image_url) {
@@ -2434,8 +2446,10 @@ function initWallpanel() {
 				this.mediaListRetryAt = savedState ? savedState.mediaListRetryAt || 0 : 0;
 			}
 			this.setDisplayTime();
-			// crossfade_time and other style-bound keys are only applied to the DOM by updateStyle()
-			this.updateStyle();
+			// crossfade_time and other style-bound keys are only applied to the DOM by updateStyle().
+			// Defer it until the item's media is actually switched in, so the outgoing media is not
+			// restyled while the next item loads (or for the retry delay if it fails to load).
+			this.playlistStylePending = true;
 			logger.debug(`Playlist activated item ${this.playlistIndex}:`, item);
 		}
 
@@ -2914,6 +2928,8 @@ function initWallpanel() {
 					this.playlistIndex,
 					!playlistChanged && Boolean(this.mediaList && this.mediaList.length > 0)
 				);
+				// The current item stays on screen during a reconfigure, so apply its styles immediately
+				this.applyPendingPlaylistStyle();
 			} else {
 				this.baseConfig = null;
 				this.playlistState = [];
@@ -3285,13 +3301,12 @@ function initWallpanel() {
 			this.updatingMediaList = true;
 			this.lastMediaListUpdate = Date.now();
 			this.updatingMediaListPromise = (async () => {
+				let succeeded = false;
 				try {
 					await updateFunction.bind(wp)();
 					this.clearMediaListRetry();
 					logger.debug(`Media list from ${sourceType} is now:`, wp.mediaList);
-					if (callback) {
-						callback();
-					}
+					succeeded = true;
 				} catch (error) {
 					const maxRetries = 3;
 					let retryDelay = mediaListRetryDelay;
@@ -3320,6 +3335,23 @@ function initWallpanel() {
 				} finally {
 					this.updatingMediaList = false;
 					this.updatingMediaListPromise = null;
+				}
+				// Run the callback only after the refresh state is cleared, so a switch requested
+				// by the callback is not deferred as if a refresh were still in flight
+				if (succeeded && callback) {
+					callback();
+				}
+				// Replay a manual next/previous that arrived while the refresh was in flight
+				if (this.deferredUserSwitchDirection) {
+					const direction = this.deferredUserSwitchDirection;
+					this.deferredUserSwitchDirection = null;
+					if (this.screensaverRunning() && !this.updatingMedia) {
+						const prevDirection = this.mediaListDirection;
+						this.mediaListDirection = direction;
+						this.switchActiveMedia("user_action").finally(() => {
+							this.mediaListDirection = prevDirection;
+						});
+					}
 				}
 			})();
 			await this.updatingMediaListPromise;
@@ -4544,8 +4576,14 @@ function initWallpanel() {
 
 			if (this.isPlaylistActive() && this.updatingMediaList && eventType !== "start") {
 				// A list refresh for the current item is in flight; advancing now would let its
-				// result overwrite the next item's media list. The timer retries on the next tick.
-				logger.debug("Media list update in progress, deferring playlist advance");
+				// result overwrite the next item's media list. Timed switches retry on the next tick;
+				// a manual next/previous is queued and replayed once the refresh completes.
+				if (eventType === "user_action") {
+					this.deferredUserSwitchDirection = this.mediaListDirection;
+					logger.debug("Media list update in progress, queueing manual playlist switch");
+				} else {
+					logger.debug("Media list update in progress, deferring playlist advance");
+				}
 				return;
 			}
 
@@ -4555,8 +4593,9 @@ function initWallpanel() {
 					this.skipPlaylistItem = false;
 					this.applyPlaylistItem(this.playlistIndex, Boolean(this.mediaList && this.mediaList.length > 0));
 					this.playlistCycle = 1;
-				} else if (eventType === "entity_update") {
-					// A state change of the current media entity must not consume a playlist cycle
+				} else if (eventType === "entity_update" || eventType === "reconfigure") {
+					// An entity state change or a configuration reload refreshes the current item
+					// and must not consume a playlist cycle
 				} else {
 					const currentItem = this.getCurrentPlaylistItem();
 					const targetCycles = Math.max(1, parseInt(currentItem?.cycles, 10) || 1);
@@ -4624,9 +4663,14 @@ function initWallpanel() {
 				mediaEntityState = entity.state;
 			}
 
-			this.lastMediaUpdate = Date.now();
-			if (this.isPaused) {
-				this.mediaTimeElapsedBeforePause = 0;
+			// In a playlist, entity state changes refresh the image without restarting the display
+			// timer; otherwise a frequently updating entity would hold the playlist on its item.
+			const keepDisplayTimer = this.isPlaylistActive() && eventType === "entity_update";
+			if (!keepDisplayTimer) {
+				this.lastMediaUpdate = Date.now();
+				if (this.isPaused) {
+					this.mediaTimeElapsedBeforePause = 0;
+				}
 			}
 			let crossfadeMillis = 0;
 			if (eventType != "start") {
@@ -4645,6 +4689,7 @@ function initWallpanel() {
 				this.getNextMediaURL(false) == activeElement.mediaUrl
 			) {
 				this.mediaLoadRetryAt = 0;
+				this.applyPendingPlaylistStyle();
 				this.updateInfoContainerVisibility(crossfadeMillis);
 				if (activeElement.tagName.toLowerCase() === "iframe") {
 					activeElement.style.pointerEvents = config.iframe_interaction ? "auto" : "none";
@@ -4665,15 +4710,19 @@ function initWallpanel() {
 				return;
 			}
 			this.mediaLoadRetryAt = 0;
-			this._switchActiveMedia(element, crossfadeMillis);
+			this._switchActiveMedia(element, crossfadeMillis, keepDisplayTimer);
 		}
 
-		_switchActiveMedia(newElement, crossfadeMillis = null) {
-			this.lastMediaUpdate = Date.now();
-			if (this.isPaused) {
-				// Case of calls to nextImage()/previousImage() when slideshow is paused.
-				// Preserve paused state.
-				this.mediaTimeElapsedBeforePause = 0;
+		_switchActiveMedia(newElement, crossfadeMillis = null, keepDisplayTimer = false) {
+			// Apply the new playlist item's styles at the moment its media is switched in
+			this.applyPendingPlaylistStyle();
+			if (!keepDisplayTimer) {
+				this.lastMediaUpdate = Date.now();
+				if (this.isPaused) {
+					// Case of calls to nextImage()/previousImage() when slideshow is paused.
+					// Preserve paused state.
+					this.mediaTimeElapsedBeforePause = 0;
+				}
 			}
 			this.imageOneContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
 			this.imageTwoContainer.style.transition = `opacity ${crossfadeMillis}ms ease-in-out`;
@@ -4708,7 +4757,9 @@ function initWallpanel() {
 			this.setMediaDimensions();
 			this.setImageURLEntityState();
 			this.startPlayingActiveMedia();
-			this.restartProgressBarAnimation();
+			if (!keepDisplayTimer) {
+				this.restartProgressBarAnimation();
+			}
 			this.restartKenBurnsEffect();
 
 			const wp = this;
@@ -5203,16 +5254,28 @@ function initWallpanel() {
 					return;
 				}
 				let elements = [];
-				elements = elements.concat(this.__cards || []);
-				elements = elements.concat(this.__badges || []);
-				elements = elements.concat(this.__views || []);
-				elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-info-box-content"));
-				elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-fixed-info-box-content"));
+				// Cards hidden by a playlist item (show_cards: false / hide_cards: true) must not
+				// swallow taps, otherwise the screensaver cannot be dismissed where they would be.
+				const cardsHidden = config.show_cards === false || config.hide_cards === true;
+				if (!cardsHidden) {
+					elements = elements.concat(this.__cards || []);
+					elements = elements.concat(this.__badges || []);
+					elements = elements.concat(this.__views || []);
+					elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-info-box-content"));
+					elements.push(this.shadowRoot.getElementById("wallpanel-screensaver-fixed-info-box-content"));
+				}
 				if (config.image_info_template == "analyze") {
 					elements.push(this.imageOneInfo);
 					elements.push(this.imageTwoInfo);
 				}
 				for (let i = 0; i < elements.length; i++) {
+					if (!elements[i]) {
+						continue;
+					}
+					const computedStyle = window.getComputedStyle(elements[i]);
+					if (computedStyle.display === "none" || computedStyle.visibility === "hidden") {
+						continue;
+					}
 					const pos = elements[i].getBoundingClientRect();
 					logger.debug("Event position:", elements[i], x, y, pos.left, pos.right, pos.top, pos.bottom);
 					if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
