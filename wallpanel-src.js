@@ -1500,6 +1500,7 @@ function initWallpanel() {
 			this.mediaListDirection = "forwards"; // forwards, backwards
 			this.playlistIndex = 0;
 			this.playlistCycle = 0;
+			this.skipPlaylistItem = false;
 			this.baseConfig = null;
 			this.playlistState = [];
 			this.mediaPathLists = [];
@@ -2363,9 +2364,8 @@ function initWallpanel() {
 		}
 
 		skipCurrentPlaylistItem() {
-			// Exhaust the current item's cycles so the next switch advances past it
-			const item = this.getCurrentPlaylistItem();
-			this.playlistCycle = this.mediaListDirection === "backwards" ? 1 : Math.max(1, parseInt(item?.cycles, 10) || 1);
+			// Force the next non-entity_update switch to advance past the failing item regardless of direction
+			this.skipPlaylistItem = true;
 		}
 
 		applyPlaylistItem(index, preserveListState = true) {
@@ -2903,17 +2903,27 @@ function initWallpanel() {
 				wallpanel.moveInfoBox(0, 0);
 			}
 
+			const playlistChanged = JSON.stringify(oldConfig?.playlist) != JSON.stringify(config?.playlist);
 			if (this.isPlaylistActive()) {
-				if (JSON.stringify(oldConfig?.playlist) != JSON.stringify(config.playlist)) {
+				if (playlistChanged) {
 					// Saved per-item state is indexed by position and is invalid once the playlist changes
 					this.playlistState = [];
 				}
 				this.baseConfig = { ...config };
-				this.applyPlaylistItem(this.playlistIndex, false);
+				this.applyPlaylistItem(
+					this.playlistIndex,
+					!playlistChanged && Boolean(this.mediaList && this.mediaList.length > 0)
+				);
+			} else {
+				this.baseConfig = null;
+				this.playlistState = [];
+				this.playlistIndex = 0;
+				this.playlistCycle = 0;
+				this.skipPlaylistItem = false;
 			}
 
 			const sourceChange =
-				JSON.stringify(oldConfig?.playlist) != JSON.stringify(config?.playlist) ||
+				playlistChanged ||
 				oldConfig.image_url != config.image_url ||
 				oldConfig.media_order != config.media_order ||
 				oldConfig.media_list_max_size != config.media_list_max_size ||
@@ -4542,6 +4552,7 @@ function initWallpanel() {
 			const playlistIndexBefore = this.playlistIndex;
 			if (this.isPlaylistActive()) {
 				if (eventType === "start") {
+					this.skipPlaylistItem = false;
 					this.applyPlaylistItem(this.playlistIndex, Boolean(this.mediaList && this.mediaList.length > 0));
 					this.playlistCycle = 1;
 				} else if (eventType === "entity_update") {
@@ -4549,9 +4560,11 @@ function initWallpanel() {
 				} else {
 					const currentItem = this.getCurrentPlaylistItem();
 					const targetCycles = Math.max(1, parseInt(currentItem?.cycles, 10) || 1);
+					const forceAdvance = this.skipPlaylistItem;
+					this.skipPlaylistItem = false;
 
 					if (this.mediaListDirection === "backwards") {
-						if (this.playlistCycle > 1) {
+						if (!forceAdvance && this.playlistCycle > 1) {
 							this.playlistCycle--;
 						} else {
 							const prevIndex = (this.playlistIndex - 1 + config.playlist.length) % config.playlist.length;
@@ -4560,7 +4573,7 @@ function initWallpanel() {
 							this.playlistCycle = Math.max(1, parseInt(newItem?.cycles, 10) || 1);
 						}
 					} else {
-						if (this.playlistCycle < targetCycles) {
+						if (!forceAdvance && this.playlistCycle < targetCycles) {
 							this.playlistCycle++;
 						} else {
 							const nextIndex = (this.playlistIndex + 1) % config.playlist.length;
@@ -4584,6 +4597,7 @@ function initWallpanel() {
 				const entity = this.hass.states[mediaEntity];
 				if (!entity) {
 					logger.error(`Media entity "${mediaEntity}" not available`);
+					this.mediaLoadRetryAt = Date.now() + mediaLoadRetryDelay;
 					if (this.isPlaylistActive() && eventType !== "entity_update") {
 						this.skipCurrentPlaylistItem();
 					}
@@ -4599,6 +4613,7 @@ function initWallpanel() {
 				} else if (config.media_entity_load_unchanged) {
 					logger.debug(`Media entity ${mediaEntity} state unchanged, but media_entity_load_unchanged = true`);
 				} else {
+					this.mediaLoadRetryAt = 0;
 					this.lastMediaUpdate = Date.now();
 					if (this.isPaused) {
 						this.mediaTimeElapsedBeforePause = 0;
@@ -4629,6 +4644,7 @@ function initWallpanel() {
 				!config.iframe_load_unchanged &&
 				this.getNextMediaURL(false) == activeElement.mediaUrl
 			) {
+				this.mediaLoadRetryAt = 0;
 				this.updateInfoContainerVisibility(crossfadeMillis);
 				if (activeElement.tagName.toLowerCase() === "iframe") {
 					activeElement.style.pointerEvents = config.iframe_interaction ? "auto" : "none";
