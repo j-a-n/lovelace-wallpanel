@@ -1507,6 +1507,7 @@ function initWallpanel() {
 			this.currentMediaPath = null;
 			this.lastMediaListUpdate;
 			this.updatingMediaList = false;
+			this.updatingMediaListPromise = null;
 			this.mediaListRetryAt = 0;
 			this.mediaListRetryTimer = null;
 			this.updatingMedia = false;
@@ -2374,14 +2375,25 @@ function initWallpanel() {
 			if (!this.baseConfig) {
 				this.baseConfig = { ...config };
 			}
+			const nextIndex = (index + config.playlist.length) % config.playlist.length;
 			if (preserveListState && this.playlistState) {
 				this.playlistState[this.playlistIndex] = {
 					mediaList: this.mediaList ? [...this.mediaList] : [],
 					mediaIndex: this.mediaIndex,
-					lastMediaListUpdate: this.lastMediaListUpdate
+					lastMediaListUpdate: this.lastMediaListUpdate,
+					mediaPathLists: this.mediaPathLists
+						? this.mediaPathLists.map((entry) => ({ ...entry, medias: [...entry.medias] }))
+						: [],
+					mediaPathQueue: this.mediaPathQueue ? [...this.mediaPathQueue] : [],
+					currentMediaPath: this.currentMediaPath || null,
+					mediaListRetryAt: this.mediaListRetryAt || 0
 				};
 			}
-			this.playlistIndex = (index + config.playlist.length) % config.playlist.length;
+			if (this.mediaListRetryTimer && (nextIndex !== this.playlistIndex || !preserveListState)) {
+				clearTimeout(this.mediaListRetryTimer);
+				this.mediaListRetryTimer = null;
+			}
+			this.playlistIndex = nextIndex;
 			const item = this.getCurrentPlaylistItem();
 			if (!item) {
 				return;
@@ -2410,10 +2422,16 @@ function initWallpanel() {
 				this.mediaList = savedState.mediaList;
 				this.mediaIndex = savedState.mediaIndex !== undefined ? savedState.mediaIndex : -1;
 				this.lastMediaListUpdate = savedState.lastMediaListUpdate || 0;
+				this.mediaPathLists = savedState.mediaPathLists || [];
+				this.mediaPathQueue = savedState.mediaPathQueue || [];
+				this.currentMediaPath = savedState.currentMediaPath || null;
+				this.mediaListRetryAt = savedState.mediaListRetryAt || 0;
 			} else {
 				this.mediaList = [];
 				this.mediaIndex = -1;
 				this.lastMediaListUpdate = 0;
+				this.resetMediaPathLists();
+				this.mediaListRetryAt = savedState ? savedState.mediaListRetryAt || 0 : 0;
 			}
 			this.setDisplayTime();
 			// crossfade_time and other style-bound keys are only applied to the DOM by updateStyle()
@@ -3215,7 +3233,13 @@ function initWallpanel() {
 
 		async updateMediaList(callback = null, force = false, retryCount = 0) {
 			if (!config.image_url) return;
-			if (this.updatingMediaList) return;
+			if (this.updatingMediaListPromise) {
+				await this.updatingMediaListPromise;
+				if (callback && this.mediaList && this.mediaList.length > 0) {
+					callback();
+				}
+				return;
+			}
 			if (this.mediaListRetryAt > Date.now()) return;
 			if (!force) {
 				if (new Date().getTime() - this.lastMediaListUpdate < config.media_list_update_interval * 1000) {
@@ -3250,40 +3274,45 @@ function initWallpanel() {
 
 			this.updatingMediaList = true;
 			this.lastMediaListUpdate = Date.now();
-			try {
-				await updateFunction.bind(wp)();
-				this.clearMediaListRetry();
-				logger.debug(`Media list from ${sourceType} is now:`, wp.mediaList);
-				if (callback) {
-					callback();
-				}
-			} catch (error) {
-				const maxRetries = 3;
-				let retryDelay = mediaListRetryDelay;
-				if (error.httpStatus === 429) {
-					if (Number.isFinite(error.retryAfterDelay)) {
-						retryDelay = Math.max(error.retryAfterDelay, mediaListRetryDelay);
-					} else {
-						retryDelay = Math.min(mediaListRateLimitRetryDelay * 2 ** retryCount, maxMediaListRateLimitRetryDelay);
+			this.updatingMediaListPromise = (async () => {
+				try {
+					await updateFunction.bind(wp)();
+					this.clearMediaListRetry();
+					logger.debug(`Media list from ${sourceType} is now:`, wp.mediaList);
+					if (callback) {
+						callback();
 					}
+				} catch (error) {
+					const maxRetries = 3;
+					let retryDelay = mediaListRetryDelay;
+					if (error.httpStatus === 429) {
+						if (Number.isFinite(error.retryAfterDelay)) {
+							retryDelay = Math.max(error.retryAfterDelay, mediaListRetryDelay);
+						} else {
+							retryDelay = Math.min(mediaListRateLimitRetryDelay * 2 ** retryCount, maxMediaListRateLimitRetryDelay);
+						}
+					}
+					logger.warn(`Failed to update media list from ${sourceType}:`, error);
+					if (retryCount < maxRetries) {
+						logger.warn(
+							`Retrying media list update in ${retryDelay / 1000} seconds (attempt ${retryCount + 1}/${maxRetries})...`
+						);
+						this.mediaListRetryAt = Date.now() + retryDelay;
+						this.mediaListRetryTimer = setTimeout(() => {
+							wp.mediaListRetryTimer = null;
+							wp.mediaListRetryAt = 0;
+							wp.updateMediaList(callback, true, retryCount + 1);
+						}, retryDelay);
+					} else {
+						const errorMsg = `Failed to update media list from ${config.image_url} after ${maxRetries} retries: ${error.message || stringify(error)}`;
+						logger.error(errorMsg);
+					}
+				} finally {
+					this.updatingMediaList = false;
+					this.updatingMediaListPromise = null;
 				}
-				logger.warn(`Failed to update media list from ${sourceType}:`, error);
-				if (retryCount < maxRetries) {
-					logger.warn(
-						`Retrying media list update in ${retryDelay / 1000} seconds (attempt ${retryCount + 1}/${maxRetries})...`
-					);
-					this.mediaListRetryAt = Date.now() + retryDelay;
-					this.mediaListRetryTimer = setTimeout(() => {
-						wp.mediaListRetryTimer = null;
-						wp.mediaListRetryAt = 0;
-						wp.updateMediaList(callback, true, retryCount + 1);
-					}, retryDelay);
-				} else {
-					const errorMsg = `Failed to update media list from ${config.image_url} after ${maxRetries} retries: ${error.message || stringify(error)}`;
-					logger.error(errorMsg);
-				}
-			}
-			this.updatingMediaList = false;
+			})();
+			await this.updatingMediaListPromise;
 		}
 
 		resetMediaPathLists() {
@@ -4513,7 +4542,7 @@ function initWallpanel() {
 			const playlistIndexBefore = this.playlistIndex;
 			if (this.isPlaylistActive()) {
 				if (eventType === "start") {
-					this.applyPlaylistItem(this.playlistIndex, false);
+					this.applyPlaylistItem(this.playlistIndex, Boolean(this.mediaList && this.mediaList.length > 0));
 					this.playlistCycle = 1;
 				} else if (eventType === "entity_update") {
 					// A state change of the current media entity must not consume a playlist cycle
@@ -4584,15 +4613,6 @@ function initWallpanel() {
 			if (this.isPaused) {
 				this.mediaTimeElapsedBeforePause = 0;
 			}
-			const activeElement = this.getActiveMediaElement();
-			if (
-				(sourceType === "iframe" || sourceType === "embed") &&
-				!config.iframe_load_unchanged &&
-				this.getNextMediaURL(false) == activeElement.mediaUrl
-			) {
-				return;
-			}
-
 			let crossfadeMillis = 0;
 			if (eventType != "start") {
 				if (config.crossfade_time > 0) {
@@ -4601,6 +4621,20 @@ function initWallpanel() {
 				if (eventType == "user_action" && crossfadeMillis > 250) {
 					crossfadeMillis = 250;
 				}
+			}
+
+			const activeElement = this.getActiveMediaElement();
+			if (
+				(sourceType === "iframe" || sourceType === "embed") &&
+				!config.iframe_load_unchanged &&
+				this.getNextMediaURL(false) == activeElement.mediaUrl
+			) {
+				this.updateInfoContainerVisibility(crossfadeMillis);
+				if (activeElement.tagName.toLowerCase() === "iframe") {
+					activeElement.style.pointerEvents = config.iframe_interaction ? "auto" : "none";
+				}
+				this.restartProgressBarAnimation();
+				return;
 			}
 
 			const updateElement = this.getInactiveMediaElement();
